@@ -1,13 +1,12 @@
 # JWT Ayarları
 jwt:
-  # En az 256 bitlik Base64 formatında güçlü bir şifre olmalı
   secret-key: a2V5LXBhc3N3b3JkLWZvci1zZWN1cmUtand0LWFwcGxpY2F0aW9uLXNwcmluZy1ib290
   expiration: 86400000 # 24 Saat (Milisaniye cinsinden)
 
 # Frontend Yönlendirme URL'i
 app:
   frontend:
-    url: http://localhost:4200 # Frontend'in ayağa kalktığı adres
+    url: http://localhost:4200
 
 spring:
   security:
@@ -20,3 +19,19 @@ spring:
             scope:
               - email
               - profile
+
+  # PostgreSQL ve PostGIS (GIS) Yapılandırması
+  datasource:
+    url: jdbc:postgresql://localhost:5432/patimati_db
+    username: postgres
+    password: postgres_sifre
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        # PostGIS Dialect
+        dialect: org.hibernate.spatial.dialect.postgis.PostgisPG95Dialect
