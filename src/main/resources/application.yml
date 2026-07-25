@@ -1,0 +1,22 @@
+# JWT Ayarları
+jwt:
+  # En az 256 bitlik Base64 formatında güçlü bir şifre olmalı
+  secret-key: a2V5LXBhc3N3b3JkLWZvci1zZWN1cmUtand0LWFwcGxpY2F0aW9uLXNwcmluZy1ib290
+  expiration: 86400000 # 24 Saat (Milisaniye cinsinden)
+
+# Frontend Yönlendirme URL'i
+app:
+  frontend:
+    url: http://localhost:4200 # Frontend'in ayağa kalktığı adres
+
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: SIZIN_GOOGLE_CLIENT_ID_BILGINIZ
+            client-secret: SIZIN_GOOGLE_CLIENT_SECRET_BILGINIZ
+            scope:
+              - email
+              - profile
