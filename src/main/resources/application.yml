@@ -1,19 +1,25 @@
 # Veritabanı ve Flyway Ayarları
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/senin_db_adin
-    username: user
-    password: password
+    # DİKKAT: Kendi veritabanı adını (örn: patimati_db) yazmalısın
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/patimati_db}
+    # DİKKAT: Kendi PostgreSQL kullanıcı adını yazmalısın (genelde postgres'tir)
+    username: ${DB_USER:postgres}
+    # DİKKAT: Kendi PostgreSQL şifreni yazmalısın
+    password: ${DB_PASSWORD}
   jpa:
+    # Bu satırı ekleyerek Hibernate'e dialect'i manuel veriyoruz
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       # ÖNEMLİ: Update yerine validate yapıyoruz
       ddl-auto: validate
-    properties:
-      hibernate:
-      # Dialect satırını tamamen sildik
   flyway:
     enabled: true
-    baseline-on-migrate: true # Mevcut tablolar varsa hata vermesin diye
+    # Mevcut veritabanı boş değilse hata vermek yerine baseline noktasından başlar
+    baseline-on-migrate: true
+    # Baseline sürüm numarasını V1 script'imizle eşleştiriyoruz
+    baseline-version: 1
+    baseline-description: "Init Schema"
 
   # OAuth2 Google Giriş Ayarları
   security:

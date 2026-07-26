@@ -1,7 +1,7 @@
 package com.works.patimati.security;
 
-import com.example.app.entity.User;
-import com.example.app.repository.UserRepository;
+import com.works.patimati.entity.User;
+import com.works.patimati.repository.UserRepository;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -44,15 +44,16 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         if (userOptional.isEmpty()) {
             user = new User();
             user.setEmail(email);
-            user.setName(name);
-            user.setRole("USER"); // Varsayılan rol
+            user.setFirstName(name);
+            user.setLastName(name);
+            user.setRole(User.Role.USER);
             userRepository.save(user);
         } else {
             user = userOptional.get();
         }
 
         // JWT Üret
-        String token = jwtService.generateToken(user.getEmail(), user.getRole());
+        String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
 
         // Frontend'e JWT ile yönlendir (Örn: http://localhost:4200/login?token=abc...)
         String targetUrl = frontendUrl + "/login?token=" + token;
