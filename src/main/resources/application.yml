@@ -1,15 +1,21 @@
-# JWT Ayarları
-jwt:
-  # En az 256 bitlik Base64 formatında güçlü bir şifre olmalı
-  secret-key: a2V5LXBhc3N3b3JkLWZvci1zZWN1cmUtand0LWFwcGxpY2F0aW9uLXNwcmluZy1ib290
-  expiration: 86400000 # 24 Saat (Milisaniye cinsinden)
-
-# Frontend Yönlendirme URL'i
-app:
-  frontend:
-    url: http://localhost:4200 # Frontend'in ayağa kalktığı adres
-
+# Veritabanı ve Flyway Ayarları
 spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/senin_db_adin
+    username: user
+    password: password
+  jpa:
+    hibernate:
+      # ÖNEMLİ: Update yerine validate yapıyoruz
+      ddl-auto: validate
+    properties:
+      hibernate:
+      # Dialect satırını tamamen sildik
+  flyway:
+    enabled: true
+    baseline-on-migrate: true # Mevcut tablolar varsa hata vermesin diye
+
+  # OAuth2 Google Giriş Ayarları
   security:
     oauth2:
       client:
@@ -20,3 +26,13 @@ spring:
             scope:
               - email
               - profile
+
+# JWT Ayarları
+jwt:
+  secret: ${JWT_SECRET_KEY}
+  expiration: 86400000 # Örnek token süresi # 24 Saat (Milisaniye cinsinden)
+
+# Frontend Yönlendirme URL'i
+app:
+  frontend:
+    url: http://localhost:4200 # Frontend'in ayağa kalktığı adres
