@@ -8,7 +8,7 @@ import org.locationtech.jts.geom.Point;
 @Table(
         name = "ads",
         indexes = {
-                @Index(name = "idx_ads_location", columnList = "location") // GIST İndeksi (3. Kısım)
+                @Index(name = "idx_ads_location", columnList = "location")
         }
 )
 @Getter
