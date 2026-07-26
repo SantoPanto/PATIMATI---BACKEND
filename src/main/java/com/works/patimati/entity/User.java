@@ -2,6 +2,7 @@ package com.works.patimati.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.locationtech.jts.geom.Point; 
 
 @Entity
 @Table(name = "users")
@@ -43,6 +44,9 @@ public class User {
 
     // Hesabı kapatıp açmak için kontrol
     private boolean enabled;
+    // KISIM 3: Coğrafi Konum
+    @Column(columnDefinition = "geometry(Point, 4326)")
+    private Point location;
 
     // Rol yönetimi için Enum tanımı
     public enum Role {
