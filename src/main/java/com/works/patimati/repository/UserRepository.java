@@ -18,6 +18,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByGoogleId(String googleId);
 
     // KISIM 3
-    @Query(value = "SELECT * FROM users u WHERE u.fcm_token IS NOT NULL AND ST_DWithin(u.location::geography, :point::geography, :distanceInMeters) = true", nativeQuery = true)
+    @Query(value = "SELECT * FROM users u WHERE u.fcm_token IS NOT NULL AND ST_DWithin(u.location, :point, :distanceInMeters) = true", nativeQuery = true)
     List<User> findUsersNearby(@Param("point") Point point, @Param("distanceInMeters") double distanceInMeters);
 }

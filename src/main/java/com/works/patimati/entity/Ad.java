@@ -28,8 +28,8 @@ public class Ad {
     @Enumerated(EnumType.STRING)
     private AdType adType; // LOST, FOUND, ADOPTION
 
-    // KISIM 3: Coğrafi Konum (GIS)
-    @Column(columnDefinition = "geometry(Point, 4326)")
+    // KISIM 3
+    @Column(columnDefinition = "geography(Point, 4326)")
     private Point location;
 
     @ManyToOne
