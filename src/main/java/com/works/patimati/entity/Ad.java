@@ -1,5 +1,12 @@
 package com.works.patimati.entity;
 
+import com.works.patimati.entity.enums.AgeGroup;
+import com.works.patimati.entity.enums.CoatPattern;
+import com.works.patimati.entity.enums.EyeColor;
+import com.works.patimati.entity.enums.PetColor;
+import com.works.patimati.entity.enums.PetGender;
+import com.works.patimati.entity.enums.PresenceStatus;
+import com.works.patimati.entity.enums.Species;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -7,8 +14,11 @@ import org.hibernate.annotations.UpdateTimestamp;
 import org.locationtech.jts.geom.Point;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(
@@ -37,6 +47,71 @@ public class Ad {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private Species species;
+
+    @Column(nullable = false, length = 100)
+    @Builder.Default
+    private String breed = "MIXED_OR_UNKNOWN";
+
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(
+            name = "ad_colors",
+            joinColumns = @JoinColumn(name = "ad_id")
+    )
+    @Enumerated(EnumType.STRING)
+    @Column(name = "color", nullable = false, length = 30)
+    @Builder.Default
+    private Set<PetColor> colors = new LinkedHashSet<>();
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private PetGender gender = PetGender.UNKNOWN;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "age_group", nullable = false, length = 20)
+    @Builder.Default
+    private AgeGroup ageGroup = AgeGroup.UNKNOWN;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "coat_pattern", nullable = false, length = 30)
+    @Builder.Default
+    private CoatPattern coatPattern = CoatPattern.UNKNOWN;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "collar_status", nullable = false, length = 20)
+    @Builder.Default
+    private PresenceStatus collarStatus = PresenceStatus.UNKNOWN;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "collar_color", length = 30)
+    private PetColor collarColor;
+
+    @Column(name = "collar_tag_text", length = 255)
+    private String collarTagText;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "eye_color", nullable = false, length = 30)
+    @Builder.Default
+    private EyeColor eyeColor = EyeColor.UNKNOWN;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "ear_tag_status", nullable = false, length = 20)
+    @Builder.Default
+    private PresenceStatus earTagStatus = PresenceStatus.UNKNOWN;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "ear_notch_status", nullable = false, length = 20)
+    @Builder.Default
+    private PresenceStatus earNotchStatus = PresenceStatus.UNKNOWN;
+
+    @Column(name = "microchip_number", length = 32)
+    private String microchipNumber;
+
+    @Column(name = "lost_date")
+    private LocalDate lostDate;
+
+    @Column(name = "distinctive_marks", length = 1000)
+    private String distinctiveMarks;
 
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(
@@ -70,9 +145,5 @@ public class Ad {
 
     public enum AdType {
         LOST, FOUND, ADOPTION
-    }
-
-    public enum Species {
-        CAT, DOG, BIRD, OTHER
     }
 }
