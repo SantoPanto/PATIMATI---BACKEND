@@ -35,7 +35,7 @@ spring:
 
 # JWT Ayarları
 jwt:
-  secret: ${JWT_SECRET_KEY}
+  secret-key: ${JWT_SECRET_KEY}
   expiration: 86400000 # Örnek token süresi # 24 Saat (Milisaniye cinsinden)
 
 # Frontend Yönlendirme URL'i
