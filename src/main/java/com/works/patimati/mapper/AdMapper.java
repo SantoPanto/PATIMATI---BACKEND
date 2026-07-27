@@ -91,6 +91,10 @@ public class AdMapper {
     }
 
     public AdResponse toResponse(Ad ad) {
+        return toResponse(ad, immutablePhotoUrls(ad.getPhotoUrls()));
+    }
+
+    public AdResponse toResponse(Ad ad, List<String> photoUrls) {
         Point location = ad.getLocation();
         User owner = ad.getUser();
 
@@ -114,7 +118,7 @@ public class AdMapper {
                 ad.getMicrochipNumber() != null && !ad.getMicrochipNumber().isBlank(),
                 ad.getLostDate(),
                 ad.getDistinctiveMarks(),
-                immutablePhotoUrls(ad.getPhotoUrls()),
+                immutablePhotoUrls(photoUrls),
                 location == null ? null : location.getY(),
                 location == null ? null : location.getX(),
                 owner == null ? null : owner.getUid(),

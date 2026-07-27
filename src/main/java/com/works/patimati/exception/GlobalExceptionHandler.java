@@ -1,0 +1,156 @@
+package com.works.patimati.exception;
+
+import com.works.patimati.storage.ImageStorageException;
+import com.works.patimati.storage.InvalidImageException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolationException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
+
+import java.net.URI;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ProblemDetail> handleNotFound(
+            ResourceNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        return problem(
+                HttpStatus.NOT_FOUND,
+                "Kaynak bulunamadı",
+                exception.getMessage(),
+                request
+        );
+    }
+
+    @ExceptionHandler(InvalidImageException.class)
+    public ResponseEntity<ProblemDetail> handleInvalidImage(
+            InvalidImageException exception,
+            HttpServletRequest request
+    ) {
+        return problem(
+                HttpStatus.BAD_REQUEST,
+                "Geçersiz fotoğraf",
+                exception.getMessage(),
+                request
+        );
+    }
+
+    @ExceptionHandler(ImageStorageException.class)
+    public ResponseEntity<ProblemDetail> handleStorageFailure(
+            ImageStorageException exception,
+            HttpServletRequest request
+    ) {
+        return problem(
+                HttpStatus.BAD_GATEWAY,
+                "Dosya depolama hatası",
+                exception.getMessage(),
+                request
+        );
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ProblemDetail> handleRequestValidation(
+            MethodArgumentNotValidException exception,
+            HttpServletRequest request
+    ) {
+        Map<String, String> fieldErrors = new LinkedHashMap<>();
+
+        exception.getBindingResult()
+                .getFieldErrors()
+                .forEach(error -> fieldErrors.putIfAbsent(
+                        error.getField(),
+                        error.getDefaultMessage()
+                ));
+
+        exception.getBindingResult()
+                .getGlobalErrors()
+                .forEach(error -> fieldErrors.putIfAbsent(
+                        error.getObjectName(),
+                        error.getDefaultMessage()
+                ));
+
+        ProblemDetail detail = createProblem(
+                HttpStatus.BAD_REQUEST,
+                "Doğrulama hatası",
+                "Gönderilen ilan bilgileri geçersiz",
+                request
+        );
+        detail.setProperty("validationErrors", fieldErrors);
+
+        return ResponseEntity.badRequest().body(detail);
+    }
+
+    @ExceptionHandler({
+            ConstraintViolationException.class,
+            HandlerMethodValidationException.class,
+            MethodArgumentTypeMismatchException.class,
+            MissingServletRequestPartException.class,
+            MissingServletRequestParameterException.class,
+            HttpMessageNotReadableException.class,
+            MultipartException.class
+    })
+    public ResponseEntity<ProblemDetail> handleInvalidRequest(
+            Exception exception,
+            HttpServletRequest request
+    ) {
+        return problem(
+                HttpStatus.BAD_REQUEST,
+                "Geçersiz istek",
+                "İstek parametreleri veya gönderilen veri biçimi geçersiz",
+                request
+        );
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ProblemDetail> handleMaxUploadSize(
+            MaxUploadSizeExceededException exception,
+            HttpServletRequest request
+    ) {
+        return problem(
+                HttpStatus.PAYLOAD_TOO_LARGE,
+                "Dosya boyutu sınırı aşıldı",
+                "Yüklenen fotoğrafların toplam boyutu izin verilen sınırı aşıyor",
+                request
+        );
+    }
+
+    private ResponseEntity<ProblemDetail> problem(
+            HttpStatus status,
+            String title,
+            String message,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity
+                .status(status)
+                .body(createProblem(status, title, message, request));
+    }
+
+    private ProblemDetail createProblem(
+            HttpStatus status,
+            String title,
+            String message,
+            HttpServletRequest request
+    ) {
+        ProblemDetail detail =
+                ProblemDetail.forStatusAndDetail(status, message);
+        detail.setTitle(title);
+        detail.setInstance(URI.create(request.getRequestURI()));
+        return detail;
+    }
+}
