@@ -28,7 +28,21 @@
     </scm>
     <properties>
         <java.version>17</java.version>
+        <aws.java.sdk.version>2.49.3</aws.java.sdk.version>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>bom</artifactId>
+                <version>${aws.java.sdk.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
         <dependency>
             <groupId>org.flywaydb</groupId>
@@ -157,11 +171,10 @@
             <version>2.3.0</version>
         </dependency>
 
-        <!-- AWS Java SDK S3 - İlan Fotoğraflarının Bulutta Saklanması[cite: 1] -->
+        <!-- AWS SDK for Java v2 - İlan fotoğraflarının S3'te saklanması -->
         <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-s3</artifactId>
-            <version>1.12.670</version>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
