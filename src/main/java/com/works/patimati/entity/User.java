@@ -23,10 +23,10 @@ public class User {
     @Column(nullable = false, unique = true, length = 100)
     private String email;
 
-    @Column(name = "first_name", length = 50)
+    @Column(name = "first_name", nullable = false, length = 50)
     private String firstName;
 
-    @Column(name = "last_name", length = 50)
+    @Column(name = "last_name", nullable = false, length = 50)
     private String lastName;
 
     @Column(length = 255)
@@ -44,6 +44,7 @@ public class User {
 
     // Hesabı kapatıp açmak için kontrol
     private boolean enabled;
+
     // KISIM 3: Coğrafi Konum
     @Column(columnDefinition = "geometry(Point, 4326)")
     private Point location;
