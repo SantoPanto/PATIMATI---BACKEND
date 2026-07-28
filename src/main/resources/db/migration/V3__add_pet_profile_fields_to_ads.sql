@@ -1,0 +1,62 @@
+UPDATE ads
+SET species = 'UNKNOWN'
+WHERE species NOT IN ('CAT', 'DOG', 'UNKNOWN');
+
+ALTER TABLE ads
+    ADD COLUMN IF NOT EXISTS breed VARCHAR(100) NOT NULL DEFAULT 'MIXED_OR_UNKNOWN';
+
+ALTER TABLE ads
+    ADD COLUMN IF NOT EXISTS gender VARCHAR(20) NOT NULL DEFAULT 'UNKNOWN';
+
+ALTER TABLE ads
+    ADD COLUMN IF NOT EXISTS age_group VARCHAR(20) NOT NULL DEFAULT 'UNKNOWN';
+
+ALTER TABLE ads
+    ADD COLUMN IF NOT EXISTS coat_pattern VARCHAR(30) NOT NULL DEFAULT 'UNKNOWN';
+
+ALTER TABLE ads
+    ADD COLUMN IF NOT EXISTS collar_status VARCHAR(20) NOT NULL DEFAULT 'UNKNOWN';
+
+ALTER TABLE ads
+    ADD COLUMN IF NOT EXISTS collar_color VARCHAR(30);
+
+ALTER TABLE ads
+    ADD COLUMN IF NOT EXISTS collar_tag_text VARCHAR(255);
+
+ALTER TABLE ads
+    ADD COLUMN IF NOT EXISTS eye_color VARCHAR(30) NOT NULL DEFAULT 'UNKNOWN';
+
+ALTER TABLE ads
+    ADD COLUMN IF NOT EXISTS ear_tag_status VARCHAR(20) NOT NULL DEFAULT 'UNKNOWN';
+
+ALTER TABLE ads
+    ADD COLUMN IF NOT EXISTS ear_notch_status VARCHAR(20) NOT NULL DEFAULT 'UNKNOWN';
+
+ALTER TABLE ads
+    ADD COLUMN IF NOT EXISTS microchip_number VARCHAR(32);
+
+ALTER TABLE ads
+    ADD COLUMN IF NOT EXISTS lost_date DATE;
+
+ALTER TABLE ads
+    ADD COLUMN IF NOT EXISTS distinctive_marks VARCHAR(1000);
+
+CREATE TABLE IF NOT EXISTS ad_colors
+(
+    ad_id BIGINT      NOT NULL,
+    color VARCHAR(30) NOT NULL,
+    CONSTRAINT pk_ad_colors PRIMARY KEY (ad_id, color),
+    CONSTRAINT fk_ad_colors_ad
+    FOREIGN KEY (ad_id) REFERENCES ads (id) ON DELETE CASCADE
+    );
+
+CREATE INDEX IF NOT EXISTS idx_ad_colors_ad_id
+    ON ad_colors (ad_id);
+
+CREATE INDEX IF NOT EXISTS idx_ads_microchip_number
+    ON ads (microchip_number)
+    WHERE microchip_number IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_ads_matching_candidates
+    ON ads (species, lost_date)
+    WHERE active = TRUE;

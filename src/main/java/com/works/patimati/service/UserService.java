@@ -38,11 +38,20 @@ public class UserService {
             return ResponseEntity.badRequest().body(errorResponse);
         }
 
+        if (request.getPhone() != null && userRepository.existsByPhone(request.getPhone())) {
+            Map<String, Object> errorResponse = Map.of(
+                    "success", false,
+                    "message", "Bu telefon numarası zaten kullanımda."
+            );
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
+
         User user = User.builder()
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
+                .phone(request.getPhone())
                 .role(User.Role.USER)
                 .enabled(true)
                 .build();
