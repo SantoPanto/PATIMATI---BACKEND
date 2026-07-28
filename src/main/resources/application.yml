@@ -38,7 +38,14 @@ jwt:
   secret-key: ${JWT_SECRET_KEY}
   expiration: 86400000 # Örnek token süresi # 24 Saat (Milisaniye cinsinden)
 
-# Frontend Yönlendirme URL'i
+# Uygulama ve Depolama Ayarları
 app:
   frontend:
     url: http://localhost:4200 # Frontend'in ayağa kalktığı adres
+  storage:
+    s3:
+      bucket: patimati-medya-kutusu
+      region: eu-central-1
+      maxFileCount: 3
+      maxFileSize: 5MB
+      presignedUrlDuration: 15m

@@ -57,7 +57,9 @@ public class SecurityConfig {
                                 "/api/auth/login",
                                 "/api/public/**",
                                 "/swagger-ui/**",
-                                "/v3/api-docs/**"
+                                "/v3/api-docs/**",
+                                "/api/auth/forgot-password",
+                                "/api/auth/reset-password"
                         ).permitAll() // Kayıt, giriş ve açık uçlara HERKES erişebilsin
                         .anyRequest().authenticated() // Diğer tüm uç noktalar için token/giriş zorunlu olsun
                 )
