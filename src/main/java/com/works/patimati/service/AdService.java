@@ -3,6 +3,7 @@ package com.works.patimati.service;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.Message;
 import com.google.firebase.messaging.Notification;
+import com.works.patimati.dto.AdCreateDto;
 import com.works.patimati.entity.Ad;
 import com.works.patimati.entity.User;
 import com.works.patimati.repository.AdRepository;
@@ -24,23 +25,35 @@ public class AdService {
     private final UserRepository userRepository;
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
-    //KISIM 3
     public List<Ad> findNearbyAds(double latitude, double longitude, double radiusInMeters) {
         Point userPoint = geometryFactory.createPoint(new Coordinate(longitude, latitude));
         return adRepository.findNearbyAds(userPoint, radiusInMeters);
     }
 
-    //
-    public Ad createAdAndNotifyNearbyUsers(Ad ad, double latitude, double longitude) {
-        Point adPoint = geometryFactory.createPoint(new Coordinate(longitude, latitude));
-        ad.setLocation(adPoint);
+    public Ad createAdAndNotifyNearbyUsers(AdCreateDto dto, User user) {
+        Point adPoint = geometryFactory.createPoint(new Coordinate(dto.getLongitude(), dto.getLatitude()));
+
+        Ad ad = Ad.builder()
+                .title(dto.getTitle())
+                .description(dto.getDescription())
+                .adType(dto.getAdType())
+                .location(adPoint)
+                .user(user)
+                .active(true)
+                .build();
+
         Ad savedAd = adRepository.save(ad);
 
-        // 5 km
+        // 5 km (5000 meter) radius push notifications
         List<User> nearbyUsers = userRepository.findUsersNearby(adPoint, 5000.0);
-        for (User user : nearbyUsers) {
-            if (user.getFcmToken() != null && !user.getFcmToken().isEmpty()) {
-                sendPushNotification(user.getFcmToken(), savedAd.getTitle(), savedAd.getDescription());
+
+        for (User u : nearbyUsers) {
+            if (u.getFcmToken() != null && !u.getFcmToken().isEmpty()) {
+                sendPushNotification(
+                        u.getFcmToken(),
+                        "Yakınınızda Olası İlan Eşleşmesi",
+                        "Yakınınızda yeni bir ilan paylaşıldı: " + savedAd.getTitle() + ". Kontrol etmek ister misiniz?"
+                );
             }
         }
 
@@ -52,14 +65,13 @@ public class AdService {
             Message message = Message.builder()
                     .setToken(token)
                     .setNotification(Notification.builder()
-                            .setTitle("Yakınınızda Yeni İlan: " + title)
+                            .setTitle(title)
                             .setBody(body)
                             .build())
                     .build();
             FirebaseMessaging.getInstance().send(message);
         } catch (Exception e) {
-
-            System.err.println("Push notification gönderilemedi: " + e.getMessage());
+            System.err.println("Push notification error: " + e.getMessage());
         }
     }
 }
