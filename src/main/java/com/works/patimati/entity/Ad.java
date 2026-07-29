@@ -28,7 +28,11 @@ public class Ad {
     @Enumerated(EnumType.STRING)
     private AdType adType; // LOST, FOUND, ADOPTION
 
-    // KISIM 3
+    // DRAFT, PUBLISHED, INACTIVE
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private AdStatus status = AdStatus.DRAFT;
+
     @Column(columnDefinition = "geography(Point, 4326)")
     private Point location;
 
@@ -36,9 +40,11 @@ public class Ad {
     @JoinColumn(name = "user_id")
     private User user;
 
-    private boolean active = true;
-
     public enum AdType {
         LOST, FOUND, ADOPTION
+    }
+
+    public enum AdStatus {
+        DRAFT, PUBLISHED, INACTIVE
     }
 }

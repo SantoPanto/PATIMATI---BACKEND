@@ -29,35 +29,72 @@ public class AdService {
         Point userPoint = geometryFactory.createPoint(new Coordinate(longitude, latitude));
         return adRepository.findNearbyAds(userPoint, radiusInMeters);
     }
-
-    public Ad createAdAndNotifyNearbyUsers(AdCreateDto dto, User user) {
+    // DRAFT
+    public Ad createDraftAd(AdCreateDto dto, User user) {
         Point adPoint = geometryFactory.createPoint(new Coordinate(dto.getLongitude(), dto.getLatitude()));
-
         Ad ad = Ad.builder()
                 .title(dto.getTitle())
                 .description(dto.getDescription())
                 .adType(dto.getAdType())
                 .location(adPoint)
                 .user(user)
-                .active(true)
+                .status(Ad.AdStatus.DRAFT)
                 .build();
+        return adRepository.save(ad);
+    }
 
-        Ad savedAd = adRepository.save(ad);
+    // PUBLISHED
+    public Ad publishAd(Long adId, User currentUser) {
+        Ad ad = adRepository.findById(adId)
+                .orElseThrow(() -> new IllegalArgumentException("İlan bulunamadı."));
 
-        // 5 km (5000 meter) radius push notifications
-        List<User> nearbyUsers = userRepository.findUsersNearby(adPoint, 5000.0);
+        if (!ad.getUser().getId().equals(currentUser.getId())) {
+            throw new IllegalArgumentException("Bu ilanı yayınlama yetkiniz yok.");
+        }
 
+        if (ad.getStatus() == Ad.AdStatus.PUBLISHED) {
+            throw new IllegalArgumentException("İlan zaten yayınlanmış.");
+        }
+
+        ad.setStatus(Ad.AdStatus.PUBLISHED);
+        Ad publishedAd = adRepository.save(ad);
+
+        //Push Bildirimi
+        List<User> nearbyUsers = userRepository.findUsersNearby(ad.getLocation(), 5000.0);
         for (User u : nearbyUsers) {
-            if (u.getFcmToken() != null && !u.getFcmToken().isEmpty()) {
+            if (u.getFcmToken() != null && !u.getFcmToken().isEmpty() && !u.getId().equals(currentUser.getId())) {
                 sendPushNotification(
                         u.getFcmToken(),
                         "Yakınınızda Olası İlan Eşleşmesi",
-                        "Yakınınızda yeni bir ilan paylaşıldı: " + savedAd.getTitle() + ". Kontrol etmek ister misiniz?"
+                        "Yakınınızda yeni bir ilan paylaşıldı: " + publishedAd.getTitle() + ". Kontrol etmek ister misiniz?"
                 );
             }
         }
 
-        return savedAd;
+        return publishedAd;
+    }
+
+    //İlan Düzenleme İsteği
+    public Ad updateAd(Long adId, AdCreateDto dto, User currentUser) {
+        Ad ad = adRepository.findById(adId)
+                .orElseThrow(() -> new IllegalArgumentException("İlan bulunamadı."));
+
+        if (!ad.getUser().getId().equals(currentUser.getId())) {
+            throw new IllegalArgumentException("Bu ilanı düzenleme yetkiniz yok.");
+        }
+
+        if (ad.getStatus() == Ad.AdStatus.PUBLISHED) {
+            //400 hatası
+            throw new IllegalArgumentException("Yayınlanmış ilanlar tekrar düzenlenemez. İlanı silip yeniden oluşturabilirsiniz.");
+        }
+
+        Point adPoint = geometryFactory.createPoint(new Coordinate(dto.getLongitude(), dto.getLatitude()));
+        ad.setTitle(dto.getTitle());
+        ad.setDescription(dto.getDescription());
+        ad.setAdType(dto.getAdType());
+        ad.setLocation(adPoint);
+
+        return adRepository.save(ad);
     }
 
     private void sendPushNotification(String token, String title, String body) {
