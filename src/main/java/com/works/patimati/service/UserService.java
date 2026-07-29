@@ -15,6 +15,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.util.Map;
 import java.util.Optional;
 
@@ -146,13 +148,27 @@ public class UserService {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(notFoundResponse);
     }
     // --- ÇIKIŞ YAP (LOGOUT) ---
+    @Transactional
     public ResponseEntity<?> logout() {
-        // Mevcut isteğin Spring Security bağlamını temizler
+        // 1. O anki giriş yapmış kullanıcıyı bul
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication != null && authentication.isAuthenticated()) {
+            String username = authentication.getName();
+
+            // 2. KULLANICININ BİLDİRİM TOKEN'INI (FCM TOKEN) SİL
+            // Böylece çıkış yapmış telefona artık PatiMati anlık bildirimi (push notification) GİTMEZ!
+            userRepository.findByEmail(username).ifPresent(user -> {
+                user.setFcmToken(null);
+                userRepository.save(user);
+            });
+        }
+
         SecurityContextHolder.clearContext();
 
         Map<String, Object> successResponse = Map.of(
                 "success", true,
-                "message", "Başarıyla çıkış yapıldı."
+                "message", "Başarıyla çıkış yapıldı ve bildirimler durduruldu."
         );
 
         return ResponseEntity.ok().body(successResponse);
