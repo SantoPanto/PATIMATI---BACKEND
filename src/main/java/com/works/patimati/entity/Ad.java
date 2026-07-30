@@ -1,6 +1,7 @@
 package com.works.patimati.entity;
 
 import com.works.patimati.entity.enums.AgeGroup;
+import com.works.patimati.entity.enums.AiStatus;
 import com.works.patimati.entity.enums.CoatPattern;
 import com.works.patimati.entity.enums.EyeColor;
 import com.works.patimati.entity.enums.PetColor;
@@ -10,7 +11,9 @@ import com.works.patimati.entity.enums.Species;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.type.SqlTypes;
 import org.locationtech.jts.geom.Point;
 
 import java.time.Instant;
@@ -142,6 +145,68 @@ public class Ad {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
+
+    // ---------------------------------------------------------------------
+    // AI analiz sonuçları (entegrasyon sözleşmesi §6)
+    // Bu alanları AI servisi doldurur; ilan CRUD'u bunlara yazmaz.
+    // ---------------------------------------------------------------------
+
+    /**
+     * İlanın HER fotoğrafı için bir vektör.
+     *
+     * <p>Neden liste: tek fotoğrafla eşleşme oranı gerçek veride %24'te kaldı
+     * (ölçüm raporu §4). Görsel skor tüm fotoğraf çiftlerinin en iyisinden
+     * alınır, bu yüzden ilan başına birden çok vektör saklanır.
+     */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "ai_embeddings", columnDefinition = "jsonb")
+    private List<AiPhotoVector> aiEmbeddings;
+
+    /** Eşleştirme skorunun %30'unu oluşturan etiketler: ["cat","tabby","brown"] */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "ai_labels", columnDefinition = "jsonb")
+    private List<String> aiLabels;
+
+    /**
+     * AI'ın tür tahmini — kullanıcının beyanı olan {@link #species}'ten AYRI.
+     * Sözleşme §7 kural 2: beyan önceliklidir, AI tahmini onu ezmez.
+     */
+    @Column(name = "ai_species", length = 16)
+    private String aiSpecies;
+
+    /** Bilgi amaçlı. FİLTRE DEĞİLDİR (sözleşme §7 kural 1) — melez oranı yüksek. */
+    @Column(name = "ai_breed", length = 64)
+    private String aiBreed;
+
+    @Column(name = "ai_breed_confidence")
+    private Float aiBreedConfidence;
+
+    /**
+     * Vektörü hangi model üretti (örn. "siglip2-animal/v2").
+     *
+     * <p>Model değişince eski vektörler yenileriyle kıyaslanamaz; bu alan
+     * olmadan hangilerinin bayat olduğu anlaşılamaz. AI tarafı sürümü
+     * tutmayan adayları eleyip raporlar.
+     */
+    @Column(name = "ai_model_version", length = 64)
+    private String aiModelVersion;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "ai_status", length = 16, nullable = false)
+    @Builder.Default
+    private AiStatus aiStatus = AiStatus.PENDING;
+
+    @Column(name = "ai_processed_at")
+    private Instant aiProcessedAt;
+
+    /**
+     * Tek bir fotoğrafın vektörü ve hangi adresten üretildiği.
+     *
+     * <p>Adresi vektörle birlikte saklamak, kullanıcı fotoğraf sırasını
+     * değiştirse bile hangi vektörün hangi kareye ait olduğunu korur.
+     */
+    public record AiPhotoVector(String photoUrl, float[] embedding) {
+    }
 
     public enum AdType {
         LOST, FOUND, ADOPTION

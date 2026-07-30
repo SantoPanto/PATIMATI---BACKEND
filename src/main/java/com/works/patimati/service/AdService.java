@@ -3,6 +3,7 @@ package com.works.patimati.service;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.Message;
 import com.google.firebase.messaging.Notification;
+import com.works.patimati.ai.AiAnalysisPublisher;
 import com.works.patimati.dto.ad.AdCreateRequest;
 import com.works.patimati.dto.ad.AdResponse;
 import com.works.patimati.dto.ad.AdUpdateRequest;
@@ -38,6 +39,7 @@ public class AdService {
     private final UserRepository userRepository;
     private final AdMapper adMapper;
     private final ImageStorageService imageStorageService;
+    private final AiAnalysisPublisher aiAnalysisPublisher;
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
     @Transactional
@@ -65,6 +67,13 @@ public class AdService {
         AdResponse response = toResponseWithTemporaryPhotoUrls(savedAd);
 
         notifyNearbyUsersSafely(savedAd, owner.getUid());
+
+        // AI analizini KUYRUĞA bırakır ve beklemez (entegrasyon sözleşmesi §1).
+        // Fotoğraf analizi 1-3 saniye sürüyor; senkron çağrı kullanıcıyı
+        // bekletirdi. Yayınlama hata verse bile ilan kaydedilmiş kalır:
+        // ai_status PENDING'de durur ve sonradan yeniden denenebilir.
+        aiAnalysisPublisher.publish(savedAd);
+
         return response;
     }
 
