@@ -24,8 +24,10 @@ import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -42,10 +44,18 @@ public class AdService {
     private final AiAnalysisPublisher aiAnalysisPublisher;
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
+    /**
+     * İlanı, yüklenen fotoğraflarıyla birlikte oluşturur.
+     *
+     * <p>Fotoğraflar önce depoya yüklenir, dönen kalıcı referanslar ilana
+     * yazılır. Veritabanına kayıt başarısız olursa yüklenen dosyalar geri
+     * silinir — aksi hâlde depoda sahipsiz nesneler birikir.
+     */
     @Transactional
     public AdResponse createAd(
             String ownerEmail,
-            AdCreateRequest request
+            AdCreateRequest request,
+            List<MultipartFile> images
     ) {
         User owner = findUserByEmail(ownerEmail);
 
@@ -63,7 +73,25 @@ public class AdService {
             ad.setLocation(location);
         }
 
-        Ad savedAd = adRepository.saveAndFlush(ad);
+        List<String> storedReferences = images == null || images.isEmpty()
+                ? List.of()
+                : imageStorageService.uploadImages(images);
+        if (!storedReferences.isEmpty()) {
+            ad.setPhotoUrls(new ArrayList<>(storedReferences));
+        }
+
+        Ad savedAd;
+        try {
+            savedAd = adRepository.saveAndFlush(ad);
+        } catch (RuntimeException exception) {
+            // Kayıt başarısızsa yüklenen dosyalar depoda kalmasın: kimse
+            // referanslarını bilmediği için sonsuza kadar yer kaplarlar.
+            if (!storedReferences.isEmpty()) {
+                imageStorageService.deleteImages(storedReferences);
+            }
+            throw exception;
+        }
+
         AdResponse response = toResponseWithTemporaryPhotoUrls(savedAd);
 
         notifyNearbyUsersSafely(savedAd, owner.getUid());
