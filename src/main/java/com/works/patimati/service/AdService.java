@@ -13,7 +13,6 @@ import com.works.patimati.mapper.AdMapper;
 import com.works.patimati.repository.AdRepository;
 import com.works.patimati.repository.UserRepository;
 import com.works.patimati.storage.ImageStorageService;
-import com.works.patimati.storage.InvalidImageException;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,10 +24,7 @@ import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
 @Service
@@ -47,34 +43,29 @@ public class AdService {
     @Transactional
     public AdResponse createAd(
             String ownerEmail,
-            AdCreateRequest request,
-            List<MultipartFile> images
+            AdCreateRequest request
     ) {
-        if (images == null || images.isEmpty()) {
-            throw new InvalidImageException(
-                    "İlan oluşturmak için en az bir fotoğraf yüklenmelidir"
-            );
-        }
-
         User owner = findUserByEmail(ownerEmail);
-        List<String> photoReferences =
-                imageStorageService.uploadImages(images);
 
-        try {
-            Ad ad = adMapper.toEntity(request);
-            ad.setUser(owner);
-            ad.setActive(true);
-            ad.setPhotoUrls(new ArrayList<>(photoReferences));
+        Ad ad = adMapper.toEntity(request);
 
-            Ad savedAd = adRepository.saveAndFlush(ad);
-            AdResponse response = toResponseWithTemporaryPhotoUrls(savedAd);
+        // Güvenli atamalar
+        ad.setUser(owner);
+        ad.setActive(true);
 
-            notifyNearbyUsersSafely(savedAd);
-            return response;
-        } catch (RuntimeException exception) {
-            deleteImagesSafely(photoReferences);
-            throw exception;
+        // MapStruct spatial point dönüşümünü yapmadıysa manuel fallback
+        if (ad.getLocation() == null && request.latitude() != null && request.longitude() != null) {
+            Point location = geometryFactory.createPoint(
+                    new Coordinate(request.longitude().doubleValue(), request.latitude().doubleValue())
+            );
+            ad.setLocation(location);
         }
+
+        Ad savedAd = adRepository.saveAndFlush(ad);
+        AdResponse response = toResponseWithTemporaryPhotoUrls(savedAd);
+
+        notifyNearbyUsersSafely(savedAd, owner.getUid());
+        return response;
     }
 
     @Transactional(readOnly = true)
@@ -93,10 +84,10 @@ public class AdService {
         Page<Ad> ads = adType == null
                 ? adRepository.findAllByActive(true, pageable)
                 : adRepository.findAllByAdTypeAndActive(
-                        adType,
-                        true,
-                        pageable
-                );
+                adType,
+                true,
+                pageable
+        );
 
         return ads.map(this::toResponseWithTemporaryPhotoUrls);
     }
@@ -141,7 +132,6 @@ public class AdService {
         adRepository.saveAndFlush(ad);
     }
 
-    //KISIM 3
     @Transactional(readOnly = true)
     public List<AdResponse> findNearbyAds(
             double latitude,
@@ -178,14 +168,14 @@ public class AdService {
         List<String> temporaryPhotoUrls = ad.getPhotoUrls() == null
                 ? List.of()
                 : ad.getPhotoUrls()
-                        .stream()
-                        .map(imageStorageService::createTemporaryReadUrl)
-                        .toList();
+                .stream()
+                .map(imageStorageService::createTemporaryReadUrl)
+                .toList();
 
         return adMapper.toResponse(ad, temporaryPhotoUrls);
     }
 
-    private void notifyNearbyUsersSafely(Ad ad) {
+    private void notifyNearbyUsersSafely(Ad ad, Long ownerUid) {
         if (ad.getLocation() == null) {
             return;
         }
@@ -196,13 +186,21 @@ public class AdService {
                     DEFAULT_NOTIFICATION_RADIUS_METERS
             );
 
+            String notificationTitle = "Olası Eşleşme!";
+            String notificationBody = "Kayıp ilanınızla uyuşabilecek yeni bir ilan var: " + ad.getTitle();
+
             for (User nearbyUser : nearbyUsers) {
+
+                if (nearbyUser.getUid() != null && nearbyUser.getUid().equals(ownerUid)) {
+                    continue;
+                }
+
                 String fcmToken = nearbyUser.getFcmToken();
                 if (fcmToken != null && !fcmToken.isBlank()) {
                     sendPushNotification(
                             fcmToken,
-                            ad.getTitle(),
-                            ad.getDescription()
+                            notificationTitle,
+                            notificationBody
                     );
                 }
             }
@@ -211,17 +209,6 @@ public class AdService {
                     "İlan oluşturuldu ancak yakındaki kullanıcılar belirlenemedi. adId={}",
                     ad.getId(),
                     exception
-            );
-        }
-    }
-
-    private void deleteImagesSafely(Collection<String> photoReferences) {
-        try {
-            imageStorageService.deleteImages(photoReferences);
-        } catch (RuntimeException cleanupException) {
-            log.warn(
-                    "Başarısız ilan oluşturma işleminden sonra fotoğraflar temizlenemedi",
-                    cleanupException
             );
         }
     }
@@ -237,8 +224,7 @@ public class AdService {
                     .build();
             FirebaseMessaging.getInstance().send(message);
         } catch (Exception e) {
-
-            System.err.println("Push notification gönderilemedi: " + e.getMessage());
+            log.error("Push notification gönderilemedi: {}", e.getMessage());
         }
     }
 }
