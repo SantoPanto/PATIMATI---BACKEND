@@ -4,6 +4,7 @@ import com.works.patimati.ai.dto.AiAnalysisRequest;
 import com.works.patimati.ai.dto.AiCandidate;
 import com.works.patimati.entity.Ad;
 import com.works.patimati.repository.AdRepository;
+import com.works.patimati.storage.ImageStorageService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +32,7 @@ public class AiAnalysisPublisher {
 
     private final RabbitTemplate aiRabbitTemplate;
     private final AdRepository adRepository;
+    private final ImageStorageService imageStorageService;
 
     /** Aday yarıçapı. Bildirim yarıçapından (5 km) FARKLIDIR — hayvan yürür. */
     @Value("${ai.matching.radius-km:25}")
@@ -61,13 +63,20 @@ public class AiAnalysisPublisher {
                 return;
             }
 
+            List<String> photoUrls = toDownloadableUrls(ad.getPhotoUrls());
+            if (photoUrls.isEmpty()) {
+                log.warn("İlan {} için indirilebilir fotoğraf adresi üretilemedi",
+                        ad.getId());
+                return;
+            }
+
             AiAnalysisRequest request = new AiAnalysisRequest(
                     AiRabbitConfig.SCHEMA_VERSION,
                     UUID.randomUUID().toString(),
                     ad.getId(),
                     ad.getAdType().name(),
                     declaredSpecies(ad),
-                    List.copyOf(ad.getPhotoUrls()),
+                    photoUrls,
                     collectCandidates(ad));
 
             aiRabbitTemplate.convertAndSend(
@@ -115,6 +124,47 @@ public class AiAnalysisPublisher {
             return false;
         }
         return true;
+    }
+
+    /**
+     * Depolama referanslarını AI'ın indirebileceği HTTPS adreslerine çevirir.
+     *
+     * <p><b>Bu dönüşüm zorunlu.</b> Veritabanında fotoğraflar
+     * {@code s3://kova/ads/2026/07/uuid.jpg} biçiminde bir <i>depolama
+     * referansı</i> olarak duruyor — HTTP adresi değil. AI servisi yalnızca
+     * https indirir ve {@code s3://} şemasını reddeder; olduğu gibi
+     * gönderilseydi HER analiz {@code PHOTO_DOWNLOAD_FAILED} ile dönerdi.
+     *
+     * <p>Şu an süreli özel adres (presigned URL) üretiliyor, geçerlilik süresi
+     * {@code app.storage.presignedUrlDuration} (15 dk). Kuyruk normalde
+     * saniyeler içinde işlediği için bu bol bir pay; ancak AI servisi uzun süre
+     * kapalı kalırsa bekleyen mesajın adresi ölür ve o ilan FAILED olur —
+     * yeniden analiz gerekir.
+     *
+     * <p>Ekip kararına göre fotoğraflar ileride kendi alan adımızın altından
+     * ({@code cdn.<alanadi>}) <b>public</b> sunulacak. O zaman burada süreli
+     * adres üretmeye gerek kalmaz ve süre sorunu tümden ortadan kalkar.
+     *
+     * <p><b>Ya hepsi ya hiçbiri.</b> Bir adres üretilemezse kısaltılmış liste
+     * gönderilmez, hiç gönderilmez. Sebebi ince: sonuçtaki vektörlerin sırası
+     * gönderilen adreslerin sırasıyla aynıdır ve dinleyici bunları ilanın
+     * <i>tam</i> fotoğraf listesiyle eşler. Araya bir fotoğraf atlanırsa sıra
+     * kayar ve üçüncü fotoğrafın vektörü ikinciye yazılır — hata vermeden,
+     * sessizce yanlış veri. Eksik analiz, yanlış analizden iyidir.
+     */
+    private List<String> toDownloadableUrls(List<String> storageReferences) {
+        List<String> urls = new ArrayList<>(storageReferences.size());
+        for (String reference : storageReferences) {
+            try {
+                urls.add(imageStorageService.createTemporaryReadUrl(reference));
+            } catch (RuntimeException e) {
+                log.warn("Fotoğraf adresi üretilemedi ({}): {} — vektör sırası"
+                        + " kaymasın diye bu ilan hiç gönderilmiyor",
+                        reference, e.getMessage());
+                return List.of();
+            }
+        }
+        return urls;
     }
 
     /**

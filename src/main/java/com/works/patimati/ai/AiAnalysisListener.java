@@ -119,10 +119,16 @@ public class AiAnalysisListener {
     /**
      * Vektörleri fotoğraf adresleriyle eşler.
      *
+     * <p><b>Burada KALICI depolama referansı saklanır</b> ({@code s3://...}),
+     * AI'ya gönderilen süreli adres değil. Süreli adres 15 dakikada ölür;
+     * veritabanına yazmanın anlamı olmaz.
+     *
      * <p>Sözleşme, {@code analysis.embeddings} sırasının {@code photo_urls} ile
      * aynı olduğunu söyler. Yine de sayılar tutmayabilir: indirilemeyen
      * fotoğraflar atlanır. O yüzden kısa olan listeye göre eşliyoruz —
      * yanlış adresi yanlış vektöre bağlamaktansa eksik bağlamak yeğdir.
+     * (Yayıncı taraf da bu yüzden kısmi liste göndermiyor; bkz.
+     * {@code AiAnalysisPublisher.toDownloadableUrls}.)
      */
     private List<Ad.AiPhotoVector> pairVectorsWithUrls(List<String> urls, List<float[]> vectors) {
         if (vectors == null || vectors.isEmpty()) {
