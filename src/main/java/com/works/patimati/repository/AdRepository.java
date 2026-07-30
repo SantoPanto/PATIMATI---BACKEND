@@ -13,6 +13,6 @@ import java.util.List;
 public interface AdRepository extends JpaRepository<Ad, Long> {
 
     // KISIM 3
-    @Query(value = "SELECT * FROM ads a WHERE a.active = true AND ST_DWithin(a.location::geography, :userPoint::geography, :distanceInMeters) = true", nativeQuery = true)
+    @Query(value = "SELECT * FROM ads a WHERE a.active = true AND ST_DWithin(a.location, :userPoint, :distanceInMeters) = true", nativeQuery = true)
     List<Ad> findNearbyAds(@Param("userPoint") Point userPoint, @Param("distanceInMeters") double distanceInMeters);
 }

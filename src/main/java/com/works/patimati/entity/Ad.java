@@ -48,8 +48,8 @@ public class Ad {
     @Builder.Default
     private List<String> photoUrls = new ArrayList<>();
 
-    // KISIM 3: Coğrafi Konum (GIS)
-    @Column(columnDefinition = "geometry(Point, 4326)")
+    // Coğrafi Konum (GIS) - PostGIS Geography türü tercih edildi
+    @Column(columnDefinition = "geography(Point, 4326)")
     private Point location;
 
     @ManyToOne(fetch = FetchType.LAZY)

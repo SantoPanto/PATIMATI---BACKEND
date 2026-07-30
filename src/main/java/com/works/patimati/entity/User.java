@@ -2,7 +2,7 @@ package com.works.patimati.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.locationtech.jts.geom.Point; 
+import org.locationtech.jts.geom.Point;
 
 @Entity
 @Table(name = "users")
@@ -15,7 +15,7 @@ public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long uid;
+    private Long id; // Standart olması açısından 'id' olarak güncellendi
 
     @Column(name = "google_id", unique = true)
     private String googleId;
@@ -23,10 +23,10 @@ public class User {
     @Column(nullable = false, unique = true, length = 100)
     private String email;
 
-    @Column(name = "first_name", nullable = false, length = 50)
+    @Column(name = "first_name", length = 50)
     private String firstName;
 
-    @Column(name = "last_name", nullable = false, length = 50)
+    @Column(name = "last_name", length = 50)
     private String lastName;
 
     @Column(length = 255)
@@ -42,14 +42,13 @@ public class User {
     @Column(name = "fcm_token")
     private String fcmToken;
 
-    // Hesabı kapatıp açmak için kontrol
-    private boolean enabled;
+    @Builder.Default
+    private boolean enabled = true;
 
-    // KISIM 3: Coğrafi Konum
-    @Column(columnDefinition = "geometry(Point, 4326)")
+    // Coğrafi Konum (PostGIS Spatial)
+    @Column(columnDefinition = "geography(Point, 4326)")
     private Point location;
 
-    // Rol yönetimi için Enum tanımı
     public enum Role {
         GUEST, USER, ADMIN
     }
