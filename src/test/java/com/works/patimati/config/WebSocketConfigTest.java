@@ -9,6 +9,9 @@ import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.StompWebSocketEndpointRegistration;
 
+import com.works.patimati.security.WebSocketChannelInterceptor;
+import org.springframework.messaging.simp.config.ChannelRegistration;
+
 import java.util.List;
 
 import static org.mockito.Mockito.verify;
@@ -33,6 +36,11 @@ class WebSocketConfigTest {
 
     @Mock
     private StompWebSocketEndpointRegistration endpointRegistration;
+    @Mock
+    private WebSocketChannelInterceptor webSocketChannelInterceptor;
+
+    @Mock
+    private ChannelRegistration channelRegistration;
 
     private WebSocketConfig webSocketConfig;
 
@@ -40,7 +48,10 @@ class WebSocketConfigTest {
     void setUp() {
         // Her testte üretim koduyla aynı tip güvenli properties nesnesi kullanılır.
         WebSocketProperties properties = new WebSocketProperties(ALLOWED_ORIGINS);
-        webSocketConfig = new WebSocketConfig(properties);
+        webSocketConfig = new WebSocketConfig(
+                properties,
+                webSocketChannelInterceptor
+        );
     }
 
     @Test
@@ -84,5 +95,18 @@ class WebSocketConfigTest {
 
         // SockJS geri dönüş desteğinin unutulmadığını doğrular.
         verify(endpointRegistration).withSockJS();
+    }
+
+    @Test
+    void shouldRegisterSecurityInterceptorOnInboundChannel() {
+        // İstemciden gelen STOMP paketleri için inbound kanal yapılandırılır.
+        webSocketConfig.configureClientInboundChannel(channelRegistration);
+
+        /*
+         * JWT kontrolünü gerçekleştiren interceptor'ın
+         * inbound kanala eklendiğini doğrular.
+         */
+        verify(channelRegistration)
+                .interceptors(webSocketChannelInterceptor);
     }
 }

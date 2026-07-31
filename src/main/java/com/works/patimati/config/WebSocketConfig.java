@@ -1,7 +1,9 @@
 package com.works.patimati.config;
 
+import com.works.patimati.security.WebSocketChannelInterceptor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
@@ -28,12 +30,17 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     static final String PRIVATE_QUEUE_PREFIX = "/queue";
 
     private final WebSocketProperties properties;
+    private final WebSocketChannelInterceptor webSocketChannelInterceptor;
 
-    public WebSocketConfig(WebSocketProperties properties) {
+    public WebSocketConfig(
+            WebSocketProperties properties,
+            WebSocketChannelInterceptor webSocketChannelInterceptor)
+    {
         this.properties = properties;
+        this.webSocketChannelInterceptor = webSocketChannelInterceptor;
     }
 
-    /**
+    /*
      * STOMP mesajlarının uygulama metotlarına mı yoksa broker'a mı
      * yönlendirileceğini belirler.
      */
@@ -68,5 +75,19 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         registry.addEndpoint(WEBSOCKET_ENDPOINT)
                 .setAllowedOrigins(properties.allowedOrigins().toArray(String[]::new))
                 .withSockJS();
+    }
+
+    /*
+     * İstemciden sunucuya gelen STOMP paketlerinin güvenlik
+     * interceptor'ından geçmesini sağlar.
+     */
+
+    @Override
+    public void configureClientInboundChannel(ChannelRegistration registration) {
+        /*
+         * Bu kayıt yapılmazsa WebSocketChannelInterceptor bir Spring bean'i
+         * olsa bile CONNECT paketlerini yakalayamaz ve JWT kontrolü çalışmaz.
+         */
+        registration.interceptors(webSocketChannelInterceptor);
     }
 }
