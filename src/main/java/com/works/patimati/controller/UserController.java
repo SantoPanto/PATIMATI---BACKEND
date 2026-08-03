@@ -1,12 +1,15 @@
 package com.works.patimati.controller;
 
 import com.works.patimati.dto.*;
+import com.works.patimati.dto.User.UserResponseDTO;
 import com.works.patimati.service.PasswordResetService;
 import com.works.patimati.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -49,5 +52,11 @@ public class UserController {
     @PostMapping("/reset-password")
     public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         return passwordResetService.processResetPassword(request);
+    }
+
+    @GetMapping("/userlist")
+    public ResponseEntity<List<UserResponseDTO>> getAllUsers() {
+        List<UserResponseDTO> users = authService.getAllUsers();
+        return ResponseEntity.ok(users);
     }
 }

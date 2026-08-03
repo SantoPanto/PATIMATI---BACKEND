@@ -1,5 +1,7 @@
 package com.works.patimati.exception;
 
+import com.fasterxml.jackson.databind.JsonMappingException.Reference;
+import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import com.works.patimati.storage.ImageStorageException;
 import com.works.patimati.storage.InvalidImageException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -7,11 +9,11 @@ import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
@@ -21,6 +23,7 @@ import org.springframework.web.multipart.support.MissingServletRequestPartExcept
 import java.net.URI;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -33,6 +36,32 @@ public class GlobalExceptionHandler {
         return problem(
                 HttpStatus.NOT_FOUND,
                 "Kaynak bulunamadı",
+                exception.getMessage(),
+                request
+        );
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ProblemDetail> handleIllegalArgument(
+            IllegalArgumentException exception,
+            HttpServletRequest request
+    ) {
+        return problem(
+                HttpStatus.BAD_REQUEST,
+                "Geçersiz parametre",
+                exception.getMessage(),
+                request
+        );
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ProblemDetail> handleIllegalState(
+            IllegalStateException exception,
+            HttpServletRequest request
+    ) {
+        return problem(
+                HttpStatus.CONFLICT,
+                "İşlem çakışması",
                 exception.getMessage(),
                 request
         );
@@ -88,10 +117,48 @@ public class GlobalExceptionHandler {
         ProblemDetail detail = createProblem(
                 HttpStatus.BAD_REQUEST,
                 "Doğrulama hatası",
-                "Gönderilen ilan bilgileri geçersiz",
+                "Gönderilen istek verileri doğrulamadan geçemedi",
                 request
         );
         detail.setProperty("validationErrors", fieldErrors);
+
+        return ResponseEntity.badRequest().body(detail);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ProblemDetail> handleHttpMessageNotReadable(
+            HttpMessageNotReadableException exception,
+            HttpServletRequest request
+    ) {
+        Map<String, String> fieldErrors = new LinkedHashMap<>();
+        String detailMessage = "Gönderilen JSON verisi korrupt veya okunabilir biçimde değil.";
+
+        Throwable mostSpecificCause = exception.getMostSpecificCause();
+        if (mostSpecificCause instanceof InvalidFormatException invalidFormatException) {
+            String fieldName = invalidFormatException.getPath().stream()
+                    .map(Reference::getFieldName)
+                    .collect(Collectors.joining("."));
+            String errorMessage = "Geçersiz değer: '" + invalidFormatException.getValue() + "'";
+            if (invalidFormatException.getTargetType() != null && invalidFormatException.getTargetType().isEnum()) {
+                errorMessage = "'" + invalidFormatException.getValue() + "' geçerli bir enum değeri değil.";
+            }
+            if (!fieldName.isEmpty()) {
+                fieldErrors.put(fieldName, errorMessage);
+            }
+            detailMessage = "JSON veri tipi veya alan formatı geçersiz: " + (fieldName.isEmpty() ? errorMessage : fieldName + " -> " + errorMessage);
+        } else if (mostSpecificCause != null && mostSpecificCause.getMessage() != null) {
+            detailMessage = mostSpecificCause.getMessage();
+        }
+
+        ProblemDetail detail = createProblem(
+                HttpStatus.BAD_REQUEST,
+                "Geçersiz JSON Verisi",
+                detailMessage,
+                request
+        );
+        if (!fieldErrors.isEmpty()) {
+            detail.setProperty("validationErrors", fieldErrors);
+        }
 
         return ResponseEntity.badRequest().body(detail);
     }
@@ -102,7 +169,6 @@ public class GlobalExceptionHandler {
             MethodArgumentTypeMismatchException.class,
             MissingServletRequestPartException.class,
             MissingServletRequestParameterException.class,
-            HttpMessageNotReadableException.class,
             MultipartException.class
     })
     public ResponseEntity<ProblemDetail> handleInvalidRequest(
