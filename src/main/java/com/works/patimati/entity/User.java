@@ -15,6 +15,11 @@ public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    /*
+     * Java tarafındaki uid alanı, veritabanındaki users.id
+     * primary key kolonuna karşılık gelir.
+     */
+    @Column(name = "id")
     private Long uid;
 
     @Column(name = "google_id", unique = true)
