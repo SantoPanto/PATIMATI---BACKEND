@@ -7,7 +7,8 @@ import com.works.patimati.entity.enums.ComplaintReason;
 import com.works.patimati.entity.enums.ComplaintStatus;
 import com.works.patimati.exception.GlobalExceptionHandler;
 import com.works.patimati.exception.ResourceNotFoundException;
-import com.works.patimati.service.ComplaintService;
+import com.works.patimati.service.AdComplaintService;
+import com.works.patimati.service.UserComplaintService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -28,15 +29,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 class ComplaintControllerTest {
 
-    private ComplaintService complaintService;
+    private UserComplaintService userComplaintService;
+    private AdComplaintService adComplaintService;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        complaintService = mock(ComplaintService.class);
+        userComplaintService = mock(UserComplaintService.class);
+        adComplaintService = mock(AdComplaintService.class);
 
         mockMvc = MockMvcBuilders
-                .standaloneSetup(new ComplaintController(complaintService))
+                .standaloneSetup(new ComplaintController(userComplaintService, adComplaintService))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
@@ -49,14 +52,14 @@ class ComplaintControllerTest {
                 100L,
                 "reporter@patimati.com",
                 10L,
-                200L, // ilan sahibinin uid'si backend'de set edilir
+                200L,
                 ComplaintReason.SAHTE_ILAN,
                 "Şüpheli sahte ilan açıklaması",
                 ComplaintStatus.BEKLEMEDE,
                 Instant.now()
         );
 
-        when(complaintService.createAdComplaint(eq("reporter@patimati.com"), any(AdComplaintRequestDTO.class)))
+        when(adComplaintService.createAdComplaint(eq("reporter@patimati.com"), any(AdComplaintRequestDTO.class)))
                 .thenReturn(mockResponse);
 
         String jsonPayload = """
@@ -89,15 +92,15 @@ class ComplaintControllerTest {
                 2L,
                 100L,
                 "reporter@patimati.com",
-                null, // reportedAdId null
-                300L, // reportedUserId
+                null,
+                300L,
                 ComplaintReason.DOLANDIRICILIK,
                 "Şüpheli kullanıcı faaliyeti",
                 ComplaintStatus.BEKLEMEDE,
                 Instant.now()
         );
 
-        when(complaintService.createUserComplaint(eq("reporter@patimati.com"), any(UserComplaintRequestDTO.class)))
+        when(userComplaintService.createUserComplaint(eq("reporter@patimati.com"), any(UserComplaintRequestDTO.class)))
                 .thenReturn(mockResponse);
 
         String jsonPayload = """
@@ -171,7 +174,7 @@ class ComplaintControllerTest {
     @Test
     @DisplayName("Şikayet edilen ilan veritabanında bulunamadığında 404 Not Found dönmeli")
     void shouldReturn404WhenReportedAdNotFound() throws Exception {
-        when(complaintService.createAdComplaint(eq("reporter@patimati.com"), any(AdComplaintRequestDTO.class)))
+        when(adComplaintService.createAdComplaint(eq("reporter@patimati.com"), any(AdComplaintRequestDTO.class)))
                 .thenThrow(new ResourceNotFoundException("Şikayet edilen ilan bulunamadı ID: 999"));
 
         String jsonPayload = """
@@ -196,7 +199,7 @@ class ComplaintControllerTest {
     @Test
     @DisplayName("Şikayet edilen kullanıcı veritabanında bulunamadığında 404 Not Found dönmeli")
     void shouldReturn404WhenReportedUserNotFound() throws Exception {
-        when(complaintService.createUserComplaint(eq("reporter@patimati.com"), any(UserComplaintRequestDTO.class)))
+        when(userComplaintService.createUserComplaint(eq("reporter@patimati.com"), any(UserComplaintRequestDTO.class)))
                 .thenThrow(new ResourceNotFoundException("Şikayet edilen kullanıcı bulunamadı ID: 888"));
 
         String jsonPayload = """
@@ -221,7 +224,7 @@ class ComplaintControllerTest {
     @Test
     @DisplayName("Mükerrer şikayette IllegalStateException 409 Conflict dönmeli")
     void shouldReturnConflictWhenDuplicateComplaintExists() throws Exception {
-        when(complaintService.createAdComplaint(eq("reporter@patimati.com"), any(AdComplaintRequestDTO.class)))
+        when(adComplaintService.createAdComplaint(eq("reporter@patimati.com"), any(AdComplaintRequestDTO.class)))
                 .thenThrow(new IllegalStateException("Bu ilan için halihazırda incelenmekte olan bir şikayetiniz bulunmaktadır."));
 
         String jsonPayload = """
