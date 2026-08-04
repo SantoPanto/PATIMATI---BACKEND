@@ -7,6 +7,7 @@ import com.works.patimati.entity.enums.PetColor;
 import com.works.patimati.entity.enums.PetGender;
 import com.works.patimati.entity.enums.PresenceStatus;
 import com.works.patimati.entity.enums.Species;
+import com.works.patimati.entity.enums.AiStatus; // <-- AiStatus import edildi
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -122,6 +123,12 @@ public class Ad {
     @Column(name = "photo_url", nullable = false, length = 2048)
     @Builder.Default
     private List<String> photoUrls = new ArrayList<>();
+
+    // Yeni eklenen AiStatus alanı
+    @Enumerated(EnumType.STRING)
+    @Column(name = "ai_status", nullable = false, length = 30)
+    @Builder.Default
+    private AiStatus aiStatus = AiStatus.PENDING;
 
     // KISIM 3: Coğrafi Konum (GIS)
     @Column(columnDefinition = "geometry(Point, 4326)")
