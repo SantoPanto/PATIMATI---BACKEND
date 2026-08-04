@@ -3,6 +3,7 @@ package com.works.patimati.service;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.Message;
 import com.google.firebase.messaging.Notification;
+import com.works.patimati.ai.AiAnalysisPublisher;
 import com.works.patimati.dto.ad.AdCreateRequest;
 import com.works.patimati.dto.ad.AdResponse;
 import com.works.patimati.dto.ad.AdUpdateRequest;
@@ -14,7 +15,6 @@ import com.works.patimati.mapper.AdMapper;
 import com.works.patimati.repository.AdRepository;
 import com.works.patimati.repository.UserRepository;
 import com.works.patimati.storage.ImageStorageService;
-import com.works.patimati.storage.InvalidImageException;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,11 +25,10 @@ import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
 @Service
@@ -43,8 +42,16 @@ public class AdService {
     private final UserRepository userRepository;
     private final AdMapper adMapper;
     private final ImageStorageService imageStorageService;
+    private final AiAnalysisPublisher aiAnalysisPublisher;
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
+    /**
+     * İlanı, yüklenen fotoğraflarıyla birlikte oluşturur.
+     *
+     * <p>Fotoğraflar önce depoya yüklenir, dönen kalıcı referanslar ilana
+     * yazılır. Veritabanına kayıt başarısız olursa yüklenen dosyalar geri
+     * silinir — aksi hâlde depoda sahipsiz nesneler birikir.
+     */
     @Transactional
     public AdResponse createAd(
             String ownerEmail,
@@ -57,6 +64,7 @@ public class AdService {
             throw new InvalidImageException(
                     "İlan oluşturmak için en az bir fotoğraf yüklenmelidir"
             );
+            ad.setLocation(location);
         }
         */
 
@@ -67,6 +75,7 @@ public class AdService {
         // Doğrudan sahte bir URL listesi veriyoruz ki silme veya yükleme hatası almayalım.
         List<String> photoReferences = List.of("https://dummyimage.com/600x400/000/fff&text=Patimati+Test");
 
+        Ad savedAd;
         try {
             Ad ad = adMapper.toEntity(request);
             ad.setUser(owner);
@@ -89,6 +98,18 @@ public class AdService {
             // deleteImagesSafely(photoReferences);
             throw exception;
         }
+
+        AdResponse response = toResponseWithTemporaryPhotoUrls(savedAd);
+
+        notifyNearbyUsersSafely(savedAd, owner.getUid());
+
+        // AI analizini KUYRUĞA bırakır ve beklemez (entegrasyon sözleşmesi §1).
+        // Fotoğraf analizi 1-3 saniye sürüyor; senkron çağrı kullanıcıyı
+        // bekletirdi. Yayınlama hata verse bile ilan kaydedilmiş kalır:
+        // ai_status PENDING'de durur ve sonradan yeniden denenebilir.
+        aiAnalysisPublisher.publish(savedAd);
+
+        return response;
     }
 
     @Transactional(readOnly = true)
@@ -107,10 +128,10 @@ public class AdService {
         Page<Ad> ads = adType == null
                 ? adRepository.findAllByActive(true, pageable)
                 : adRepository.findAllByAdTypeAndActive(
-                        adType,
-                        true,
-                        pageable
-                );
+                adType,
+                true,
+                pageable
+        );
 
         return ads.map(this::toResponseWithTemporaryPhotoUrls);
     }
@@ -155,7 +176,6 @@ public class AdService {
         adRepository.saveAndFlush(ad);
     }
 
-    //KISIM 3
     @Transactional(readOnly = true)
     public List<AdResponse> findNearbyAds(
             double latitude,
@@ -206,7 +226,7 @@ public class AdService {
         return adMapper.toResponse(ad, temporaryPhotoUrls);
     }
 
-    private void notifyNearbyUsersSafely(Ad ad) {
+    private void notifyNearbyUsersSafely(Ad ad, Long ownerUid) {
         if (ad.getLocation() == null) {
             return;
         }
@@ -217,13 +237,21 @@ public class AdService {
                     DEFAULT_NOTIFICATION_RADIUS_METERS
             );
 
+            String notificationTitle = "Olası Eşleşme!";
+            String notificationBody = "Kayıp ilanınızla uyuşabilecek yeni bir ilan var: " + ad.getTitle();
+
             for (User nearbyUser : nearbyUsers) {
+
+                if (nearbyUser.getUid() != null && nearbyUser.getUid().equals(ownerUid)) {
+                    continue;
+                }
+
                 String fcmToken = nearbyUser.getFcmToken();
                 if (fcmToken != null && !fcmToken.isBlank()) {
                     sendPushNotification(
                             fcmToken,
-                            ad.getTitle(),
-                            ad.getDescription()
+                            notificationTitle,
+                            notificationBody
                     );
                 }
             }
@@ -232,17 +260,6 @@ public class AdService {
                     "İlan oluşturuldu ancak yakındaki kullanıcılar belirlenemedi. adId={}",
                     ad.getId(),
                     exception
-            );
-        }
-    }
-
-    private void deleteImagesSafely(Collection<String> photoReferences) {
-        try {
-            imageStorageService.deleteImages(photoReferences);
-        } catch (RuntimeException cleanupException) {
-            log.warn(
-                    "Başarısız ilan oluşturma işleminden sonra fotoğraflar temizlenemedi",
-                    cleanupException
             );
         }
     }
@@ -258,8 +275,7 @@ public class AdService {
                     .build();
             FirebaseMessaging.getInstance().send(message);
         } catch (Exception e) {
-
-            System.err.println("Push notification gönderilemedi: " + e.getMessage());
+            log.error("Push notification gönderilemedi: {}", e.getMessage());
         }
     }
 

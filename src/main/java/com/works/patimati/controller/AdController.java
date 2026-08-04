@@ -15,8 +15,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.MediaType;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -27,15 +29,10 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.net.URI;
 import java.util.List;
-
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 
 @Validated
 @RestController
@@ -47,21 +44,28 @@ public class AdController {
 
     private final AdService adService;
 
+    /**
+     * İlanı fotoğraflarıyla birlikte oluşturur.
+     *
+     * <p>İstek {@code multipart/form-data}: {@code ad} alanı ilan
+     * bilgilerini taşıyan JSON, {@code images} alanı ise yüklenen dosyalar.
+     * Fotoğraf zorunlu değil ama <b>şiddetle önerilir</b>: AI eşleştirmesi
+     * fotoğrafsız ilanı analiz edemez, üstelik ölçümlere göre birden çok
+     * fotoğraf eşleşme başarısını en çok artıran tek etken.
+     */
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<AdResponse> createAd(
-            Authentication authentication,
             @Valid @RequestPart("ad") AdCreateRequest request,
-            @RequestPart("images") List<MultipartFile> images
+            @RequestPart(value = "images", required = false) List<MultipartFile> images,
+            Authentication authentication
     ) {
-        AdResponse createdAd = adService.createAd(
-                authentication.getName(),
-                request,
-                images
-        );
+        AdResponse response = adService.createAd(authentication.getName(), request, images);
 
+        // 201 Created + Location: yeni kaynağın adresi. REST sözleşmesinin
+        // beklediği yanıt bu; testler de bunu doğruluyor.
         return ResponseEntity
-                .created(URI.create("/api/ads/" + createdAd.id()))
-                .body(createdAd);
+                .created(URI.create("/api/ads/" + response.id()))
+                .body(response);
     }
 
     @GetMapping("/{adId}")
@@ -136,7 +140,6 @@ public class AdController {
         return ResponseEntity.noContent().build();
     }
 
-    // KISIM 3: Konum tabanlı yakın ilan sorgusu.
     @GetMapping("/nearby")
     public ResponseEntity<List<AdResponse>> getNearbyAds(
             @RequestParam
