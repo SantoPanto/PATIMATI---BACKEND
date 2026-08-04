@@ -15,6 +15,7 @@ import com.works.patimati.mapper.AdMapper;
 import com.works.patimati.repository.AdRepository;
 import com.works.patimati.repository.UserRepository;
 import com.works.patimati.storage.ImageStorageService;
+import com.works.patimati.storage.InvalidImageException;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,22 +59,15 @@ public class AdService {
             AdCreateRequest request,
             List<MultipartFile> images
     ) {
-        //  NULL KONTROL
-        /*
         if (images == null || images.isEmpty()) {
             throw new InvalidImageException(
                     "İlan oluşturmak için en az bir fotoğraf yüklenmelidir"
             );
-            ad.setLocation(location);
         }
-        */
 
         User owner = findUserByEmail(ownerEmail);
 
-
-        // Gerçek S3 / Firebase servisi
-        // Doğrudan sahte bir URL listesi veriyoruz ki silme veya yükleme hatası almayalım.
-        List<String> photoReferences = List.of("https://dummyimage.com/600x400/000/fff&text=Patimati+Test");
+        List<String> photoReferences = imageStorageService.uploadImages(images);
 
         Ad savedAd;
         try {
@@ -81,21 +75,13 @@ public class AdService {
             ad.setUser(owner);
             ad.setActive(true);
 
-            // Eğer builder kullanıyorsan veya set ediyorsan aiStatus zaten Pending geliyor:
             ad.setAiStatus(AiStatus.PENDING);
 
-            // Fotoğraf URL'lerini güvenli bir şekilde set ediyoruz
             ad.setPhotoUrls(new ArrayList<>(photoReferences));
 
-            Ad savedAd = adRepository.saveAndFlush(ad);
-
-
-            AdResponse response = adMapper.toResponse(savedAd);
-
-            return response;
+            savedAd = adRepository.saveAndFlush(ad);
         } catch (RuntimeException exception) {
-            // Hata durumunda S3'ten silme tetiklenmesin diye burayı da geçici olarak boş bırakabiliriz
-            // deleteImagesSafely(photoReferences);
+            deleteImagesSafely(photoReferences);
             throw exception;
         }
 
@@ -110,6 +96,14 @@ public class AdService {
         aiAnalysisPublisher.publish(savedAd);
 
         return response;
+    }
+
+    private void deleteImagesSafely(List<String> photoReferences) {
+        try {
+            imageStorageService.deleteImages(photoReferences);
+        } catch (RuntimeException exception) {
+            log.warn("Yüklenen fotoğraflar silinemedi: {}", photoReferences, exception);
+        }
     }
 
     @Transactional(readOnly = true)

@@ -8,7 +8,6 @@ import com.works.patimati.entity.enums.PetColor;
 import com.works.patimati.entity.enums.PetGender;
 import com.works.patimati.entity.enums.PresenceStatus;
 import com.works.patimati.entity.enums.Species;
-import com.works.patimati.entity.enums.AiStatus; // <-- AiStatus import edildi
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -197,11 +196,6 @@ public class Ad {
      */
     @Column(name = "ai_model_version", length = 64)
     private String aiModelVersion;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "ai_status", length = 16, nullable = false)
-    @Builder.Default
-    private AiStatus aiStatus = AiStatus.PENDING;
 
     @Column(name = "ai_processed_at")
     private Instant aiProcessedAt;

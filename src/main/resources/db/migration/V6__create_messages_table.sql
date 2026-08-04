@@ -1,19 +1,18 @@
 /*
  * Kullanıcılar arasındaki mesajları kalıcı olarak saklayan tabloyu oluşturur.
  *
- * sender_id ve recipient_id alanları users tablosunun id primary key
- * kolonuna bağlanır. Java tarafındaki User.uid alanı da @Column(name = "id")
- * ile aynı kolona eşlenmiştir.
+ * sender_id ve recipient_id alanları users tablosunun uid primary key
+ * kolonuna bağlanır.
  */
 CREATE TABLE messages
 (
     -- Mesajın benzersiz veritabanı kimliği
     id BIGSERIAL PRIMARY KEY,
 
-    -- Mesajı gönderen kullanıcının users.id değeri
+    -- Mesajı gönderen kullanıcının users.uid değeri
     sender_id BIGINT NOT NULL,
 
-    -- Mesajı alan kullanıcının users.id değeri
+    -- Mesajı alan kullanıcının users.uid değeri
     recipient_id BIGINT NOT NULL,
 
     -- Mesaj içeriği entity ile aynı şekilde 2000 karakterle sınırlandırılır
@@ -34,11 +33,10 @@ CREATE TABLE messages
 
     /*
      * Gönderen kullanıcı silinirse ona ait mesajları da kaldırır.
-     * Bu işlem JPA cascade değil, veritabanı seviyesindeki bir kuraldır.
      */
     CONSTRAINT fk_messages_sender
         FOREIGN KEY (sender_id)
-            REFERENCES users (id)
+            REFERENCES users (uid)
             ON DELETE CASCADE,
 
     /*
@@ -46,15 +44,13 @@ CREATE TABLE messages
      */
     CONSTRAINT fk_messages_recipient
         FOREIGN KEY (recipient_id)
-            REFERENCES users (id)
+            REFERENCES users (uid)
             ON DELETE CASCADE
 );
 
 /*
  * İki kullanıcı arasındaki mesajları tarih ve ID sırasıyla
  * getiren findChatHistory sorgusunu hızlandırır.
- *
- * Aynı timestamp değerine sahip mesajlarda id sıralamayı kararlı tutar.
  */
 CREATE INDEX idx_messages_chat_history
     ON messages (sender_id, recipient_id, sent_at, id);
