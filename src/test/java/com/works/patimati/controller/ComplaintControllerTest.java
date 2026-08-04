@@ -1,10 +1,12 @@
 package com.works.patimati.controller;
 
-import com.works.patimati.dto.complaint.ComplaintRequest;
+import com.works.patimati.dto.complaint.AdComplaintRequestDTO;
 import com.works.patimati.dto.complaint.ComplaintResponse;
+import com.works.patimati.dto.complaint.UserComplaintRequestDTO;
 import com.works.patimati.entity.enums.ComplaintReason;
 import com.works.patimati.entity.enums.ComplaintStatus;
 import com.works.patimati.exception.GlobalExceptionHandler;
+import com.works.patimati.exception.ResourceNotFoundException;
 import com.works.patimati.service.ComplaintService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -40,21 +42,21 @@ class ComplaintControllerTest {
     }
 
     @Test
-    @DisplayName("Case-insensitive enum (lowercase sahte_ilan) ile şikayet başarıyla oluşturulmalı")
-    void shouldCreateComplaintSuccessfullyWithLowercaseEnum() throws Exception {
+    @DisplayName("POST /api/complaints/ad - Case-insensitive enum ile ilan şikayeti başarıyla oluşturulmalı")
+    void shouldCreateAdComplaintSuccessfully() throws Exception {
         ComplaintResponse mockResponse = new ComplaintResponse(
                 1L,
                 100L,
                 "reporter@patimati.com",
                 10L,
-                null,
+                200L, // ilan sahibinin uid'si backend'de set edilir
                 ComplaintReason.SAHTE_ILAN,
                 "Şüpheli sahte ilan açıklaması",
                 ComplaintStatus.BEKLEMEDE,
                 Instant.now()
         );
 
-        when(complaintService.createComplaint(eq("reporter@patimati.com"), any(ComplaintRequest.class)))
+        when(complaintService.createAdComplaint(eq("reporter@patimati.com"), any(AdComplaintRequestDTO.class)))
                 .thenReturn(mockResponse);
 
         String jsonPayload = """
@@ -66,7 +68,7 @@ class ComplaintControllerTest {
                 """;
 
         mockMvc.perform(
-                        post("/api/complaints")
+                        post("/api/complaints/ad")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(jsonPayload)
                                 .principal(authentication())
@@ -74,7 +76,50 @@ class ComplaintControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(header().string("Location", "/api/complaints/1"))
                 .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.reportedAdId").value(10))
+                .andExpect(jsonPath("$.reportedUserId").value(200))
                 .andExpect(jsonPath("$.reason").value("SAHTE_ILAN"))
+                .andExpect(jsonPath("$.status").value("BEKLEMEDE"));
+    }
+
+    @Test
+    @DisplayName("POST /api/complaints/user - Kullanıcı profil şikayeti başarıyla oluşturulmalı")
+    void shouldCreateUserComplaintSuccessfully() throws Exception {
+        ComplaintResponse mockResponse = new ComplaintResponse(
+                2L,
+                100L,
+                "reporter@patimati.com",
+                null, // reportedAdId null
+                300L, // reportedUserId
+                ComplaintReason.DOLANDIRICILIK,
+                "Şüpheli kullanıcı faaliyeti",
+                ComplaintStatus.BEKLEMEDE,
+                Instant.now()
+        );
+
+        when(complaintService.createUserComplaint(eq("reporter@patimati.com"), any(UserComplaintRequestDTO.class)))
+                .thenReturn(mockResponse);
+
+        String jsonPayload = """
+                {
+                  "reportedUserId": 300,
+                  "reason": "DOLANDIRICILIK",
+                  "description": "Şüpheli kullanıcı faaliyeti"
+                }
+                """;
+
+        mockMvc.perform(
+                        post("/api/complaints/user")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(jsonPayload)
+                                .principal(authentication())
+                )
+                .andExpect(status().isCreated())
+                .andExpect(header().string("Location", "/api/complaints/2"))
+                .andExpect(jsonPath("$.id").value(2))
+                .andExpect(jsonPath("$.reportedAdId").doesNotExist())
+                .andExpect(jsonPath("$.reportedUserId").value(300))
+                .andExpect(jsonPath("$.reason").value("DOLANDIRICILIK"))
                 .andExpect(jsonPath("$.status").value("BEKLEMEDE"));
     }
 
@@ -90,7 +135,7 @@ class ComplaintControllerTest {
                 """;
 
         mockMvc.perform(
-                        post("/api/complaints")
+                        post("/api/complaints/ad")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(jsonPayload)
                                 .principal(authentication())
@@ -112,7 +157,7 @@ class ComplaintControllerTest {
                 """;
 
         mockMvc.perform(
-                        post("/api/complaints")
+                        post("/api/complaints/ad")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(jsonPayload)
                                 .principal(authentication())
@@ -124,33 +169,59 @@ class ComplaintControllerTest {
     }
 
     @Test
-    @DisplayName("Hedef (ilan veya kullanıcı) belirtilmediğinde IllegalArgumentException 400 Bad Request dönmeli")
-    void shouldReturnBadRequestWhenNeitherAdNorUserIsProvided() throws Exception {
-        when(complaintService.createComplaint(eq("reporter@patimati.com"), any(ComplaintRequest.class)))
-                .thenThrow(new IllegalArgumentException("Şikayet etmek için bir ilan veya bir kullanıcı belirtilmelidir."));
+    @DisplayName("Şikayet edilen ilan veritabanında bulunamadığında 404 Not Found dönmeli")
+    void shouldReturn404WhenReportedAdNotFound() throws Exception {
+        when(complaintService.createAdComplaint(eq("reporter@patimati.com"), any(AdComplaintRequestDTO.class)))
+                .thenThrow(new ResourceNotFoundException("Şikayet edilen ilan bulunamadı ID: 999"));
 
         String jsonPayload = """
                 {
+                  "reportedAdId": 999,
                   "reason": "SAHTE_ILAN",
-                  "description": "Geçerli bir açıklama"
+                  "description": "Açıklama"
                 }
                 """;
 
         mockMvc.perform(
-                        post("/api/complaints")
+                        post("/api/complaints/ad")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(jsonPayload)
                                 .principal(authentication())
                 )
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.title").value("Geçersiz parametre"))
-                .andExpect(jsonPath("$.detail").value("Şikayet etmek için bir ilan veya bir kullanıcı belirtilmelidir."));
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.title").value("Kaynak bulunamadı"))
+                .andExpect(jsonPath("$.detail").value("Şikayet edilen ilan bulunamadı ID: 999"));
+    }
+
+    @Test
+    @DisplayName("Şikayet edilen kullanıcı veritabanında bulunamadığında 404 Not Found dönmeli")
+    void shouldReturn404WhenReportedUserNotFound() throws Exception {
+        when(complaintService.createUserComplaint(eq("reporter@patimati.com"), any(UserComplaintRequestDTO.class)))
+                .thenThrow(new ResourceNotFoundException("Şikayet edilen kullanıcı bulunamadı ID: 888"));
+
+        String jsonPayload = """
+                {
+                  "reportedUserId": 888,
+                  "reason": "DOLANDIRICILIK",
+                  "description": "Açıklama"
+                }
+                """;
+
+        mockMvc.perform(
+                        post("/api/complaints/user")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(jsonPayload)
+                                .principal(authentication())
+                )
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.title").value("Kaynak bulunamadı"))
+                .andExpect(jsonPath("$.detail").value("Şikayet edilen kullanıcı bulunamadı ID: 888"));
     }
 
     @Test
     @DisplayName("Mükerrer şikayette IllegalStateException 409 Conflict dönmeli")
     void shouldReturnConflictWhenDuplicateComplaintExists() throws Exception {
-        when(complaintService.createComplaint(eq("reporter@patimati.com"), any(ComplaintRequest.class)))
+        when(complaintService.createAdComplaint(eq("reporter@patimati.com"), any(AdComplaintRequestDTO.class)))
                 .thenThrow(new IllegalStateException("Bu ilan için halihazırda incelenmekte olan bir şikayetiniz bulunmaktadır."));
 
         String jsonPayload = """
@@ -162,7 +233,7 @@ class ComplaintControllerTest {
                 """;
 
         mockMvc.perform(
-                        post("/api/complaints")
+                        post("/api/complaints/ad")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(jsonPayload)
                                 .principal(authentication())

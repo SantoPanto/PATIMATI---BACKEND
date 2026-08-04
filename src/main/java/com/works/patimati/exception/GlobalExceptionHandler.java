@@ -146,8 +146,38 @@ public class GlobalExceptionHandler {
                 fieldErrors.put(fieldName, errorMessage);
             }
             detailMessage = "JSON veri tipi veya alan formatı geçersiz: " + (fieldName.isEmpty() ? errorMessage : fieldName + " -> " + errorMessage);
-        } else if (mostSpecificCause != null && mostSpecificCause.getMessage() != null) {
-            detailMessage = mostSpecificCause.getMessage();
+        } else {
+            Throwable current = exception;
+            com.fasterxml.jackson.databind.JsonMappingException jsonMappingException = null;
+            while (current != null) {
+                if (current instanceof com.fasterxml.jackson.databind.JsonMappingException jme) {
+                    jsonMappingException = jme;
+                    break;
+                }
+                current = current.getCause();
+            }
+
+            String fieldName = "";
+            if (jsonMappingException != null) {
+                fieldName = jsonMappingException.getPath().stream()
+                        .map(Reference::getFieldName)
+                        .filter(name -> name != null && !name.isBlank())
+                        .collect(Collectors.joining("."));
+            }
+
+            if (fieldName.isEmpty() && mostSpecificCause != null && mostSpecificCause.getMessage() != null) {
+                if (mostSpecificCause.getMessage().contains("şikayet sebebi") || mostSpecificCause.getMessage().contains("ComplaintReason") || mostSpecificCause.getMessage().contains("reason")) {
+                    fieldName = "reason";
+                }
+            }
+
+            if (!fieldName.isEmpty() && mostSpecificCause != null && mostSpecificCause.getMessage() != null) {
+                fieldErrors.put(fieldName, mostSpecificCause.getMessage());
+            }
+
+            if (mostSpecificCause != null && mostSpecificCause.getMessage() != null) {
+                detailMessage = mostSpecificCause.getMessage();
+            }
         }
 
         ProblemDetail detail = createProblem(
