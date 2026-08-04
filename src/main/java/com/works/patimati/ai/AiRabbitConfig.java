@@ -5,14 +5,13 @@ import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
 import org.springframework.amqp.rabbit.listener.RabbitListenerContainerFactory;
-import org.springframework.amqp.support.converter.JacksonJsonMessageConverter;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import tools.jackson.databind.DeserializationFeature;
-import tools.jackson.databind.PropertyNamingStrategies;
-import tools.jackson.databind.json.JsonMapper;
 
 /**
  * AI servisiyle konuşulan kuyrukların tanımı.
@@ -115,13 +114,10 @@ public class AiRabbitConfig {
      */
     @Bean
     MessageConverter aiJsonMessageConverter() {
-        // Tip JsonMapper: JacksonJsonMessageConverter (Spring AMQP 4 / Jackson 3)
-        // ObjectMapper değil, JsonMapper bekliyor.
-        JsonMapper aiMapper = JsonMapper.builder()
-                .propertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
-                .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-                .build();
-        return new JacksonJsonMessageConverter(aiMapper);
+        ObjectMapper aiMapper = new ObjectMapper()
+                .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
+                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        return new Jackson2JsonMessageConverter(aiMapper);
     }
 
     @Bean
