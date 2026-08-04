@@ -187,6 +187,33 @@
 
     <build>
         <plugins>
+            <!--
+                Lombok'un annotation processor'ı AÇIKÇA tanımlanıyor.
+
+                Neden gerekli: JDK 21'den itibaren javac, sınıf yolunda
+                kendiliğinden bulduğu processor'ları çalıştırmayı bıraktı
+                (JDK 23'te tamamen kapalı). Bu tanım olmadan Lombok hiç
+                çalışmaz: @Getter/@Setter üretilmez ve proje "cannot find
+                symbol: method getId()" gibi YÜZLERCE hatayla derlenmez.
+
+                Hata, Lombok'u değil kendi kodunuzu işaret ettiği için
+                yanıltıcıdır. JDK 17/21 kullananlarda sorun görünmez, JDK 23
+                kullanan bir ekip arkadaşında proje hiç derlenmez.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <proc>full</proc>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>

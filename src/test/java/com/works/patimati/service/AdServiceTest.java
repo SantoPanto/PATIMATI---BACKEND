@@ -1,5 +1,6 @@
 package com.works.patimati.service;
 
+import com.works.patimati.ai.AiAnalysisPublisher;
 import com.works.patimati.dto.ad.AdCreateRequest;
 import com.works.patimati.dto.ad.AdResponse;
 import com.works.patimati.dto.ad.AdUpdateRequest;
@@ -31,6 +32,7 @@ class AdServiceTest {
     private UserRepository userRepository;
     private AdMapper adMapper;
     private ImageStorageService imageStorageService;
+    private AiAnalysisPublisher aiAnalysisPublisher;
     private AdService adService;
 
     @BeforeEach
@@ -39,12 +41,18 @@ class AdServiceTest {
         userRepository = mock(UserRepository.class);
         adMapper = mock(AdMapper.class);
         imageStorageService = mock(ImageStorageService.class);
+        // AI yayıncısı taklit ediliyor: birim testler kuyruk kurulumu
+        // gerektirmesin. (Yayıncının kendisi zaten hata yutuyor — AI bir ek,
+        // ürünün kalbi değil — ama mock, testi RabbitMQ'dan tümden bağımsız
+        // tutuyor ve "yayınlandı mı" doğrulaması yapılabilmesini sağlıyor.)
+        aiAnalysisPublisher = mock(AiAnalysisPublisher.class);
 
         adService = new AdService(
                 adRepository,
                 userRepository,
                 adMapper,
-                imageStorageService
+                imageStorageService,
+                aiAnalysisPublisher
         );
     }
 

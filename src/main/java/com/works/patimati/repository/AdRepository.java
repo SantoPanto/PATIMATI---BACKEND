@@ -1,5 +1,6 @@
 package com.works.patimati.repository;
 
+import com.works.patimati.ai.AiCandidateRow;
 import com.works.patimati.entity.Ad;
 import org.locationtech.jts.geom.Point;
 import org.springframework.data.domain.Page;
@@ -9,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -45,4 +47,51 @@ public interface AdRepository extends JpaRepository<Ad, Long> {
     @Query(
             value = "SELECT * FROM ads a WHERE a.active = true AND ST_DWithin(a.location::geography, :userPoint::geography, :distanceInMeters) = true", nativeQuery = true)
     List<Ad> findNearbyAds(@Param("userPoint") Point userPoint, @Param("distanceInMeters") double distanceInMeters);
+
+    /**
+     * AI eşleştirmesine girecek adayları süzer (entegrasyon sözleşmesi §5).
+     *
+     * <p>Süzmeyi <b>Java yapar</b>, AI değil: PostGIS, ilan tipi ve tarih
+     * bilgisi bizde; AI'ın veritabanına erişimi yok.
+     *
+     * <p>Uygulanan kurallar:
+     * <ul>
+     *   <li><b>Karşıt ilan tipi</b> — kayıp ilanını başka bir kayıp ilanıyla
+     *       eşleştirmek anlamsız. ADOPTION hiç aday olmaz.</li>
+     *   <li><b>ai_status = DONE ve vektör dolu</b> — vektörü olmayan aday
+     *       kıyaslanamaz.</li>
+     *   <li><b>Yarıçap</b> — bildirim yarıçapından (5 km) farklıdır ve olmalıdır:
+     *       kaybolan hayvan yürür, günlerce uzaklaşabilir.</li>
+     *   <li><b>Zaman penceresi</b> — eski ilanlar gürültü yaratır.</li>
+     *   <li><b>Kendisi hariç</b> — ilan kendisiyle %100 eşleşirdi.</li>
+     * </ul>
+     *
+     * <p>Sıralama mesafeye göre yakından uzağa; üst sınır çağıran tarafta
+     * uygulanır (sözleşmede 100).
+     *
+     * <p><b>Neden {@code ::geography}:</b> {@code geometry(Point,4326)} üzerinde
+     * ST_DWithin mesafeyi <b>derece</b> cinsinden ölçer — 25000 yazarsanız tüm
+     * dünyayı kapsar. {@code geography}'e çevirince metre olur. Bu, projede
+     * gerçekten yaşanmış bir hatadır.
+     */
+    @Query(value = """
+            SELECT a.id AS adId,
+                   ST_Distance(a.location::geography, :origin::geography) / 1000.0 AS distanceKm
+              FROM ads a
+             WHERE a.active = TRUE
+               AND a.id <> :selfAdId
+               AND a.ad_type = :oppositeAdType
+               AND a.ai_status = 'DONE'
+               AND a.ai_embeddings IS NOT NULL
+               AND a.created_at >= :since
+               AND a.location IS NOT NULL
+               AND ST_DWithin(a.location::geography, :origin::geography, :radiusMeters)
+             ORDER BY a.location <-> :origin
+            """, nativeQuery = true)
+    List<AiCandidateRow> findAiCandidates(
+            @Param("selfAdId") Long selfAdId,
+            @Param("oppositeAdType") String oppositeAdType,
+            @Param("origin") Point origin,
+            @Param("radiusMeters") double radiusMeters,
+            @Param("since") Instant since);
 }

@@ -60,6 +60,16 @@ public class SecurityConfig {
                                 "/api/auth/forgot-password",
                                 "/api/auth/reset-password",
                                 "/error"
+                                /*
+                                 * WebSocket ve SockJS HTTP handshake isteklerinin
+                                 * Spring Security filtresinden geçmesine izin verilir.
+                                 *
+                                 * Bu permitAll ayarı mesajlaşmayı güvenliksiz yapmaz.
+                                 * Kullanıcının JWT doğrulaması STOMP CONNECT paketinde
+                                 * WebSocketChannelInterceptor tarafından gerçekleştirilir.
+                                 */
+                                "/ws-connect", // Doğrudan WebSocket bağlantısını kapsar.
+                                "/ws-connect/**" // SockJS’in kullandığı alt adresleri kapsar.
                         ).permitAll() // Kayıt, giriş ve açık uçlara HERKES erişebilsin
                         .anyRequest().authenticated() // Diğer tüm uç noktalar için token/giriş zorunlu olsun
                 )
