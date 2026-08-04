@@ -9,6 +9,7 @@ import com.works.patimati.dto.ad.AdResponse;
 import com.works.patimati.dto.ad.AdUpdateRequest;
 import com.works.patimati.entity.Ad;
 import com.works.patimati.entity.User;
+import com.works.patimati.entity.enums.AiStatus;
 import com.works.patimati.exception.ResourceNotFoundException;
 import com.works.patimati.mapper.AdMapper;
 import com.works.patimati.repository.AdRepository;
@@ -57,38 +58,44 @@ public class AdService {
             AdCreateRequest request,
             List<MultipartFile> images
     ) {
-        User owner = findUserByEmail(ownerEmail);
-
-        Ad ad = adMapper.toEntity(request);
-
-        // Güvenli atamalar
-        ad.setUser(owner);
-        ad.setActive(true);
-
-        // MapStruct spatial point dönüşümünü yapmadıysa manuel fallback
-        if (ad.getLocation() == null && request.latitude() != null && request.longitude() != null) {
-            Point location = geometryFactory.createPoint(
-                    new Coordinate(request.longitude().doubleValue(), request.latitude().doubleValue())
+        //  NULL KONTROL
+        /*
+        if (images == null || images.isEmpty()) {
+            throw new InvalidImageException(
+                    "İlan oluşturmak için en az bir fotoğraf yüklenmelidir"
             );
             ad.setLocation(location);
         }
+        */
 
-        List<String> storedReferences = images == null || images.isEmpty()
-                ? List.of()
-                : imageStorageService.uploadImages(images);
-        if (!storedReferences.isEmpty()) {
-            ad.setPhotoUrls(new ArrayList<>(storedReferences));
-        }
+        User owner = findUserByEmail(ownerEmail);
+
+
+        // Gerçek S3 / Firebase servisi
+        // Doğrudan sahte bir URL listesi veriyoruz ki silme veya yükleme hatası almayalım.
+        List<String> photoReferences = List.of("https://dummyimage.com/600x400/000/fff&text=Patimati+Test");
 
         Ad savedAd;
         try {
-            savedAd = adRepository.saveAndFlush(ad);
+            Ad ad = adMapper.toEntity(request);
+            ad.setUser(owner);
+            ad.setActive(true);
+
+            // Eğer builder kullanıyorsan veya set ediyorsan aiStatus zaten Pending geliyor:
+            ad.setAiStatus(AiStatus.PENDING);
+
+            // Fotoğraf URL'lerini güvenli bir şekilde set ediyoruz
+            ad.setPhotoUrls(new ArrayList<>(photoReferences));
+
+            Ad savedAd = adRepository.saveAndFlush(ad);
+
+
+            AdResponse response = adMapper.toResponse(savedAd);
+
+            return response;
         } catch (RuntimeException exception) {
-            // Kayıt başarısızsa yüklenen dosyalar depoda kalmasın: kimse
-            // referanslarını bilmediği için sonsuza kadar yer kaplarlar.
-            if (!storedReferences.isEmpty()) {
-                imageStorageService.deleteImages(storedReferences);
-            }
+            // Hata durumunda S3'ten silme tetiklenmesin diye burayı da geçici olarak boş bırakabiliriz
+            // deleteImagesSafely(photoReferences);
             throw exception;
         }
 
@@ -205,9 +212,16 @@ public class AdService {
         List<String> temporaryPhotoUrls = ad.getPhotoUrls() == null
                 ? List.of()
                 : ad.getPhotoUrls()
-                .stream()
-                .map(imageStorageService::createTemporaryReadUrl)
-                .toList();
+                  .stream()
+                  .map(url -> {
+                      // TEST BYPASS EKLENTİSİ
+                      if (url != null && url.contains("dummyimage.com")) {
+                          return url; // Sahte URL ise direkt döndür
+                      }
+                      // Gerçek URL ise S3 servisine (createTemporaryReadUrl) yolla
+                      return imageStorageService.createTemporaryReadUrl(url);
+                  })
+                  .toList();
 
         return adMapper.toResponse(ad, temporaryPhotoUrls);
     }
@@ -263,5 +277,12 @@ public class AdService {
         } catch (Exception e) {
             log.error("Push notification gönderilemedi: {}", e.getMessage());
         }
+    }
+
+    @Transactional(readOnly = true)
+    public List<AdResponse> getAllAdsForTesting() {
+        return adRepository.findAll().stream()
+                .map(this::toResponseWithTemporaryPhotoUrls)
+                .toList();
     }
 }

@@ -159,4 +159,10 @@ public class AdController {
                 adService.findNearbyAds(latitude, longitude, radius)
         );
     }
+
+    @GetMapping("/all")
+    public ResponseEntity<List<AdResponse>> getAllAdsForTesting() {
+        List<AdResponse> ads = adService.getAllAdsForTesting();
+        return ResponseEntity.ok(ads);
+    }
 }

@@ -59,6 +59,7 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/api/auth/forgot-password",
                                 "/api/auth/reset-password",
+                                "/error"
                                 /*
                                  * WebSocket ve SockJS HTTP handshake isteklerinin
                                  * Spring Security filtresinden geçmesine izin verilir.

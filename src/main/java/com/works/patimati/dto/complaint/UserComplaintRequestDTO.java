@@ -9,19 +9,31 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Kullanıcı profili şikayeti istek DTO'su.
+ * İstemciden (client) reportedAdId ALINMAZ, sadece şikayet edilen kullanıcının uid'si alınır.
+ */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ComplaintRequest {
+public class UserComplaintRequestDTO {
 
-    private Long reportedAdId;
-
+    /**
+     * Şikayet edilen kullanıcının benzersiz kimlik numarası (uid).
+     */
+    @NotNull(message = "Şikayet edilecek kullanıcı ID'si boş olamaz")
     private Long reportedUserId;
 
+    /**
+     * Şikayet sebebi (Enum).
+     */
     @NotNull(message = "Şikayet sebebi boş olamaz")
     private ComplaintReason reason;
 
+    /**
+     * Şikayet detay açıklaması.
+     */
     @NotBlank(message = "Şikayet açıklaması boş olamaz")
     @Size(max = 1000, message = "Açıklama en fazla 1000 karakter olabilir")
     private String description;
