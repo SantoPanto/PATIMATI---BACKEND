@@ -44,8 +44,11 @@ public interface AdRepository extends JpaRepository<Ad, Long> {
     );
 
     // KISIM 3
+    // PARAMETREDE ::geography YAZILAMAZ — Hibernate parametre adını
+    // "userPoint::geography" diye okur ve sorgu çalışma anında patlar.
+    // Sütunda (a.location::geography) sorun yok.
     @Query(
-            value = "SELECT * FROM ads a WHERE a.active = true AND ST_DWithin(a.location::geography, :userPoint::geography, :distanceInMeters) = true", nativeQuery = true)
+            value = "SELECT * FROM ads a WHERE a.active = true AND ST_DWithin(a.location::geography, CAST(:userPoint AS geography), :distanceInMeters) = true", nativeQuery = true)
     List<Ad> findNearbyAds(@Param("userPoint") Point userPoint, @Param("distanceInMeters") double distanceInMeters);
 
     /**
@@ -76,7 +79,7 @@ public interface AdRepository extends JpaRepository<Ad, Long> {
      */
     @Query(value = """
             SELECT a.id AS adId,
-                   ST_Distance(a.location::geography, :origin::geography) / 1000.0 AS distanceKm
+                   ST_Distance(a.location::geography, CAST(:origin AS geography)) / 1000.0 AS distanceKm
               FROM ads a
              WHERE a.active = TRUE
                AND a.id <> :selfAdId
@@ -85,7 +88,7 @@ public interface AdRepository extends JpaRepository<Ad, Long> {
                AND a.ai_embeddings IS NOT NULL
                AND a.created_at >= :since
                AND a.location IS NOT NULL
-               AND ST_DWithin(a.location::geography, :origin::geography, :radiusMeters)
+               AND ST_DWithin(a.location::geography, CAST(:origin AS geography), :radiusMeters)
              ORDER BY a.location <-> :origin
             """, nativeQuery = true)
     List<AiCandidateRow> findAiCandidates(
