@@ -4,6 +4,7 @@ import com.works.patimati.dto.AuthResponse;
 import com.works.patimati.dto.GoogleAuthRequest;
 import com.works.patimati.dto.LoginRequest;
 import com.works.patimati.dto.RegisterRequest;
+import com.works.patimati.dto.User.UserResponseDTO;
 import com.works.patimati.entity.User;
 import com.works.patimati.repository.UserRepository;
 import com.works.patimati.security.JwtService;
@@ -15,8 +16,12 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -146,15 +151,38 @@ public class UserService {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(notFoundResponse);
     }
     // --- ÇIKIŞ YAP (LOGOUT) ---
+    @Transactional
     public ResponseEntity<?> logout() {
-        // Mevcut isteğin Spring Security bağlamını temizler
+        // 1. O anki giriş yapmış kullanıcıyı bul
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication != null && authentication.isAuthenticated()) {
+            String username = authentication.getName();
+
+            // 2. KULLANICININ BİLDİRİM TOKEN'INI (FCM TOKEN) SİL
+            // Böylece çıkış yapmış telefona artık PatiMati anlık bildirimi (push notification) GİTMEZ!
+            userRepository.findByEmail(username).ifPresent(user -> {
+                user.setFcmToken(null);
+                userRepository.save(user);
+            });
+        }
+
         SecurityContextHolder.clearContext();
 
         Map<String, Object> successResponse = Map.of(
                 "success", true,
-                "message", "Başarıyla çıkış yapıldı."
+                "message", "Başarıyla çıkış yapıldı ve bildirimler durduruldu."
         );
 
         return ResponseEntity.ok().body(successResponse);
+    }
+
+    public List<UserResponseDTO> getAllUsers() {
+        return userRepository.findAll().stream()
+                .map(user -> UserResponseDTO.builder()
+                        .uid(user.getUid()) // Hata veren getId() burasıydı
+                        .email(user.getEmail())
+                        .build())
+                .collect(Collectors.toList());
     }
 }

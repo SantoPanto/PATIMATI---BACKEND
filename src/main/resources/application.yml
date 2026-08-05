@@ -12,7 +12,7 @@ spring:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       # ÖNEMLİ: Update yerine validate yapıyoruz
-      ddl-auto: validate
+      ddl-auto: update
   flyway:
     enabled: true
     # Mevcut veritabanı boş değilse hata vermek yerine baseline noktasından başlar
@@ -33,12 +33,46 @@ spring:
               - email
               - profile
 
+  # RabbitMQ — AI servisiyle asenkron köprü
+  # Lokal geliştirmede varsayılanlar yeterli; sunucuda ortam değişkeniyle verilir.
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    # Bağlantı koptuğunda yeniden denenir; AI ya da broker yeniden başladığında
+    # backend'in elle yeniden başlatılması gerekmesin.
+    connection-timeout: 10s
+
+# AI eşleştirme ayarları (entegrasyon sözleşmesi §5)
+ai:
+  matching:
+    # Aday yarıçapı. Bildirim yarıçapından (5 km) BİLEREK farklı:
+    # kaybolan hayvan yürür, günlerce uzaklaşabilir.
+    radius-km: ${AI_MATCHING_RADIUS_KM:25}
+    # Eski ilanlar gürültü yaratır.
+    window-days: ${AI_MATCHING_WINDOW_DAYS:90}
+    # Aday başına ~7 KB (768 float); 100 aday ≈ 700 KB mesaj.
+    max-candidates: ${AI_MATCHING_MAX_CANDIDATES:100}
+
 # JWT Ayarları
 jwt:
   secret-key: ${JWT_SECRET_KEY}
   expiration: 86400000 # Örnek token süresi # 24 Saat (Milisaniye cinsinden)
 
-# Frontend Yönlendirme URL'i
+# Uygulama ve Depolama Ayarları
 app:
   frontend:
     url: http://localhost:4200 # Frontend'in ayağa kalktığı adres
+  storage:
+    s3:
+      bucket: patimati-medya-kutusu
+      region: eu-central-1
+      maxFileCount: 3
+      maxFileSize: 5MB
+      presignedUrlDuration: 15m
+
+  # WebSocket ve STOMP bağlantı ayarları
+  websocket:
+    # Virgülle ayrılmış origin listesi ortam değişkeniyle canlı ortamda değiştirilebilir.
+    allowed-origins: ${WEBSOCKET_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:4200}

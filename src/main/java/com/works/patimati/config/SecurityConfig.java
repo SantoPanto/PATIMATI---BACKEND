@@ -5,6 +5,7 @@ import com.works.patimati.security.OAuth2LoginSuccessHandler;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -32,8 +33,6 @@ public class SecurityConfig {
     public SecurityConfig(JwtAuthFilter jwtAuthFilter, OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.oAuth2LoginSuccessHandler = oAuth2LoginSuccessHandler;
-
-
     }
 
     @Bean
@@ -57,17 +56,45 @@ public class SecurityConfig {
                                 "/api/auth/login",
                                 "/api/public/**",
                                 "/swagger-ui/**",
-                                "/v3/api-docs/**"
+                                "/v3/api-docs/**",
+                                "/api/auth/forgot-password",
+                                "/api/auth/reset-password",
+                                "/error",
+                                /*
+                                 * WebSocket ve SockJS HTTP handshake isteklerinin
+                                 * Spring Security filtresinden geçmesine izin verilir.
+                                 *
+                                 * Bu permitAll ayarı mesajlaşmayı güvenliksiz yapmaz.
+                                 * Kullanıcının JWT doğrulaması STOMP CONNECT paketinde
+                                 * WebSocketChannelInterceptor tarafından gerçekleştirilir.
+                                 */
+                                "/ws-connect", // Doğrudan WebSocket bağlantısını kapsar.
+                                "/ws-connect/**" // SockJS’in kullandığı alt adresleri kapsar.
                         ).permitAll() // Kayıt, giriş ve açık uçlara HERKES erişebilsin
                         .anyRequest().authenticated() // Diğer tüm uç noktalar için token/giriş zorunlu olsun
                 )
 
-                // 3. EN ÖNEMLİ KISIM: Yetkisiz erişimlerde JSON hata dön
+                // 3. EN ÖNEMLİ KISIM: Yetkisiz erişimlerde ProblemDetail formatında JSON dön
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint((request, response, authException) -> {
                             response.setContentType("application/json;charset=UTF-8");
                             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                            response.getWriter().write("{\"error\": \"Yetkisiz erişim, lütfen geçerli bir token sağlayın.\"}");
+
+                            // RFC 7807 (ProblemDetail) standardına uygun JSON formatı
+                            String problemDetailJson = String.format(
+                                    "{" +
+                                            "\"type\":\"about:blank\"," +
+                                            "\"title\":\"Yetkisiz Erişim\"," +
+                                            "\"status\":%d," +
+                                            "\"detail\":\"%s\"," +
+                                            "\"instance\":\"%s\"" +
+                                            "}",
+                                    HttpStatus.UNAUTHORIZED.value(),
+                                    "Bu işlemi gerçekleştirmek için geçerli bir kimlik doğrulama token'ı gereklidir.",
+                                    request.getRequestURI()
+                            );
+
+                            response.getWriter().write(problemDetailJson);
                         })
                 )
 
