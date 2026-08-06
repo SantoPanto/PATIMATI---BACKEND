@@ -9,6 +9,7 @@ import com.works.patimati.entity.enums.PetGender;
 import com.works.patimati.entity.enums.PresenceStatus;
 import com.works.patimati.entity.enums.Species;
 import com.works.patimati.exception.GlobalExceptionHandler;
+import com.works.patimati.repository.UserRepository;
 import com.works.patimati.service.AdService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,14 +46,16 @@ import org.springframework.data.domain.PageRequest;
 class AdControllerTest {
 
     private AdService adService;
+    private UserRepository userRepository;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         adService = mock(AdService.class);
+        userRepository = mock(UserRepository.class);
 
         mockMvc = MockMvcBuilders
-                .standaloneSetup(new AdController(adService))
+                .standaloneSetup(new AdController(adService, userRepository))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }

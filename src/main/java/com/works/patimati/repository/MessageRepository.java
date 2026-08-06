@@ -1,6 +1,8 @@
 package com.works.patimati.repository;
 
 import com.works.patimati.entity.Message;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -42,9 +44,10 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
             )
             ORDER BY message.timestamp ASC, message.id ASC
             """)
-    List<Message> findChatHistory(
+    Page<Message> findChatHistory(
             @Param("firstUserId") Long firstUserId,
-            @Param("secondUserId") Long secondUserId
+            @Param("secondUserId") Long secondUserId,
+            Pageable pageable
     );
 
     /**

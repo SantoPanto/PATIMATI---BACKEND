@@ -1,6 +1,6 @@
 package com.works.patimati.dto.message;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record MessageResponse(
         Long id,
@@ -9,7 +9,7 @@ public record MessageResponse(
         Long recipientId,
         String recipientName,
         String content,
-        LocalDateTime timestamp,
+        Instant timestamp,
         boolean isRead
 ) {
 }
