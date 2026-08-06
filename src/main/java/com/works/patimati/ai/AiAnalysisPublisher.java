@@ -235,11 +235,31 @@ public class AiAnalysisPublisher {
             if (vectors.isEmpty()) {
                 continue;
             }
+            // Adayın türü de BEYANDAN alınır, AI tahmininden değil — yeni ilanda
+            // (declaredSpecies) zaten öyle yapılıyordu, aday tarafı geride kalmıştı.
+            //
+            // Neden önemli: AI, güveni %80'in altındaysa "unknown" der ve bu nadir
+            // değil (ölçüldü: gerçek bir kedi fotoğrafı "unknown" çıktı). AI
+            // tarafındaki tür engeli ise İKİ taraf da bilindiğinde çalışıyor.
+            // Aday "unknown" olduğu anda engel sessizce devre dışı kalıyor ve
+            // kedi ilanı köpek ilanına aday olarak gidiyordu.
+            //
+            // Ölçüm (2026-08-05, kuyruğa yazılan mesaj okunarak):
+            //   önce : aday species='unknown' -> engel yok,  skor 0.1521
+            //   sonra: aday species='cat'     -> species_mismatch, skor 0.0
+            //
+            // Sözleşme §7 kural 2: kullanıcı beyanı önceliklidir, AI tahmini ezmez.
+            String candidateSpecies = declaredSpecies(candidate);
+            if (candidateSpecies == null) {
+                candidateSpecies = candidate.getAiSpecies() == null
+                        ? "unknown" : candidate.getAiSpecies();
+            }
+
             candidates.add(new AiCandidate(
                     candidate.getId(),
                     vectors,
                     candidate.getAiLabels() == null ? List.of() : candidate.getAiLabels(),
-                    candidate.getAiSpecies() == null ? "unknown" : candidate.getAiSpecies(),
+                    candidateSpecies,
                     distances.getOrDefault(candidate.getId(), 0.0),
                     candidate.getAiModelVersion()));
         }
