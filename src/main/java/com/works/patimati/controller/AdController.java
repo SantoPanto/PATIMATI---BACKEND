@@ -4,6 +4,8 @@ import com.works.patimati.dto.ad.AdCreateRequest;
 import com.works.patimati.dto.ad.AdResponse;
 import com.works.patimati.dto.ad.AdUpdateRequest;
 import com.works.patimati.entity.Ad;
+import com.works.patimati.entity.User;
+import com.works.patimati.repository.UserRepository;
 import com.works.patimati.service.AdService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMax;
@@ -43,6 +45,7 @@ public class AdController {
     private static final int MAX_PAGE_SIZE = 100;
 
     private final AdService adService;
+    private final UserRepository userRepository;
 
     /**
      * İlanı fotoğraflarıyla birlikte oluşturur.

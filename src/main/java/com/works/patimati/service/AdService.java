@@ -263,7 +263,7 @@ public class AdService {
             Message message = Message.builder()
                     .setToken(token)
                     .setNotification(Notification.builder()
-                            .setTitle("Yakınınızda Yeni İlan: " + title)
+                            .setTitle(title)
                             .setBody(body)
                             .build())
                     .build();
