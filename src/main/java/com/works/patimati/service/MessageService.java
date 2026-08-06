@@ -12,7 +12,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Service
 @RequiredArgsConstructor
@@ -30,8 +30,8 @@ public class MessageService {
                 .sender(sender)
                 .recipient(recipient)
                 .content(filteredContent)
-                .timestamp(LocalDateTime.now())
-                .isRead(false)
+                .timestamp(Instant.now())
+                .read(false)
                 .build();
 
         Message savedMessage = messageRepository.save(message);
@@ -58,7 +58,7 @@ public class MessageService {
     @Transactional(readOnly = true)
     public long getUnreadMessageCount(String currentUserEmail) {
         User currentUser = findUserByEmail(currentUserEmail);
-        return messageRepository.countByRecipient_UidAndIsReadFalse(currentUser.getUid());
+        return messageRepository.countByRecipient_UidAndReadFalse(currentUser.getUid());
     }
     private User findUserByEmail(String email) {
         return userRepository.findByEmail(email)
