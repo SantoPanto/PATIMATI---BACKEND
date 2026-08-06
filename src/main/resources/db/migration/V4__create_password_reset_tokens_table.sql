@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
 
     CONSTRAINT fk_password_reset_user
     FOREIGN KEY (user_id)
-    REFERENCES users (id)
+    REFERENCES users (uid)
     ON DELETE CASCADE
     );
 
