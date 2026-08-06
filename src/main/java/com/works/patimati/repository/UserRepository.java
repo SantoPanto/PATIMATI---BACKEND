@@ -20,7 +20,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByPhone(String phone);
 
     // KISIM 3
-    @Query(value = "SELECT * FROM users u WHERE u.fcm_token IS NOT NULL AND ST_DWithin(u.location::geography, :point::geography, :distanceInMeters) = true", nativeQuery = true)
     // PARAMETREDE ::geography YAZILAMAZ — Hibernate parametre adını
     // "point::geography" diye okur. Hata AdService.notifyNearbyUsersSafely
     // içinde yutulduğu için ilan 201 dönüyor, ama YAKINDAKİ KULLANICILARA
