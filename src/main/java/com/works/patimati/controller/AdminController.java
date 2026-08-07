@@ -16,6 +16,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @Validated
 @RestController
 @RequestMapping("/api/admin")
@@ -41,18 +43,18 @@ public class AdminController {
      * Kullanıcı hesabını engeller / dondurur.
      */
     @PutMapping("/users/{userId}/ban")
-    public ResponseEntity<Void> banUser(@PathVariable @Min(1) Long userId) {
+    public ResponseEntity<Map<String, String>> banUser(@PathVariable @Min(1) Long userId) {
         adminService.banUser(userId);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(Map.of("message", "User with ID " + userId + " has been successfully banned."));
     }
 
     /**
      * Kullanıcı engelini kaldırır.
      */
     @PutMapping("/users/{userId}/unban")
-    public ResponseEntity<Void> unbanUser(@PathVariable @Min(1) Long userId) {
+    public ResponseEntity<Map<String, String>> unbanUser(@PathVariable @Min(1) Long userId) {
         adminService.unbanUser(userId);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(Map.of("message", "User with ID " + userId + " has been successfully unbanned."));
     }
 
     /**
@@ -71,27 +73,27 @@ public class AdminController {
      * Şikayet inceleme sürecinde ilanı geçici olarak gizler (askıya alır).
      */
     @PutMapping("/ads/{adId}/suspend")
-    public ResponseEntity<Void> suspendAd(@PathVariable @Min(1) Long adId) {
+    public ResponseEntity<Map<String, String>> suspendAd(@PathVariable @Min(1) Long adId) {
         adminService.suspendAd(adId);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(Map.of("message", "Ad with ID " + adId + " has been successfully suspended."));
     }
 
     /**
      * İlanın gizliliğini kaldırıp tekrar aktif hale getirir.
      */
     @PutMapping("/ads/{adId}/unhide")
-    public ResponseEntity<Void> unhideAd(@PathVariable @Min(1) Long adId) {
+    public ResponseEntity<Map<String, String>> unhideAd(@PathVariable @Min(1) Long adId) {
         adminService.unhideAd(adId);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(Map.of("message", "Ad with ID " + adId + " has been successfully unhidden."));
     }
 
     /**
      * İlanı veritabanından tamamen siler (Hard Delete).
      */
     @DeleteMapping("/ads/{adId}")
-    public ResponseEntity<Void> deleteAdAsAdmin(@PathVariable @Min(1) Long adId) {
+    public ResponseEntity<Map<String, String>> deleteAdAsAdmin(@PathVariable @Min(1) Long adId) {
         adminService.deleteAdAsAdmin(adId);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(Map.of("message", "Ad with ID " + adId + " has been successfully deleted."));
     }
 
     /**
