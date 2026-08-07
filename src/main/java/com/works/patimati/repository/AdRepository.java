@@ -20,6 +20,9 @@ public interface AdRepository extends JpaRepository<Ad, Long> {
     // Yalnızca aktif bir ilanı getirir.
     Optional<Ad> findByIdAndActiveTrue(Long adId);
 
+    // Yalnızca halka açık (aktif ve askıda olmayan) bir ilanı getirir.
+    Optional<Ad> findByIdAndActiveTrueAndSuspendedFalse(Long adId);
+
     // İlanın hem aktif olduğunu hem de belirtilen kullanıcıya ait olduğunu kontrol eder.
     Optional<Ad> findByIdAndUser_UidAndActiveTrue(Long adId, Long userId);
 
@@ -29,10 +32,19 @@ public interface AdRepository extends JpaRepository<Ad, Long> {
             Pageable pageable
     );
 
+    // Halka açık aktif ve askıda olmayan ilanları listeler.
+    Page<Ad> findAllByActiveTrueAndSuspendedFalse(Pageable pageable);
+
     // İlanları türüne ve aktiflik durumuna göre filtreler.
     Page<Ad> findAllByAdTypeAndActive(
             Ad.AdType adType,
             boolean active,
+            Pageable pageable
+    );
+
+    // Halka açık aktif ve askıda olmayan ilanları türüne göre listeler.
+    Page<Ad> findAllByAdTypeAndActiveTrueAndSuspendedFalse(
+            Ad.AdType adType,
             Pageable pageable
     );
 

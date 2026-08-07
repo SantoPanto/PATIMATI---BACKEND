@@ -43,7 +43,12 @@ public class User {
     private String fcmToken;
 
     // Hesabı kapatıp açmak için kontrol
-    private boolean enabled;
+    @Builder.Default
+    private boolean enabled = true;
+
+    @org.hibernate.annotations.CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private java.time.Instant createdAt;
 
     // KISIM 3: Coğrafi Konum
     @Column(columnDefinition = "geometry(Point, 4326)")

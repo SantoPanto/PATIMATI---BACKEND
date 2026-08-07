@@ -144,6 +144,10 @@ public class Ad {
     @Builder.Default
     private boolean active = true;
 
+    @Column(name = "suspended", nullable = false)
+    @Builder.Default
+    private boolean suspended = false;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
