@@ -98,6 +98,17 @@ public class AiAnalysisListener {
         ad.setAiBreed(analysis.breed());
         ad.setAiBreedConfidence((float) analysis.breedConfidence());
 
+        // "Fotoğrafta gerçekten hayvan var mı" cevabı. AI bunu baştan beri
+        // gönderiyordu ama hiçbir yere yazılmıyordu: ekran görüntüsüyle açılan
+        // ilan normal ilan gibi DONE olup aday havuzuna giriyordu.
+        // null gelirse null yazılır — "AI söylemedi" ile "hayvan yok" farklıdır.
+        ad.setAiIsPet(analysis.isPet());
+        if (Boolean.FALSE.equals(analysis.isPet())) {
+            // Sessiz kalmasın: ilan yayında kalıyor ama fotoğrafı işe yaramıyor.
+            log.info("İlan {} fotoğraflarında kedi/köpek görülmedi (is_pet=false)",
+                    ad.getId());
+        }
+
         // model_version KRİTİK: hangi modelle üretildiğini söyler. Bu alan
         // olmadan hangi vektörlerin bayat olduğu anlaşılamaz ve model
         // değiştiğinde sessizce yanlış benzerlik hesaplanır.
