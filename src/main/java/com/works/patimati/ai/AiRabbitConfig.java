@@ -8,6 +8,7 @@ import org.springframework.amqp.rabbit.listener.RabbitListenerContainerFactory;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
@@ -117,6 +118,28 @@ public class AiRabbitConfig {
         ObjectMapper aiMapper = new ObjectMapper()
                 .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+        // java.time desteği AÇIKÇA tanıtılmalı.
+        //
+        // Sözleşme §6'daki cevapta processed_at bir zaman damgası
+        // ("2026-08-06T17:05:52Z") ve DTO tarafındaki karşılığı Instant.
+        // Elle kurulan bir ObjectMapper bu tipi TANIMAZ:
+        //   Java 8 date/time type `java.time.Instant` not supported by default
+        // Hata AI'nın CEVABINI çözerken çıkıyor; yani analiz başarıyla bitiyor,
+        // sonuç kuyruğa yazılıyor, ama ilana hiç işlenmiyor ve ilan sonsuza
+        // kadar PENDING kalıyor. Dışarıdan bakınca "AI çalışmıyor" görünüyor.
+        //
+        // Bu daha önce fark edilmedi çünkü proje Jackson 3 kullanırken
+        // java.time desteği çekirdekte geliyordu; Jackson 2'ye dönülünce
+        // ayrı modül gerekti (jackson-datatype-jsr310 zaten sınıf yolunda).
+        // findAndRegisterModules kullanmak sürüm değişikliklerine dayanıklı:
+        // sınıf yolunda ne varsa onu kaydeder.
+        aiMapper.findAndRegisterModules();
+
+        // Tarihler epoch sayısı değil ISO-8601 metni olarak yazılsın —
+        // sözleşmedeki biçim bu ve Python tarafı böyle okuyor.
+        aiMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
         return new Jackson2JsonMessageConverter(aiMapper);
     }
 
