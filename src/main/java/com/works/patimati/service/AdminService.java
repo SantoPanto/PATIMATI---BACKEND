@@ -2,6 +2,7 @@ package com.works.patimati.service;
 
 import com.works.patimati.dto.ad.AdResponse;
 import com.works.patimati.dto.admin.AdComplaintAdminResponse;
+import com.works.patimati.dto.admin.AdoptionComplaintAdminResponse;
 import com.works.patimati.dto.admin.UserComplaintAdminResponse;
 import com.works.patimati.dto.admin.UserDetailForAdminDTO;
 import org.springframework.data.domain.Page;
@@ -56,4 +57,9 @@ public interface AdminService {
      * Kullanıcı profili şikayetlerini bağlam bilgileriyle sayfalı listeler.
      */
     Page<UserComplaintAdminResponse> getUserComplaints(Pageable pageable);
+
+    /**
+     * Sahiplendirme ilanı şikayetlerini bağlam bilgileriyle sayfalı listeler.
+     */
+    Page<AdoptionComplaintAdminResponse> getAdoptionComplaints(Pageable pageable);
 }

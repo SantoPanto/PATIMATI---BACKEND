@@ -23,6 +23,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
+import com.works.patimati.dto.admin.AdoptionComplaintAdminResponse;
+import com.works.patimati.entity.AdoptionComplaint;
+import com.works.patimati.repository.AdoptionComplaintRepository;
+
 @Service
 @RequiredArgsConstructor
 public class AdminServiceImpl implements AdminService {
@@ -31,6 +35,7 @@ public class AdminServiceImpl implements AdminService {
     private final AdRepository adRepository;
     private final AdComplaintRepository adComplaintRepository;
     private final UserComplaintRepository userComplaintRepository;
+    private final AdoptionComplaintRepository adoptionComplaintRepository;
     private final AdService adService;
 
     @Transactional(readOnly = true)
@@ -164,6 +169,42 @@ public class AdminServiceImpl implements AdminService {
                     complaint.getReportedUserId(),
                     reportedUserFullName,
                     reportedUserEmail,
+                    complaint.getReason(),
+                    complaint.getDescription(),
+                    complaint.getStatus(),
+                    complaint.getCreatedAt()
+            );
+        });
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public Page<AdoptionComplaintAdminResponse> getAdoptionComplaints(Pageable pageable) {
+        Page<AdoptionComplaint> complaints = adoptionComplaintRepository.findAll(pageable);
+
+        return complaints.map(complaint -> {
+            Optional<User> reporterOpt = userRepository.findById(complaint.getReporterId());
+            String reporterFullName = reporterOpt
+                    .map(u -> (u.getFirstName() + " " + u.getLastName()).trim())
+                    .orElse("Bilinmeyen Kullanıcı");
+            String reporterEmail = reporterOpt.map(User::getEmail).orElse("");
+
+            Optional<Ad> adOpt = adRepository.findById(complaint.getAdId());
+            String adTitle = adOpt.map(Ad::getTitle).orElse("Silinmiş / Bulunamayan İlan");
+            Long adOwnerId = adOpt.filter(a -> a.getUser() != null).map(a -> a.getUser().getUid()).orElse(null);
+            String adOwnerFullName = adOpt.filter(a -> a.getUser() != null)
+                    .map(a -> (a.getUser().getFirstName() + " " + a.getUser().getLastName()).trim())
+                    .orElse("Bilinmeyen Sahip");
+
+            return new AdoptionComplaintAdminResponse(
+                    complaint.getId(),
+                    complaint.getReporterId(),
+                    reporterFullName,
+                    reporterEmail,
+                    complaint.getAdId(),
+                    adTitle,
+                    adOwnerId,
+                    adOwnerFullName,
                     complaint.getReason(),
                     complaint.getDescription(),
                     complaint.getStatus(),

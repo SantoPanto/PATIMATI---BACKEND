@@ -119,4 +119,16 @@ public class AdminController {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         return ResponseEntity.ok(adminService.getUserComplaints(pageable));
     }
+
+    /**
+     * Sahiplendirme ilanı şikayetlerini bağlam bilgileriyle listeler.
+     */
+    @GetMapping("/complaints/adoptions")
+    public ResponseEntity<Page<com.works.patimati.dto.admin.AdoptionComplaintAdminResponse>> getAdoptionComplaints(
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(MAX_PAGE_SIZE) int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        return ResponseEntity.ok(adminService.getAdoptionComplaints(pageable));
+    }
 }
