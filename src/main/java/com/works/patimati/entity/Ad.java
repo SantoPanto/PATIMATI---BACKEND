@@ -184,6 +184,23 @@ public class Ad {
     @Column(name = "ai_species", length = 16)
     private String aiSpecies;
 
+    /**
+     * Fotoğrafta gerçekten kedi/köpek görülüp görülmediği (sözleşme §4).
+     *
+     * <p><b>Üç durumlu, bu yüzden {@code Boolean} — {@code boolean} değil:</b>
+     * {@code null} analizin henüz yapılmadığını (PENDING) ya da başarısız
+     * olduğunu (FAILED) söyler, {@code FALSE} ise "bakıldı, hayvan görünmüyor"
+     * demektir. İkisini aynı değere indirseydik, analizi bekleyen her ilan
+     * hakkında arayüz henüz ölçülmemiş bir iddiada bulunurdu.
+     *
+     * <p>İlan birden çok fotoğraf taşıyabilir; AI bunlardan <b>en az biri</b>
+     * hayvan içeriyorsa {@code true} döner (bkz. AI tarafında
+     * {@code app/analiz.py}). Kullanıcı üç fotoğraf yüklerken birine
+     * yanlışlıkla manzara koyabilir — bu ilanı reddetmek için sebep değildir.
+     */
+    @Column(name = "ai_is_pet")
+    private Boolean aiIsPet;
+
     /** Bilgi amaçlı. FİLTRE DEĞİLDİR (sözleşme §7 kural 1) — melez oranı yüksek. */
     @Column(name = "ai_breed", length = 64)
     private String aiBreed;

@@ -125,7 +125,9 @@ public class AdMapper {
                 ownerDisplayName(owner),
                 ad.isActive(),
                 ad.getCreatedAt(),
-                ad.getUpdatedAt()
+                ad.getUpdatedAt(),
+                ad.getAiStatus(),
+                ad.getAiIsPet()
         );
     }
 

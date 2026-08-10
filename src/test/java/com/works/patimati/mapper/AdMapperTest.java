@@ -4,6 +4,7 @@ import com.works.patimati.dto.ad.AdCreateRequest;
 import com.works.patimati.dto.ad.AdResponse;
 import com.works.patimati.entity.Ad;
 import com.works.patimati.entity.User;
+import com.works.patimati.entity.enums.AiStatus;
 import com.works.patimati.entity.enums.PetColor;
 import com.works.patimati.entity.enums.PetGender;
 import com.works.patimati.entity.enums.PresenceStatus;
@@ -114,5 +115,45 @@ class AdMapperTest {
         assertThat(response.ownerDisplayName()).isEqualTo("Zahid Yavaş");
         assertThat(response.photoUrls())
                 .containsExactly("https://example.com/1.jpg");
+    }
+
+    /**
+     * AI analizinin arayüze görünen iki alanı doğru taşınmalı.
+     *
+     * <p>Yalnızca "alan var mı" değil, <b>hangi durumu temsil ettiği</b> de
+     * önemli: analiz henüz yapılmamış bir ilanda {@code aiIsPet} {@code null}
+     * kalmalı. {@code false}'a düşerse arayüz "bu fotoğrafta hayvan yok" diye
+     * henüz ölçülmemiş bir iddiada bulunur.
+     */
+    @Test
+    void shouldCarryAiFieldsToResponseWithoutInventingAnAnswer() {
+        Ad analiziBitmis = Ad.builder()
+                .id(8L)
+                .title("Bulunan kedi")
+                .adType(Ad.AdType.FOUND)
+                .species(Species.CAT)
+                .aiStatus(AiStatus.DONE)
+                .aiIsPet(false)
+                .build();
+
+        AdResponse bitmis = adMapper.toResponse(analiziBitmis);
+        assertThat(bitmis.aiStatus()).isEqualTo(AiStatus.DONE);
+        assertThat(bitmis.aiIsPet())
+                .withFailMessage("AI 'hayvan görünmüyor' dedi, yanıt bunu taşımalı")
+                .isFalse();
+
+        Ad analiziBeklemede = Ad.builder()
+                .id(9L)
+                .title("Yeni ilan")
+                .adType(Ad.AdType.LOST)
+                .species(Species.DOG)
+                .build();
+
+        AdResponse beklemede = adMapper.toResponse(analiziBeklemede);
+        assertThat(beklemede.aiStatus()).isEqualTo(AiStatus.PENDING);
+        assertThat(beklemede.aiIsPet())
+                .withFailMessage("Analiz henüz yapılmadı; aiIsPet null kalmalı, "
+                        + "false 'hayvan yok' demektir ve burada ölçülmüş bir şey yok")
+                .isNull();
     }
 }
