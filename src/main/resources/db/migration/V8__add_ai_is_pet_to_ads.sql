@@ -1,0 +1,24 @@
+-- AI'ın "fotoğrafta gerçekten kedi/köpek var mı" cevabı.
+-- Karşılığı: PATIMATI-AI deposunda docs/entegrasyon-sozlesmesi.md §4 (analysis.is_pet).
+--
+-- Neden gerekti: AI bu bilgiyi doğru üretiyor ve mesajda gönderiyordu, ama Java
+-- tarafı hiçbir yere yazmıyordu. Sonuç: ekran görüntüsüyle veya boş duvar
+-- fotoğrafıyla açılan ilan normal ilan gibi DONE olup aday havuzuna giriyor,
+-- kullanıcı da "bu fotoğrafta hayvan görünmüyor" uyarısını hiç alamıyordu.
+--
+-- NEDEN NULL SERBEST (ve NOT NULL DEFAULT FALSE DEĞİL):
+-- Üç durumu ayırmak zorundayız —
+--   NULL   : analiz henüz yapılmadı (PENDING) ya da başarısız oldu (FAILED)
+--   TRUE   : fotoğrafta hayvan görüldü
+--   FALSE  : fotoğrafta hayvan GÖRÜLMEDİ
+-- Varsayılan FALSE verilseydi, analizi bekleyen her ilan "hayvan yok" görünür
+-- ve arayüz henüz ölçülmemiş bir şey hakkında kullanıcıyı uyarırdı. Bu, projede
+-- daha önce de canımızı yakan "sessizce yanlış cevap" kalıbının aynısı olurdu.
+ALTER TABLE ads ADD COLUMN IF NOT EXISTS ai_is_pet boolean;
+
+-- Not: aday süzme sorgusuna (idx_ads_ai_candidates / findAiCandidates) bilerek
+-- eklenmedi. is_pet kapısının YANLIŞ REDDETME oranı ölçüldü (111 gerçek hayvan
+-- fotoğrafında 0), ama YAKALAMA oranı için gerçek "hayvan olmayan fotoğraf"
+-- kümesi henüz yok. Ölçülmemiş bir kapıyı eleyici yapmak, gerçek bir kayıp
+-- hayvan ilanını sessizce havuz dışında bırakma riski taşır. Önce bilgi
+-- gösterilsin; eleme, kapı ölçüldükten sonra ayrı bir kararla gelir.

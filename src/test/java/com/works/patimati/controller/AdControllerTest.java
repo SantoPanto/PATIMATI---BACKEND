@@ -3,6 +3,7 @@ package com.works.patimati.controller;
 import com.works.patimati.dto.ad.AdResponse;
 import com.works.patimati.entity.Ad;
 import com.works.patimati.entity.enums.AgeGroup;
+import com.works.patimati.entity.enums.AiStatus;
 import com.works.patimati.entity.enums.CoatPattern;
 import com.works.patimati.entity.enums.EyeColor;
 import com.works.patimati.entity.enums.PetGender;
@@ -231,7 +232,9 @@ class AdControllerTest {
                 "Test User",
                 true,
                 Instant.parse("2026-07-27T12:00:00Z"),
-                Instant.parse("2026-07-27T12:00:00Z")
+                Instant.parse("2026-07-27T12:00:00Z"),
+                AiStatus.DONE,
+                true
         );
     }
 

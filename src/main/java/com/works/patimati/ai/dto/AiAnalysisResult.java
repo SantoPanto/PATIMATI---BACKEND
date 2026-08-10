@@ -37,7 +37,11 @@ public record AiAnalysisResult(
      *
      * @param embeddings       her fotoğraf için bir vektör; sırası {@code photo_urls} ile aynı
      * @param species          cat | dog | unknown — güven düşükse unknown
-     * @param isPet            false → fotoğrafta kedi/köpek görünmüyor
+     * @param isPet            {@code false} → fotoğrafta kedi/köpek görünmüyor.
+     *                         <b>Sarmalayıcı {@code Boolean}, ilkel değil:</b> alan
+     *                         mesajda hiç gelmezse Jackson ilkel tipe {@code false}
+     *                         yazardı ve "AI söylemedi" ile "AI hayvan görmedi"
+     *                         aynı değere düşerdi. {@code null} = bilinmiyor.
      * @param breed            bilgi amaçlı; filtre olarak KULLANILMAZ (§7 kural 1)
      * @param pattern          tabby | spotted | solid | bicolor
      * @param labels           eşleştirme skorunun %30'unu oluşturan etiketler
@@ -46,7 +50,7 @@ public record AiAnalysisResult(
             List<float[]> embeddings,
             String species,
             double speciesConfidence,
-            boolean isPet,
+            Boolean isPet,
             String breed,
             double breedConfidence,
             String pattern,
