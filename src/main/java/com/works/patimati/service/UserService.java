@@ -74,6 +74,14 @@ public class UserService {
         if (optionalUser.isPresent()) {
             User user = optionalUser.get();
 
+            if (!user.isEnabled()) {
+                Map<String, Object> errorResponse = Map.of(
+                        "success", false,
+                        "message", "Hesabınız askıya alınmıştır/engellenmiştir."
+                );
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
+            }
+
             // Kullanıcının şifresi varsa (Sadece Google ile girmemişse) doğrula
             if (user.getPassword() != null) {
                 boolean isMatch = passwordEncoder.matches(request.getPassword(), user.getPassword());

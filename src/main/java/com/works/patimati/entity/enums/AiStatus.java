@@ -5,5 +5,6 @@ public enum AiStatus {
     DONE,
     FAILED,
     APPROVED,
-    REJECTED
+    REJECTED,
+    NOT_APPLICABLE
 }
