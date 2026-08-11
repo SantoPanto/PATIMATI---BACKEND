@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS ad_complaints (
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_ad_complaints_ad FOREIGN KEY (ad_id) REFERENCES ads(id) ON DELETE CASCADE,
-    CONSTRAINT fk_ad_complaints_reporter FOREIGN KEY (reporter_id) REFERENCES users(id) ON DELETE CASCADE
+    CONSTRAINT fk_ad_complaints_reporter FOREIGN KEY (reporter_id) REFERENCES users(uid) ON DELETE CASCADE
 );
 
 -- 3. user_complaints tablosunu oluştur
@@ -25,8 +25,8 @@ CREATE TABLE IF NOT EXISTS user_complaints (
     status VARCHAR(20) NOT NULL DEFAULT 'BEKLEMEDE',
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT fk_user_complaints_reporter FOREIGN KEY (reporter_id) REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT fk_user_complaints_reported_user FOREIGN KEY (reported_user_id) REFERENCES users(id) ON DELETE CASCADE
+    CONSTRAINT fk_user_complaints_reporter FOREIGN KEY (reporter_id) REFERENCES users(uid) ON DELETE CASCADE,
+    CONSTRAINT fk_user_complaints_reported_user FOREIGN KEY (reported_user_id) REFERENCES users(uid) ON DELETE CASCADE
 );
 
 -- 4. Indeksler (Mükerrerlik kontrolleri ve performans için)

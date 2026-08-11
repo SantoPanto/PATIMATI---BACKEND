@@ -71,6 +71,7 @@ public class SecurityConfig {
                                 "/ws-connect", // Doğrudan WebSocket bağlantısını kapsar.
                                 "/ws-connect/**" // SockJS’in kullandığı alt adresleri kapsar.
                         ).permitAll() // Kayıt, giriş ve açık uçlara HERKES erişebilsin
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN") // Yöneticilere özel uç noktalar
                         .anyRequest().authenticated() // Diğer tüm uç noktalar için token/giriş zorunlu olsun
                 )
 

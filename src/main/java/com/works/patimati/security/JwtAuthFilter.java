@@ -13,6 +13,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.util.AntPathMatcher;
 
+import com.works.patimati.repository.UserRepository;
+
 import java.io.IOException;
 import java.util.Collections;
 
@@ -20,9 +22,11 @@ import java.util.Collections;
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
+    private final UserRepository userRepository;
 
-    public JwtAuthFilter(JwtService jwtService) {
+    public JwtAuthFilter(JwtService jwtService, UserRepository userRepository) {
         this.jwtService = jwtService;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -62,6 +66,14 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
                 if (jwtService.validateToken(jwt)) {
+                    var userOpt = userRepository.findByEmail(userEmail);
+                    if (userOpt.isPresent() && !userOpt.get().isEnabled()) {
+                        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                        response.setContentType("application/json;charset=UTF-8");
+                        response.getWriter().write("{\"title\":\"Hesap Engellendi\",\"status\":403,\"detail\":\"Hesabınız engellenmiştir.\"}");
+                        return;
+                    }
+
                     String role = jwtService.extractRole(jwt);
 
                     // Rol bilgisiyle yetkilendirme objesini oluştur

@@ -4,6 +4,7 @@ import com.works.patimati.dto.AuthResponse;
 import com.works.patimati.dto.GoogleAuthRequest;
 import com.works.patimati.dto.LoginRequest;
 import com.works.patimati.dto.RegisterRequest;
+import com.works.patimati.dto.SafeUserDTO;
 import com.works.patimati.dto.User.UserResponseDTO;
 import com.works.patimati.entity.User;
 import com.works.patimati.repository.UserRepository;
@@ -15,7 +16,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -64,7 +64,7 @@ public class UserService {
         userRepository.save(user);
         String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
 
-        return ResponseEntity.ok().body(new AuthResponse(token, user));
+        return ResponseEntity.ok().body(new AuthResponse(token, convertToSafeUser(user)));
     }
 
     // --- MANUEL GİRİŞ ---
@@ -74,13 +74,21 @@ public class UserService {
         if (optionalUser.isPresent()) {
             User user = optionalUser.get();
 
+            if (!user.isEnabled()) {
+                Map<String, Object> errorResponse = Map.of(
+                        "success", false,
+                        "message", "Hesabınız askıya alınmıştır/engellenmiştir."
+                );
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
+            }
+
             // Kullanıcının şifresi varsa (Sadece Google ile girmemişse) doğrula
             if (user.getPassword() != null) {
                 boolean isMatch = passwordEncoder.matches(request.getPassword(), user.getPassword());
 
                 if (isMatch) {
                     String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
-                    return ResponseEntity.ok().body(new AuthResponse(token, user));
+                    return ResponseEntity.ok().body(new AuthResponse(token, convertToSafeUser(user)));
                 }
             }
         }
@@ -122,7 +130,20 @@ public class UserService {
         }
 
         String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
-        return ResponseEntity.ok().body(new AuthResponse(token, user));
+        return ResponseEntity.ok().body(new AuthResponse(token, convertToSafeUser(user)));
+    }
+
+    private SafeUserDTO convertToSafeUser(User user) {
+        if (user == null) {
+            return null;
+        }
+        return new SafeUserDTO(
+                user.getUid(),
+                user.getFirstName(),
+                user.getLastName(),
+                user.getEmail(),
+                user.getRole() != null ? user.getRole().name() : null
+        );
     }
 
     // --- OTURUM SAHİBİNİ GETİR ---

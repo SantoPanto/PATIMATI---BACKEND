@@ -3,12 +3,14 @@ package com.works.patimati.controller;
 import com.works.patimati.dto.ad.AdResponse;
 import com.works.patimati.entity.Ad;
 import com.works.patimati.entity.enums.AgeGroup;
+import com.works.patimati.entity.enums.AiStatus;
 import com.works.patimati.entity.enums.CoatPattern;
 import com.works.patimati.entity.enums.EyeColor;
 import com.works.patimati.entity.enums.PetGender;
 import com.works.patimati.entity.enums.PresenceStatus;
 import com.works.patimati.entity.enums.Species;
 import com.works.patimati.exception.GlobalExceptionHandler;
+import com.works.patimati.repository.UserRepository;
 import com.works.patimati.service.AdService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,14 +47,16 @@ import org.springframework.data.domain.PageRequest;
 class AdControllerTest {
 
     private AdService adService;
+    private UserRepository userRepository;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         adService = mock(AdService.class);
+        userRepository = mock(UserRepository.class);
 
         mockMvc = MockMvcBuilders
-                .standaloneSetup(new AdController(adService))
+                .standaloneSetup(new AdController(adService, userRepository))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
@@ -228,7 +232,9 @@ class AdControllerTest {
                 "Test User",
                 true,
                 Instant.parse("2026-07-27T12:00:00Z"),
-                Instant.parse("2026-07-27T12:00:00Z")
+                Instant.parse("2026-07-27T12:00:00Z"),
+                AiStatus.DONE,
+                true
         );
     }
 
