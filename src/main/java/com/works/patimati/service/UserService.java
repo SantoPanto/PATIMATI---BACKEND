@@ -10,6 +10,10 @@ import com.works.patimati.entity.User;
 import com.works.patimati.repository.UserRepository;
 import com.works.patimati.security.JwtService;
 import lombok.RequiredArgsConstructor;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.Point;
+import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -31,6 +35,8 @@ public class UserService {
     private final UserRepository userRepository;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
+
+    private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
     // --- MANUEL KAYIT ---
     public ResponseEntity<?> register(RegisterRequest request) {
@@ -138,6 +144,12 @@ public class UserService {
         if (user == null) {
             return null;
         }
+        Double latitude = null;
+        Double longitude = null;
+        if (user.getLocation() != null) {
+            longitude = user.getLocation().getX();
+            latitude = user.getLocation().getY();
+        }
         return UserResponseDTO.builder()
                 .uid(user.getUid())
                 .email(user.getEmail())
@@ -146,7 +158,10 @@ public class UserService {
                 .role(user.getRole() != null ? user.getRole().name() : null)
                 .phone(user.getPhone())
                 .enabled(user.isEnabled())
-                .location(user.getLocation())
+                .latitude(latitude)
+                .longitude(longitude)
+                .lostPoints(user.getLostPoints())
+                .adoptionPoints(user.getAdoptionPoints())
                 .build();
     }
 
@@ -233,7 +248,17 @@ public class UserService {
             user.setFirstName(request.getFirstName());
             user.setLastName(request.getLastName());
             user.setPhone(phone);
-            // !!! Konum sınıfı eklenmedi
+
+            if (request.getLatitude() != null && request.getLongitude() != null) {
+                if (request.getLatitude() < -90.0 || request.getLatitude() > 90.0) {
+                    return ResponseEntity.badRequest().body(Map.of("error", "Enlem (latitude) -90 ile 90 arasında olmalıdır."));
+                }
+                if (request.getLongitude() < -180.0 || request.getLongitude() > 180.0) {
+                    return ResponseEntity.badRequest().body(Map.of("error", "Boylam (longitude) -180 ile 180 arasında olmalıdır."));
+                }
+                Point userPoint = geometryFactory.createPoint(new Coordinate(request.getLongitude(), request.getLatitude()));
+                user.setLocation(userPoint);
+            }
 
             // Not: Email güncellemeyi destekliyorsan user.setEmail(request.getEmail()) yapabilirsin,
             // ancak email genelde benzersiz (unique) olduğu için veritabanında çakışma kontrolü yapman gerekebilir.
