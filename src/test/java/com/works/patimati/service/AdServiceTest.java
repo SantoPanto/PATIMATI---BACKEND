@@ -33,6 +33,7 @@ class AdServiceTest {
     private AdMapper adMapper;
     private ImageStorageService imageStorageService;
     private AiAnalysisPublisher aiAnalysisPublisher;
+    private RewardService rewardService;
     private AdService adService;
 
     @BeforeEach
@@ -46,13 +47,15 @@ class AdServiceTest {
         // ürünün kalbi değil — ama mock, testi RabbitMQ'dan tümden bağımsız
         // tutuyor ve "yayınlandı mı" doğrulaması yapılabilmesini sağlıyor.)
         aiAnalysisPublisher = mock(AiAnalysisPublisher.class);
+        rewardService = mock(RewardService.class);
 
         adService = new AdService(
                 adRepository,
                 userRepository,
                 adMapper,
                 imageStorageService,
-                aiAnalysisPublisher
+                aiAnalysisPublisher,
+                rewardService
         );
     }
 
