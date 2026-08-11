@@ -19,4 +19,8 @@ public class UserResponseDTO {
     private String phone;
     private boolean enabled;
     private Point location;
+    private int lostPoints;
+    private int adoptionPoints;
+    private int lostBadgeLevel;
+    private int adoptionBadgeLevel;
 }

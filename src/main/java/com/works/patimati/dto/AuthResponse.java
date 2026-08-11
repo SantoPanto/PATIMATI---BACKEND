@@ -1,5 +1,6 @@
 package com.works.patimati.dto;
 
+import com.works.patimati.dto.User.UserResponseDTO;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -9,5 +10,5 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class AuthResponse {
     private String token;
-    private SafeUserDTO user;
+    private UserResponseDTO user;
 }

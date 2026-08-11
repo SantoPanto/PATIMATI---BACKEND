@@ -4,7 +4,6 @@ import com.works.patimati.dto.AuthResponse;
 import com.works.patimati.dto.GoogleAuthRequest;
 import com.works.patimati.dto.LoginRequest;
 import com.works.patimati.dto.RegisterRequest;
-import com.works.patimati.dto.SafeUserDTO;
 import com.works.patimati.dto.User.UpdateProfileRequest;
 import com.works.patimati.dto.User.UserResponseDTO;
 import com.works.patimati.entity.User;
@@ -66,7 +65,7 @@ public class UserService {
         userRepository.save(user);
         String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
 
-        return ResponseEntity.ok().body(new AuthResponse(token, convertToSafeUser(user)));
+        return ResponseEntity.ok().body(new AuthResponse(token, convertToUserResponseDTO(user)));
     }
 
     // --- MANUEL GİRİŞ ---
@@ -90,7 +89,7 @@ public class UserService {
 
                 if (isMatch) {
                     String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
-                    return ResponseEntity.ok().body(new AuthResponse(token, convertToSafeUser(user)));
+                    return ResponseEntity.ok().body(new AuthResponse(token, convertToUserResponseDTO(user)));
                 }
             }
         }
@@ -132,38 +131,25 @@ public class UserService {
         }
 
         String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
-        return ResponseEntity.ok().body(new AuthResponse(token, convertToSafeUser(user)));
+        return ResponseEntity.ok().body(new AuthResponse(token, convertToUserResponseDTO(user)));
     }
 
-    private SafeUserDTO convertToSafeUser(User user) {
+    private UserResponseDTO convertToUserResponseDTO(User user) {
         if (user == null) {
             return null;
         }
-        int lostPoints = user.getLostPoints();
-        int adoptionPoints = user.getAdoptionPoints();
-        return new SafeUserDTO(
-                user.getUid(),
-                user.getFirstName(),
-                user.getLastName(),
-                user.getEmail(),
-                user.getRole() != null ? user.getRole().name() : null,
-                lostPoints,
-                adoptionPoints,
-                calculateBadgeLevel(lostPoints),
-                calculateBadgeLevel(adoptionPoints)
-        );
+        return UserResponseDTO.builder()
+                .uid(user.getUid())
+                .email(user.getEmail())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .role(user.getRole() != null ? user.getRole().name() : null)
+                .phone(user.getPhone())
+                .enabled(user.isEnabled())
+                .location(user.getLocation())
+                .build();
     }
 
-    private static int calculateBadgeLevel(int points) {
-        if (points >= 50) {
-            return 3;
-        } else if (points >= 10) {
-            return 2;
-        } else if (points >= 1) {
-            return 1;
-        }
-        return 0;
-    }
 
     // --- OTURUM SAHİBİNİ GETİR ---
     public ResponseEntity<?> getCurrentUser() {
@@ -181,7 +167,7 @@ public class UserService {
         Optional<User> optionalUser = userRepository.findByEmail(email);
 
         if (optionalUser.isPresent()) {
-            return ResponseEntity.ok().body(convertToSafeUser(optionalUser.get()));
+            return ResponseEntity.ok().body(convertToUserResponseDTO(optionalUser.get()));
         }
 
         Map<String, Object> notFoundResponse = Map.of(
@@ -236,9 +222,17 @@ public class UserService {
                     .orElseThrow(() -> new RuntimeException("Kullanıcı bulunamadı"));
 
             // 3. Bilgileri güncelle
+            String phone = request.getPhone();
+            if (phone != null && phone.isBlank()) {
+                phone = null;
+            }
+            if (phone != null && userRepository.existsByPhoneAndEmailNot(phone, currentUserEmail)) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Bu telefon numarası zaten kullanımda."));
+            }
+
             user.setFirstName(request.getFirstName());
             user.setLastName(request.getLastName());
-            user.setPhone(request.getPhone());
+            user.setPhone(phone);
             // !!! Konum sınıfı eklenmedi
 
             // Not: Email güncellemeyi destekliyorsan user.setEmail(request.getEmail()) yapabilirsin,
@@ -247,11 +241,10 @@ public class UserService {
             // 4. Kaydet
             userRepository.save(user);
 
-            // 5. Güncel bilgileri frontend'e döndür (UserResponseDTO yapınıza göre uyarlayın)
-            // Eğer Map dönüyorsanız:
+            // 5. Güncel bilgileri frontend'e döndür
             Map<String, Object> response = new HashMap<>();
             response.put("message", "Profil başarıyla güncellendi");
-            response.put("user", user); // veya new UserResponseDTO(user)
+            response.put("user", convertToUserResponseDTO(user));
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {
