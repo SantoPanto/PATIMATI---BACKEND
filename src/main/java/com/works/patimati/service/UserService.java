@@ -220,10 +220,7 @@ public class UserService {
 
     public List<UserResponseDTO> getAllUsers() {
         return userRepository.findAll().stream()
-                .map(user -> UserResponseDTO.builder()
-                        .uid(user.getUid()) // Hata veren getId() burasıydı
-                        .email(user.getEmail())
-                        .build())
+                .map(this::convertToUserResponseDTO)
                 .collect(Collectors.toList());
     }
 
