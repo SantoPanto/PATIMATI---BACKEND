@@ -162,7 +162,7 @@ public class UserService {
         Optional<User> optionalUser = userRepository.findByEmail(email);
 
         if (optionalUser.isPresent()) {
-            return ResponseEntity.ok().body(optionalUser.get());
+            return ResponseEntity.ok().body(convertToSafeUser(optionalUser.get()));
         }
 
         Map<String, Object> notFoundResponse = Map.of(
