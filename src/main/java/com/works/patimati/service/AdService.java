@@ -7,6 +7,7 @@
     import com.works.patimati.dto.ad.AdCreateRequest;
     import com.works.patimati.dto.ad.AdResponse;
     import com.works.patimati.dto.ad.AdUpdateRequest;
+    import com.works.patimati.dto.ad.ResolveLostAdRequest;
     import com.works.patimati.entity.Ad;
     import com.works.patimati.entity.User;
     import com.works.patimati.entity.enums.AiStatus;
@@ -44,6 +45,7 @@
         private final AdMapper adMapper;
         private final ImageStorageService imageStorageService;
         private final AiAnalysisPublisher aiAnalysisPublisher;
+        private final RewardService rewardService;
         private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
         /**
@@ -191,6 +193,23 @@
 
             ad.setActive(false);
             adRepository.saveAndFlush(ad);
+        }
+
+        @Transactional
+        public void resolveLostAd(String ownerEmail, Long adId, ResolveLostAdRequest request) {
+            User owner = findUserByEmail(ownerEmail);
+            Ad ad = findActiveOwnedAd(adId, owner.getUid());
+
+            if (ad.getAdType() != Ad.AdType.LOST) {
+                throw new IllegalArgumentException("İlan bir kayıp ilanı değildir.");
+            }
+
+            ad.setActive(false);
+            adRepository.saveAndFlush(ad);
+
+            Long finderId = (request != null) ? request.finderId() : null;
+            rewardService.awardLostPoint(finderId);
+            log.info("Kayıp ilanı bulundu olarak işaretlendi. adId={}, ownerId={}, finderId={}", adId, owner.getUid(), finderId);
         }
 
         @Transactional(readOnly = true)

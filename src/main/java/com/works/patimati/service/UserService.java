@@ -137,13 +137,30 @@ public class UserService {
         if (user == null) {
             return null;
         }
+        int lostPoints = user.getLostPoints();
+        int adoptionPoints = user.getAdoptionPoints();
         return new SafeUserDTO(
                 user.getUid(),
                 user.getFirstName(),
                 user.getLastName(),
                 user.getEmail(),
-                user.getRole() != null ? user.getRole().name() : null
+                user.getRole() != null ? user.getRole().name() : null,
+                lostPoints,
+                adoptionPoints,
+                calculateBadgeLevel(lostPoints),
+                calculateBadgeLevel(adoptionPoints)
         );
+    }
+
+    private static int calculateBadgeLevel(int points) {
+        if (points >= 50) {
+            return 3;
+        } else if (points >= 10) {
+            return 2;
+        } else if (points >= 1) {
+            return 1;
+        }
+        return 0;
     }
 
     // --- OTURUM SAHİBİNİ GETİR ---

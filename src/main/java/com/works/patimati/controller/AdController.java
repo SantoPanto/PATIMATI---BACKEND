@@ -3,6 +3,7 @@ package com.works.patimati.controller;
 import com.works.patimati.dto.ad.AdCreateRequest;
 import com.works.patimati.dto.ad.AdResponse;
 import com.works.patimati.dto.ad.AdUpdateRequest;
+import com.works.patimati.dto.ad.ResolveLostAdRequest;
 import com.works.patimati.entity.Ad;
 import com.works.patimati.entity.User;
 import com.works.patimati.repository.UserRepository;
@@ -141,6 +142,18 @@ public class AdController {
     ) {
         adService.deactivateAd(authentication.getName(), adId);
         return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/lost/{adId}/resolve-found")
+    public ResponseEntity<java.util.Map<String, String>> resolveLostAd(
+            Authentication authentication,
+            @PathVariable @Min(1) Long adId,
+            @RequestBody(required = false) ResolveLostAdRequest request
+    ) {
+        adService.resolveLostAd(authentication.getName(), adId, request);
+        return ResponseEntity.ok(
+                java.util.Map.of("message", "Kayıp ilanı başarıyla bulundu olarak işaretlendi ve ödül puanı tanımlandı.")
+        );
     }
 
     @GetMapping("/nearby")

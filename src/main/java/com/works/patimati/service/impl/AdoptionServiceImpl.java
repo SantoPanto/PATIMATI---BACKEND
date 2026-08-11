@@ -3,6 +3,7 @@ package com.works.patimati.service.impl;
 import com.works.patimati.dto.ad.AdResponse;
 import com.works.patimati.dto.ad.AdoptionAdCreateRequest;
 import com.works.patimati.dto.ad.AdoptionAdUpdateRequest;
+import com.works.patimati.dto.ad.ResolveAdoptionAdRequest;
 import com.works.patimati.dto.complaint.AdComplaintRequestDTO;
 import com.works.patimati.dto.complaint.ComplaintResponse;
 import com.works.patimati.entity.Ad;
@@ -16,6 +17,7 @@ import com.works.patimati.repository.AdoptionComplaintRepository;
 import com.works.patimati.repository.UserRepository;
 import com.works.patimati.service.AdService;
 import com.works.patimati.service.AdoptionService;
+import com.works.patimati.service.RewardService;
 import com.works.patimati.storage.ImageStorageService;
 import com.works.patimati.storage.InvalidImageException;
 import lombok.RequiredArgsConstructor;
@@ -46,6 +48,7 @@ public class AdoptionServiceImpl implements AdoptionService {
     private final AdoptionComplaintRepository adoptionComplaintRepository;
     private final ImageStorageService imageStorageService;
     private final AdService adService;
+    private final RewardService rewardService;
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), WGS_84_SRID);
 
     @Transactional
@@ -146,6 +149,24 @@ public class AdoptionServiceImpl implements AdoptionService {
         ad.setActive(false);
         adRepository.save(ad);
         log.info("Sahiplendirme ilanı kaldırıldı (soft delete). adId={}", adId);
+    }
+
+    @Transactional
+    @Override
+    public void resolveAdoptionAd(String ownerEmail, Long adId, ResolveAdoptionAdRequest request) {
+        Ad ad = adRepository.findByIdAndActiveTrue(adId)
+                .orElseThrow(() -> new ResourceNotFoundException("Sahiplendirme ilanı bulunamadı ID: " + adId));
+
+        validateAdOwnerAndType(ad, ownerEmail);
+
+        ad.setActive(false);
+        adRepository.save(ad);
+
+        Long ownerId = ad.getUser().getUid();
+        Long adopterId = (request != null) ? request.adopterId() : null;
+
+        rewardService.awardAdoptionPoints(ownerId, adopterId);
+        log.info("Sahiplendirme ilanı sahiplendirildi olarak kapatıldı. adId={}, ownerId={}, adopterId={}", adId, ownerId, adopterId);
     }
 
     @Transactional(readOnly = true)
