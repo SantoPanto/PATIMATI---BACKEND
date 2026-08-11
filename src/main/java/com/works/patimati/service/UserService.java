@@ -5,6 +5,7 @@ import com.works.patimati.dto.GoogleAuthRequest;
 import com.works.patimati.dto.LoginRequest;
 import com.works.patimati.dto.RegisterRequest;
 import com.works.patimati.dto.SafeUserDTO;
+import com.works.patimati.dto.User.UpdateProfileRequest;
 import com.works.patimati.dto.User.UserResponseDTO;
 import com.works.patimati.entity.User;
 import com.works.patimati.repository.UserRepository;
@@ -18,6 +19,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -222,5 +224,38 @@ public class UserService {
                         .email(user.getEmail())
                         .build())
                 .collect(Collectors.toList());
+    }
+
+    public ResponseEntity<?> updateProfile(UpdateProfileRequest request) {
+        try {
+            // 1. Sisteme giriş yapmış olan kullanıcının email'ini SecurityContext'ten al
+            String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+
+            // 2. Kullanıcıyı veritabanından bul (Repository adın userRepository olmayabilir, kendi projene göre uyarla)
+            User user = userRepository.findByEmail(currentUserEmail)
+                    .orElseThrow(() -> new RuntimeException("Kullanıcı bulunamadı"));
+
+            // 3. Bilgileri güncelle
+            user.setFirstName(request.getFirstName());
+            user.setLastName(request.getLastName());
+            user.setPhone(request.getPhone());
+            // !!! Konum sınıfı eklenmedi
+
+            // Not: Email güncellemeyi destekliyorsan user.setEmail(request.getEmail()) yapabilirsin,
+            // ancak email genelde benzersiz (unique) olduğu için veritabanında çakışma kontrolü yapman gerekebilir.
+
+            // 4. Kaydet
+            userRepository.save(user);
+
+            // 5. Güncel bilgileri frontend'e döndür (UserResponseDTO yapınıza göre uyarlayın)
+            // Eğer Map dönüyorsanız:
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Profil başarıyla güncellendi");
+            response.put("user", user); // veya new UserResponseDTO(user)
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Profil güncellenirken bir hata oluştu: " + e.getMessage()));
+        }
     }
 }

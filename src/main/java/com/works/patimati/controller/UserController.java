@@ -1,6 +1,7 @@
 package com.works.patimati.controller;
 
 import com.works.patimati.dto.*;
+import com.works.patimati.dto.User.UpdateProfileRequest;
 import com.works.patimati.dto.User.UserResponseDTO;
 import com.works.patimati.service.PasswordResetService;
 import com.works.patimati.service.UserService;
@@ -58,5 +59,9 @@ public class UserController {
     public ResponseEntity<List<UserResponseDTO>> getAllUsers() {
         List<UserResponseDTO> users = authService.getAllUsers();
         return ResponseEntity.ok(users);
+    }
+    @PutMapping("/profile")
+    public ResponseEntity<?> updateProfile(@Valid @RequestBody UpdateProfileRequest request) {
+        return authService.updateProfile(request);
     }
 }
