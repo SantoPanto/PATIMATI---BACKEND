@@ -1,0 +1,28 @@
+-- İlanın yönetici tarafından askıya alınıp alınmadığı.
+-- Karşılığı: Ad entity'sindeki @Column(name = "suspended", nullable = false)
+-- ve AdminController'ın suspend / unhide uçları.
+--
+-- NEDEN GEREKTİ: alan `b3daf7d` ile entity'ye ve sorgulara eklendi, ama
+-- migration yazılmadı. Şema yalnızca `ddl-auto: update` sayesinde oluşuyordu;
+-- o da BOŞ OLMAYAN bir tabloya NOT NULL sütun ekleyemediği için sessizce
+-- (WARN seviyesinde) düşüyordu:
+--
+--   Error executing DDL "alter table if exists ads add column suspended
+--   boolean not null" -> ERROR: column "suspended" of relation "ads"
+--   contains null values
+--
+-- Sütun hiç oluşmadığı için `ads` okuyan HER sorgu 500 veriyordu:
+--
+--   ERROR: column a1_0.suspended does not exist
+--
+-- Etkilenen uçlar: GET /api/public/ads, GET /api/public/ads/{id},
+-- GET /api/public/adoptions, GET /api/ads/nearby — yani ilan listeleyen
+-- ekranların ihtiyacı olan hepsi.
+--
+-- NEDEN FARK EDİLMEDİ: taze bir veritabanında `ads` boş olduğu için aynı DDL
+-- sorunsuz çalışıyor. Hata yalnızca içinde ilan BULUNAN bir veritabanında
+-- ortaya çıkıyor; yani yeni kurulumda görünmüyor, çalışan kurulumda kırıyor.
+--
+-- DEFAULT FALSE bilerek: mevcut ilanların hiçbiri askıya alınmış değil ve
+-- NOT NULL sütun ancak varsayılanla dolu bir tabloya eklenebilir.
+ALTER TABLE ads ADD COLUMN IF NOT EXISTS suspended BOOLEAN NOT NULL DEFAULT FALSE;
