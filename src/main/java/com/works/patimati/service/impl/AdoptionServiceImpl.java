@@ -10,7 +10,9 @@ import com.works.patimati.entity.Ad;
 import com.works.patimati.entity.AdoptionComplaint;
 import com.works.patimati.entity.User;
 import com.works.patimati.entity.enums.AiStatus;
+import com.works.patimati.entity.enums.CoatPattern;
 import com.works.patimati.entity.enums.ComplaintStatus;
+import com.works.patimati.entity.enums.EyeColor;
 import com.works.patimati.exception.ResourceNotFoundException;
 import com.works.patimati.repository.AdRepository;
 import com.works.patimati.repository.AdoptionComplaintRepository;
@@ -84,8 +86,22 @@ public class AdoptionServiceImpl implements AdoptionService {
                 .gender(request.gender())
                 .ageGroup(request.ageGroup())
                 .colors(request.colors() != null ? request.colors() : Set.of())
-                .coatPattern(request.coatPattern())
-                .eyeColor(request.eyeColor())
+                /*
+                 * coatPattern ve eyeColor isteğe bağlı alanlar (DTO'da @NotNull yok)
+                 * ama ads tablosunda NOT NULL. Ad entity'sinde @Builder.Default ile
+                 * UNKNOWN tanımlı; ancak builder metodunu null ile ÇAĞIRMAK bu
+                 * varsayılanı ezer. Bu yüzden alan gönderilmediğinde insert
+                 * "null value in column coat_pattern violates not-null constraint"
+                 * ile düşüyordu ve sahiplendirme ilanı hiç oluşturulamıyordu.
+                 * (AdService bu builder metotlarını hiç çağırmadığı için orada
+                 * varsayılanlar çalışıyor.)
+                 */
+                .coatPattern(request.coatPattern() != null
+                        ? request.coatPattern()
+                        : CoatPattern.UNKNOWN)
+                .eyeColor(request.eyeColor() != null
+                        ? request.eyeColor()
+                        : EyeColor.UNKNOWN)
                 .microchipNumber(request.microchipNumber())
                 .location(location)
                 .photoUrls(photoReferences)
