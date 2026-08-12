@@ -1,15 +1,20 @@
 package com.works.patimati.service;
 
 import com.works.patimati.dto.AuthResponse;
+import com.works.patimati.dto.FcmTokenUpdateDTO;
 import com.works.patimati.dto.GoogleAuthRequest;
 import com.works.patimati.dto.LoginRequest;
 import com.works.patimati.dto.RegisterRequest;
-import com.works.patimati.dto.SafeUserDTO;
+import com.works.patimati.dto.User.UpdateProfileRequest;
 import com.works.patimati.dto.User.UserResponseDTO;
 import com.works.patimati.entity.User;
 import com.works.patimati.repository.UserRepository;
 import com.works.patimati.security.JwtService;
 import lombok.RequiredArgsConstructor;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.Point;
+import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -18,6 +23,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -30,6 +36,8 @@ public class UserService {
     private final UserRepository userRepository;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
+
+    private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
     // --- MANUEL KAYIT ---
     public ResponseEntity<?> register(RegisterRequest request) {
@@ -64,7 +72,7 @@ public class UserService {
         userRepository.save(user);
         String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
 
-        return ResponseEntity.ok().body(new AuthResponse(token, convertToSafeUser(user)));
+        return ResponseEntity.ok().body(new AuthResponse(token, convertToUserResponseDTO(user)));
     }
 
     // --- MANUEL GİRİŞ ---
@@ -88,7 +96,7 @@ public class UserService {
 
                 if (isMatch) {
                     String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
-                    return ResponseEntity.ok().body(new AuthResponse(token, convertToSafeUser(user)));
+                    return ResponseEntity.ok().body(new AuthResponse(token, convertToUserResponseDTO(user)));
                 }
             }
         }
@@ -130,38 +138,34 @@ public class UserService {
         }
 
         String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
-        return ResponseEntity.ok().body(new AuthResponse(token, convertToSafeUser(user)));
+        return ResponseEntity.ok().body(new AuthResponse(token, convertToUserResponseDTO(user)));
     }
 
-    private SafeUserDTO convertToSafeUser(User user) {
+    private UserResponseDTO convertToUserResponseDTO(User user) {
         if (user == null) {
             return null;
         }
-        int lostPoints = user.getLostPoints();
-        int adoptionPoints = user.getAdoptionPoints();
-        return new SafeUserDTO(
-                user.getUid(),
-                user.getFirstName(),
-                user.getLastName(),
-                user.getEmail(),
-                user.getRole() != null ? user.getRole().name() : null,
-                lostPoints,
-                adoptionPoints,
-                calculateBadgeLevel(lostPoints),
-                calculateBadgeLevel(adoptionPoints)
-        );
+        Double latitude = null;
+        Double longitude = null;
+        if (user.getLocation() != null) {
+            longitude = user.getLocation().getX();
+            latitude = user.getLocation().getY();
+        }
+        return UserResponseDTO.builder()
+                .uid(user.getUid())
+                .email(user.getEmail())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .role(user.getRole() != null ? user.getRole().name() : null)
+                .phone(user.getPhone())
+                .enabled(user.isEnabled())
+                .latitude(latitude)
+                .longitude(longitude)
+                .lostPoints(user.getLostPoints())
+                .adoptionPoints(user.getAdoptionPoints())
+                .build();
     }
 
-    private static int calculateBadgeLevel(int points) {
-        if (points >= 50) {
-            return 3;
-        } else if (points >= 10) {
-            return 2;
-        } else if (points >= 1) {
-            return 1;
-        }
-        return 0;
-    }
 
     // --- OTURUM SAHİBİNİ GETİR ---
     public ResponseEntity<?> getCurrentUser() {
@@ -179,7 +183,7 @@ public class UserService {
         Optional<User> optionalUser = userRepository.findByEmail(email);
 
         if (optionalUser.isPresent()) {
-            return ResponseEntity.ok().body(convertToSafeUser(optionalUser.get()));
+            return ResponseEntity.ok().body(convertToUserResponseDTO(optionalUser.get()));
         }
 
         Map<String, Object> notFoundResponse = Map.of(
@@ -217,10 +221,91 @@ public class UserService {
 
     public List<UserResponseDTO> getAllUsers() {
         return userRepository.findAll().stream()
-                .map(user -> UserResponseDTO.builder()
-                        .uid(user.getUid()) // Hata veren getId() burasıydı
-                        .email(user.getEmail())
-                        .build())
+                .map(this::convertToUserResponseDTO)
                 .collect(Collectors.toList());
+    }
+
+    public ResponseEntity<?> updateProfile(UpdateProfileRequest request) {
+        try {
+            // 1. Sisteme giriş yapmış olan kullanıcının email'ini SecurityContext'ten al
+            String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+
+            // 2. Kullanıcıyı veritabanından bul (Repository adın userRepository olmayabilir, kendi projene göre uyarla)
+            User user = userRepository.findByEmail(currentUserEmail)
+                    .orElseThrow(() -> new RuntimeException("Kullanıcı bulunamadı"));
+
+            // 3. Bilgileri güncelle
+            String phone = request.getPhone();
+            if (phone != null && phone.isBlank()) {
+                phone = null;
+            }
+            if (phone != null && userRepository.existsByPhoneAndEmailNot(phone, currentUserEmail)) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Bu telefon numarası zaten kullanımda."));
+            }
+
+            user.setFirstName(request.getFirstName());
+            user.setLastName(request.getLastName());
+            user.setPhone(phone);
+
+            if (request.getLatitude() != null && request.getLongitude() != null) {
+                if (request.getLatitude() < -90.0 || request.getLatitude() > 90.0) {
+                    return ResponseEntity.badRequest().body(Map.of("error", "Enlem (latitude) -90 ile 90 arasında olmalıdır."));
+                }
+                if (request.getLongitude() < -180.0 || request.getLongitude() > 180.0) {
+                    return ResponseEntity.badRequest().body(Map.of("error", "Boylam (longitude) -180 ile 180 arasında olmalıdır."));
+                }
+                Point userPoint = geometryFactory.createPoint(new Coordinate(request.getLongitude(), request.getLatitude()));
+                user.setLocation(userPoint);
+            }
+
+            // Not: Email güncellemeyi destekliyorsan user.setEmail(request.getEmail()) yapabilirsin,
+            // ancak email genelde benzersiz (unique) olduğu için veritabanında çakışma kontrolü yapman gerekebilir.
+
+            // 4. Kaydet
+            userRepository.save(user);
+
+            // 5. Güncel bilgileri frontend'e döndür
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Profil başarıyla güncellendi");
+            response.put("user", convertToUserResponseDTO(user));
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Profil güncellenirken bir hata oluştu: " + e.getMessage()));
+        }
+    }
+
+    @Transactional
+    public ResponseEntity<?> updateFcmToken(FcmTokenUpdateDTO request) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
+            Map<String, Object> errorResponse = Map.of(
+                    "success", false,
+                    "message", "Oturum süreniz dolmuş veya yetkisiz erişim."
+            );
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+        }
+
+        String email = authentication.getName();
+        Optional<User> optionalUser = userRepository.findByEmail(email);
+
+        if (optionalUser.isPresent()) {
+            User user = optionalUser.get();
+            user.setFcmToken(request.getFcmToken());
+            userRepository.save(user);
+
+            Map<String, Object> successResponse = Map.of(
+                    "success", true,
+                    "message", "FCM token başarıyla güncellendi."
+            );
+            return ResponseEntity.ok().body(successResponse);
+        }
+
+        Map<String, Object> notFoundResponse = Map.of(
+                "success", false,
+                "message", "Kullanıcı kaydı bulunamadı."
+        );
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(notFoundResponse);
     }
 }
