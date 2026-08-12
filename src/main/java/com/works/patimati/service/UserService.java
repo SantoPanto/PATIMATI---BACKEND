@@ -1,6 +1,7 @@
 package com.works.patimati.service;
 
 import com.works.patimati.dto.AuthResponse;
+import com.works.patimati.dto.FcmTokenUpdateDTO;
 import com.works.patimati.dto.GoogleAuthRequest;
 import com.works.patimati.dto.LoginRequest;
 import com.works.patimati.dto.RegisterRequest;
@@ -272,5 +273,39 @@ public class UserService {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", "Profil güncellenirken bir hata oluştu: " + e.getMessage()));
         }
+    }
+
+    @Transactional
+    public ResponseEntity<?> updateFcmToken(FcmTokenUpdateDTO request) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
+            Map<String, Object> errorResponse = Map.of(
+                    "success", false,
+                    "message", "Oturum süreniz dolmuş veya yetkisiz erişim."
+            );
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+        }
+
+        String email = authentication.getName();
+        Optional<User> optionalUser = userRepository.findByEmail(email);
+
+        if (optionalUser.isPresent()) {
+            User user = optionalUser.get();
+            user.setFcmToken(request.getFcmToken());
+            userRepository.save(user);
+
+            Map<String, Object> successResponse = Map.of(
+                    "success", true,
+                    "message", "FCM token başarıyla güncellendi."
+            );
+            return ResponseEntity.ok().body(successResponse);
+        }
+
+        Map<String, Object> notFoundResponse = Map.of(
+                "success", false,
+                "message", "Kullanıcı kaydı bulunamadı."
+        );
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(notFoundResponse);
     }
 }
