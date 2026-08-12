@@ -19,6 +19,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     boolean existsByPhone(String phone);
 
+    boolean existsByPhoneAndEmailNot(String phone, String email);
+
     // KISIM 3
     // PARAMETREDE ::geography YAZILAMAZ — Hibernate parametre adını
     // "point::geography" diye okur. Hata AdService.notifyNearbyUsersSafely
