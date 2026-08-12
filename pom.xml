@@ -97,7 +97,7 @@
             <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- JWT (JSON Web Token) Üretimi ve Kontrolü[cite: 1] -->
+        <!-- JWT (JSON Web Token) Üretimi ve Kontrolü -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
@@ -116,14 +116,13 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- PostGIS / Hibernate Spatial - Konum Bazlı Coğrafi Sorgular[cite: 1] -->
+        <!-- PostGIS / Hibernate Spatial - Konum Bazlı Coğrafi Sorgular -->
         <dependency>
             <groupId>org.hibernate.orm</groupId>
             <artifactId>hibernate-spatial</artifactId>
-            <!-- Sürüm numarası Spring Boot (Data JPA) tarafından otomatik yönetilir -->
         </dependency>
 
-        <!-- iText Core - Dinamik PDF Oluşturma[cite: 1] -->
+        <!-- iText Core - Dinamik PDF Oluşturma -->
         <dependency>
             <groupId>com.itextpdf</groupId>
             <artifactId>itext-core</artifactId>
@@ -131,21 +130,26 @@
             <type>pom</type>
         </dependency>
 
-        <!-- ZXing Core - QR Kod Üretimi[cite: 1] -->
+        <!-- ZXing Core & JavaSE - QR Kod Üretimi -->
         <dependency>
             <groupId>com.google.zxing</groupId>
             <artifactId>core</artifactId>
             <version>3.5.3</version>
         </dependency>
+        <dependency>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>javase</artifactId>
+            <version>3.5.3</version>
+        </dependency>
 
-        <!-- Firebase Admin SDK - iOS/Android Push Bildirimleri (FCM)[cite: 1] -->
+        <!-- Firebase Admin SDK - iOS/Android Push Bildirimleri (FCM) -->
         <dependency>
             <groupId>com.google.firebase</groupId>
             <artifactId>firebase-admin</artifactId>
             <version>9.2.0</version>
         </dependency>
 
-        <!-- SpringDoc OpenAPI (Swagger UI) - API Dokümantasyonu (Spring Boot 3 Uyumlu)[cite: 1] -->
+        <!-- SpringDoc OpenAPI (Swagger UI) - API Dokümantasyonu (Spring Boot 3 Uyumlu) -->
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
@@ -163,24 +167,10 @@
             <scope>provided</scope>
         </dependency>
 
-
     </dependencies>
 
     <build>
         <plugins>
-            <!--
-                Lombok'un annotation processor'ı AÇIKÇA tanımlanıyor.
-
-                Neden gerekli: JDK 21'den itibaren javac, sınıf yolunda
-                kendiliğinden bulduğu processor'ları çalıştırmayı bıraktı
-                (JDK 23'te tamamen kapalı). Bu tanım olmadan Lombok hiç
-                çalışmaz: @Getter/@Setter üretilmez ve proje "cannot find
-                symbol: method getId()" gibi YÜZLERCE hatayla derlenmez.
-
-                Hata, Lombok'u değil kendi kodunuzu işaret ettiği için
-                yanıltıcıdır. JDK 17/21 kullananlarda sorun görünmez, JDK 23
-                kullanan bir ekip arkadaşında proje hiç derlenmez.
-            -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>

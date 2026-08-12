@@ -3,7 +3,6 @@ package com.works.patimati.controller;
 import com.works.patimati.dto.ad.AdCreateRequest;
 import com.works.patimati.dto.ad.AdResponse;
 import com.works.patimati.dto.ad.AdUpdateRequest;
-import com.works.patimati.dto.ad.ResolveLostAdRequest;
 import com.works.patimati.entity.Ad;
 import com.works.patimati.entity.User;
 import com.works.patimati.repository.UserRepository;
@@ -36,6 +35,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
 import java.util.List;
+import com.works.patimati.service.PdfPosterService;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 
 @Validated
 @RestController
@@ -47,7 +49,7 @@ public class AdController {
 
     private final AdService adService;
     private final UserRepository userRepository;
-
+    private final PdfPosterService pdfPosterService;
     /**
      * İlanı fotoğraflarıyla birlikte oluşturur.
      *
@@ -65,8 +67,8 @@ public class AdController {
     ) {
         AdResponse response = adService.createAd(authentication.getName(), request, images);
 
-        // 201 Created + Location: yeni kaynağın adresi. REST sözleşmesinin
-        // beklediği yanıt bu; testler de bunu doğruluyor.
+// 201 Created + Location: yeni kaynağın adresi. REST sözleşmesinin
+// beklediği yanıt bu; testler de bunu doğruluyor.
         return ResponseEntity
                 .created(URI.create("/api/ads/" + response.id()))
                 .body(response);
@@ -144,18 +146,6 @@ public class AdController {
         return ResponseEntity.noContent().build();
     }
 
-    @PutMapping("/lost/{adId}/resolve-found")
-    public ResponseEntity<java.util.Map<String, String>> resolveLostAd(
-            Authentication authentication,
-            @PathVariable @Min(1) Long adId,
-            @RequestBody(required = false) ResolveLostAdRequest request
-    ) {
-        adService.resolveLostAd(authentication.getName(), adId, request);
-        return ResponseEntity.ok(
-                java.util.Map.of("message", "Kayıp ilanı başarıyla bulundu olarak işaretlendi ve ödül puanı tanımlandı.")
-        );
-    }
-
     @GetMapping("/nearby")
     public ResponseEntity<List<AdResponse>> getNearbyAds(
             @RequestParam
@@ -180,5 +170,16 @@ public class AdController {
     public ResponseEntity<List<AdResponse>> getAllAdsForTesting() {
         List<AdResponse> ads = adService.getAllAdsForTesting();
         return ResponseEntity.ok(ads);
+    }
+    @GetMapping(value = "/{adId}/poster", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> getAdPoster(@PathVariable @Min(1) Long adId) {
+        byte[] pdfContents = pdfPosterService.generateAdPoster(adId);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDispositionFormData("attachment", "kayip-ilani-poster-" + adId + ".pdf");
+        headers.setCacheControl("must-revalidate, post-check=0, pre-check=0");
+
+        return new ResponseEntity<>(pdfContents, headers, HttpStatus.OK);
     }
 }

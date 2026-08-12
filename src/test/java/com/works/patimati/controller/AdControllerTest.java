@@ -12,9 +12,11 @@ import com.works.patimati.entity.enums.Species;
 import com.works.patimati.exception.GlobalExceptionHandler;
 import com.works.patimati.repository.UserRepository;
 import com.works.patimati.service.AdService;
+import com.works.patimati.service.PdfPosterService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
@@ -42,21 +44,21 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import org.springframework.data.domain.PageRequest;
-
 class AdControllerTest {
 
     private AdService adService;
     private UserRepository userRepository;
+    private PdfPosterService pdfPosterService;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         adService = mock(AdService.class);
         userRepository = mock(UserRepository.class);
+        pdfPosterService = mock(PdfPosterService.class);
 
         mockMvc = MockMvcBuilders
-                .standaloneSetup(new AdController(adService, userRepository))
+                .standaloneSetup(new AdController(adService, userRepository, pdfPosterService))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
