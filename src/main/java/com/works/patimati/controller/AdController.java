@@ -72,7 +72,8 @@ public class AdController {
                 .body(response);
     }
 
-    @GetMapping("/{adId}")
+    // Metin tabanlı eski test adreslerinin ilan ID'si olarak algılanmasını engeller.
+    @GetMapping("/{adId:[0-9]+}")
     public ResponseEntity<AdResponse> getAd(
             @PathVariable @Min(1) Long adId
     ) {
@@ -174,11 +175,5 @@ public class AdController {
         return ResponseEntity.ok(
                 adService.findNearbyAds(latitude, longitude, radius)
         );
-    }
-
-    @GetMapping("/all")
-    public ResponseEntity<List<AdResponse>> getAllAdsForTesting() {
-        List<AdResponse> ads = adService.getAllAdsForTesting();
-        return ResponseEntity.ok(ads);
     }
 }

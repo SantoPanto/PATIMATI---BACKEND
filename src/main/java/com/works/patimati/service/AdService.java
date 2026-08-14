@@ -381,11 +381,4 @@
                 log.error("Push notification gönderilemedi: {}", e.getMessage());
             }
         }
-
-        @Transactional(readOnly = true)
-        public List<AdResponse> getAllAdsForTesting() {
-            return adRepository.findAll().stream()
-                    .map(this::toResponseWithTemporaryPhotoUrls)
-                    .toList();
-        }
     }
