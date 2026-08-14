@@ -29,6 +29,11 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * ⚠ Burada {@code S3Presigner} <b>mock'lanıyor</b> ⇒ üretilen URL'in ŞEKLİ
+ * (path-style mı virtual-host mu) bu testlerden görünmez. O iş
+ * {@code S3PresignedUrlSekliTest}'in.
+ */
 class S3ImageStorageServiceTest {
 
     private S3Client s3Client;
