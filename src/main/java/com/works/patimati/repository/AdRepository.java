@@ -55,6 +55,19 @@ public interface AdRepository extends JpaRepository<Ad, Long> {
             Pageable pageable
     );
 
+    // Standart kullanıcının görebileceği aktif ilanlar (askıda olmayanlar VEYA kullanıcının kendi askıdaki ilanları)
+    @Query("SELECT a FROM Ad a WHERE a.active = true AND (a.suspended = false OR (a.user IS NOT NULL AND a.user.uid = :userId))")
+    Page<Ad> findAllActiveForUser(@Param("userId") Long userId, Pageable pageable);
+
+    // Türüne göre standart kullanıcının görebileceği aktif ilanlar (askıda olmayanlar VEYA kullanıcının kendi askıdaki ilanları)
+    @Query("SELECT a FROM Ad a WHERE a.active = true AND a.adType = :adType AND (a.suspended = false OR (a.user IS NOT NULL AND a.user.uid = :userId))")
+    Page<Ad> findAllByAdTypeActiveForUser(
+            @Param("adType") Ad.AdType adType,
+            @Param("userId") Long userId,
+            Pageable pageable
+    );
+
+
     // KISIM 3
     // PARAMETREDE ::geography YAZILAMAZ — Hibernate parametre adını
     // "userPoint::geography" diye okur ve sorgu çalışma anında patlar.
