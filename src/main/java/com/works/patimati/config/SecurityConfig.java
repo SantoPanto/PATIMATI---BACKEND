@@ -18,11 +18,14 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+
 import java.util.Arrays;
 import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
 
     // Bağımlılıkları tanımlıyoruz
@@ -71,11 +74,11 @@ public class SecurityConfig {
                                 "/ws-connect", // Doğrudan WebSocket bağlantısını kapsar.
                                 "/ws-connect/**" // SockJS’in kullandığı alt adresleri kapsar.
                         ).permitAll() // Kayıt, giriş ve açık uçlara HERKES erişebilsin
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN") // Yöneticilere özel uç noktalar
+                        .requestMatchers("/api/auth/userlist", "/api/admin/**").hasRole("ADMIN") // Yöneticilere özel uç noktalar
                         .anyRequest().authenticated() // Diğer tüm uç noktalar için token/giriş zorunlu olsun
                 )
 
-                // 3. EN ÖNEMLİ KISIM: Yetkisiz erişimlerde ProblemDetail formatında JSON dön
+                // 3. EN ÖNEMLİ KISIM: Yetkisiz ve Yetkisiz Erişim (401 ve 403) Durumlarında ProblemDetail JSON dön
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint((request, response, authException) -> {
                             response.setContentType("application/json;charset=UTF-8");
@@ -92,6 +95,25 @@ public class SecurityConfig {
                                             "}",
                                     HttpStatus.UNAUTHORIZED.value(),
                                     "Bu işlemi gerçekleştirmek için geçerli bir kimlik doğrulama token'ı gereklidir.",
+                                    request.getRequestURI()
+                            );
+
+                            response.getWriter().write(problemDetailJson);
+                        })
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            response.setContentType("application/json;charset=UTF-8");
+                            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+
+                            String problemDetailJson = String.format(
+                                    "{" +
+                                            "\"type\":\"about:blank\"," +
+                                            "\"title\":\"Erişim Reddedildi\"," +
+                                            "\"status\":%d," +
+                                            "\"detail\":\"%s\"," +
+                                            "\"instance\":\"%s\"" +
+                                            "}",
+                                    HttpStatus.FORBIDDEN.value(),
+                                    "Bu kaynağa erişmek için yönetici (ADMIN) yetkisine sahip olmalısınız.",
                                     request.getRequestURI()
                             );
 

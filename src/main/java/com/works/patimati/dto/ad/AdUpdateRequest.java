@@ -38,6 +38,8 @@ public record AdUpdateRequest(
         @Size(max = 100, message = "Breed can contain at most 100 characters")
         String breed,
 
+        @com.fasterxml.jackson.annotation.JsonAlias({"color", "colors"})
+        @com.fasterxml.jackson.databind.annotation.JsonDeserialize(using = com.works.patimati.jackson.PetColorSetDeserializer.class)
         @Size(max = 9, message = "At most 9 colors can be selected")
         Set<PetColor> colors,
 

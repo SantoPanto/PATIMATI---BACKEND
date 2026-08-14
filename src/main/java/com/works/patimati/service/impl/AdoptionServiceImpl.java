@@ -142,7 +142,14 @@ public class AdoptionServiceImpl implements AdoptionService {
         ad.setBreed(request.breed() != null ? request.breed().trim() : "MIXED_OR_UNKNOWN");
         ad.setGender(request.gender());
         ad.setAgeGroup(request.ageGroup());
-        ad.setColors(request.colors() != null ? request.colors() : Set.of());
+        if (request.colors() != null && !request.colors().isEmpty()) {
+            Set<com.works.patimati.entity.enums.PetColor> validColors = request.colors().stream()
+                    .filter(java.util.Objects::nonNull)
+                    .collect(java.util.stream.Collectors.toCollection(java.util.LinkedHashSet::new));
+            ad.setColors(validColors);
+        } else {
+            ad.setColors(new java.util.LinkedHashSet<>());
+        }
         if (request.coatPattern() != null) ad.setCoatPattern(request.coatPattern());
         if (request.eyeColor() != null) ad.setEyeColor(request.eyeColor());
         ad.setMicrochipNumber(request.microchipNumber());
