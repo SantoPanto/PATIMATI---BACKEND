@@ -56,7 +56,6 @@ public class S3Config {
         URI endpoint = endpoint(properties);
         if (endpoint != null) {
             builder.endpointOverride(endpoint);
-            builder.forcePathStyle(properties.pathStyleAccess()); // MinIO path-style URL uyumluluğu
         }
 
         return builder.build();
@@ -80,8 +79,21 @@ public class S3Config {
         return builder.build();
     }
 
+    /**
+     * Path-style adresleme kararının TEK yeri — hem istemci hem presigner buradan besleniyor.
+     *
+     * <p>Presigner'a path-style bilgisini geçirmenin başka yolu yok:
+     * {@code S3Presigner.Builder} sınıfında {@code forcePathStyle} metodu
+     * <b>bulunmuyor</b> (AWS SDK 2.49.3'te javap ile doğrulandı). Bu satır buradan
+     * kaldırılıp yerine yalnız {@code S3ClientBuilder.forcePathStyle(...)} konursa
+     * yükleme çalışmaya devam eder ama presigner sessizce virtual-host URL üretir:
+     * {@code http://patimati-medya-kutusu.localhost:9000/...} — böyle bir alan adı
+     * çözülmediği için hiçbir fotoğraf görüntülenemez ve AI servisi fotoğrafları
+     * indiremez. Bekçisi: {@code S3PresignedUrlSekliTest}.
+     */
     private S3Configuration serviceConfiguration(S3StorageProperties properties) {
         return S3Configuration.builder()
+                .pathStyleAccessEnabled(properties.pathStyleAccess())
                 .build();
     }
 
