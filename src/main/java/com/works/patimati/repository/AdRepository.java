@@ -77,6 +77,29 @@ public interface AdRepository extends JpaRepository<Ad, Long> {
     List<Ad> findNearbyAds(@Param("userPoint") Point userPoint, @Param("distanceInMeters") double distanceInMeters);
 
     /**
+     * Herkese açık haritada gösterilebilecek yakın ilanları getirir.
+     *
+     * <p>Public uç nokta kimlik bilgisi taşımadığı için sahip ve yönetici
+     * istisnası uygulanmaz; yalnızca aktif ve askıda olmayan ilanlar döner.</p>
+     */
+    @Query(value = """
+        SELECT *
+          FROM ads a
+         WHERE a.active = TRUE
+           AND a.suspended = FALSE
+           AND a.location IS NOT NULL
+           AND ST_DWithin(
+                   a.location::geography,
+                   CAST(:userPoint AS geography),
+                   :distanceInMeters
+               ) = TRUE
+        """, nativeQuery = true)
+        List<Ad> findPublicNearbyAds(
+                @Param("userPoint") Point userPoint,
+                @Param("distanceInMeters") double distanceInMeters
+    );
+
+    /**
      * AI eşleştirmesine girecek adayları süzer (entegrasyon sözleşmesi §5).
      *
      * <p>Süzmeyi <b>Java yapar</b>, AI değil: PostGIS, ilan tipi ve tarih
