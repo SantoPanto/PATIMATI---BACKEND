@@ -5,12 +5,22 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.boot.context.properties.bind.Bindable;
+import org.springframework.boot.context.properties.bind.Binder;
+import org.springframework.boot.context.properties.bind.PropertySourcesPlaceholdersResolver;
+import org.springframework.boot.context.properties.source.ConfigurationPropertySources;
+import org.springframework.boot.env.YamlPropertySourceLoader;
+import org.springframework.core.env.MutablePropertySources;
+import org.springframework.core.env.PropertySource;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.util.unit.DataSize;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
+import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -87,6 +97,48 @@ class S3PresignedUrlSekliTest {
         assertThat(uri.getPath()).isEqualTo("/ads/2026/08/kedi.jpg");
         assertThat(uri.getScheme()).isEqualTo("https");
         assertThat(url).contains("X-Amz-Signature");
+    }
+
+    /**
+     * Yapılandırma bekçisi: yukarıdaki testler kodu sınıyor, bu test <b>gönderilen
+     * dosyayı</b> sınıyor. {@code application.yml} + {@code application-local.yml}
+     * sınıf yolundan okunur, gerçek {@code S3StorageProperties} kaydına bağlanır ve
+     * o kayıttan üretilen URL'in şekli denetlenir. Yani "local profili MinIO
+     * şalteridir" iddiası dosyadan URL'e kadar uçtan uca kanıtlanmış olur.
+     */
+    @Test
+    @DisplayName("Gönderilen application-local.yml gerçekten path-style URL üretiyor")
+    void yerelProfilPathStyleUretir() throws IOException {
+        S3StorageProperties properties = yerelProfilinBagladigiAyarlar();
+
+        assertThat(properties.endpoint()).isEqualTo("http://localhost:9000");
+        assertThat(properties.pathStyleAccess()).isTrue();
+        assertThat(properties.bucket()).isEqualTo(KOVA);
+
+        URI uri = URI.create(temporaryReadUrl(properties));
+
+        assertThat(uri.getHost()).doesNotContain(KOVA).isEqualTo("localhost");
+        assertThat(uri.getPath()).startsWith("/" + KOVA + "/");
+    }
+
+    private S3StorageProperties yerelProfilinBagladigiAyarlar() throws IOException {
+        MutablePropertySources sources = new MutablePropertySources();
+        // local ÖNCE eklenir: varsayılanı ezen taraf o.
+        yukle("application-local.yml").forEach(sources::addLast);
+        yukle("application.yml").forEach(sources::addLast);
+
+        Binder binder = new Binder(
+                ConfigurationPropertySources.from(sources),
+                new PropertySourcesPlaceholdersResolver(sources)
+        );
+
+        return binder.bind("app.storage.s3", Bindable.of(S3StorageProperties.class))
+                .orElseThrow(() -> new IllegalStateException(
+                        "app.storage.s3 bağlanamadı — yml yapısı değişmiş olabilir"));
+    }
+
+    private List<PropertySource<?>> yukle(String dosya) throws IOException {
+        return new YamlPropertySourceLoader().load(dosya, new ClassPathResource(dosya));
     }
 
     private String temporaryReadUrl(S3StorageProperties properties) {

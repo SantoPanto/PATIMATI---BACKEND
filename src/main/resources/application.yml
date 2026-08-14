@@ -65,21 +65,22 @@ app:
   frontend:
     url: http://localhost:4200 # Frontend'in ayağa kalktığı adres
   storage:
+    # VARSAYILAN = GERÇEK AWS S3. Yerelde MinIO için tek şalter:
+    #   SPRING_PROFILES_ACTIVE=local        (bkz. application-local.yml)
+    # Değişken verilmezse üretim tarafına düşer; yanlışlıkla sunucuda
+    # localhost'a bakma ihtimali böylece yapısal olarak kapanıyor.
     s3:
-      # AWS S3 (Production)
-      # bucket: patimati-medya-kutusu
-      # region: eu-central-1
-
-      # Local MinIO (Development)
-      endpoint: http://localhost:9000
-      bucket: patimati-medya-kutusu
-      access-key: minioadmin
-      secret-key: minioadmin
-      region: eu-central-1
-      pathStyleAccess: true
-      maxFileCount: 3
-      maxFileSize: 5MB
-      presignedUrlDuration: 15m
+      bucket: ${S3_BUCKET:patimati-medya-kutusu}
+      region: ${S3_REGION:eu-central-1}
+      # Boş ⇒ endpointOverride hiç çağrılmaz, gerçek AWS uçları kullanılır.
+      endpoint: ${S3_ENDPOINT:}
+      # AWS'de doğrusu virtual-host adresleme; path-style yalnız MinIO içindir.
+      path-style-access: ${S3_PATH_STYLE:false}
+      # access-key / secret-key BİLEREK yok: boş kalınca S3Config
+      # DefaultCredentialsProvider'a düşer (IAM rolü, AWS_ACCESS_KEY_ID vb.).
+      max-file-count: 3
+      max-file-size: 5MB
+      presigned-url-duration: 15m
 
   # WebSocket ve STOMP bağlantı ayarları
   websocket:
