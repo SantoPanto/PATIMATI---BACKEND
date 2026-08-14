@@ -86,6 +86,7 @@ public class AdminServiceImpl implements AdminService {
         Ad ad = adRepository.findById(adId)
                 .orElseThrow(() -> new ResourceNotFoundException("İlan bulunamadı ID: " + adId));
         ad.setSuspended(true);
+        ad.setActive(false);
         adRepository.save(ad);
     }
 
@@ -95,6 +96,7 @@ public class AdminServiceImpl implements AdminService {
         Ad ad = adRepository.findById(adId)
                 .orElseThrow(() -> new ResourceNotFoundException("İlan bulunamadı ID: " + adId));
         ad.setSuspended(false);
+        ad.setActive(true);
         adRepository.save(ad);
     }
 
