@@ -11,6 +11,7 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
@@ -95,6 +96,13 @@ public class S3ImageStorageService implements ImageStorageService {
                     .url()
                     .toExternalForm();
         } catch (SdkException exception) {
+            log.error(
+                    "Fotoğraf için geçici indirme URL'si oluşturulurken hata alındı. Reference: {}, Bucket: {}, Hata: {}",
+                    storageReference,
+                    properties.bucket(),
+                    exception.getMessage(),
+                    exception
+            );
             throw new ImageStorageException(
                     "Fotoğraf için geçici indirme adresi oluşturulamadı",
                     exception
@@ -130,7 +138,25 @@ public class S3ImageStorageService implements ImageStorageService {
                     RequestBody.fromBytes(imageBytes)
             );
             return createStorageReference(objectKey);
+        } catch (NoSuchBucketException exception) {
+            log.error(
+                    "MinIO/S3 üzerinde '{}' isimli bucket bulunamadı! Lütfen MinIO console üzerinden (http://localhost:9001) veya CLI ile bucket'ı oluşturun. Endpoint: {}",
+                    properties.bucket(),
+                    properties.endpoint(),
+                    exception
+            );
+            throw new ImageStorageException(
+                    "Hedef depolama alanı (bucket: " + properties.bucket() + ") bulunamadı",
+                    exception
+            );
         } catch (SdkException exception) {
+            log.error(
+                    "Fotoğraf MinIO/S3 depolama servisine yüklenemedi. Bucket: {}, Endpoint: {}, Hata: {}",
+                    properties.bucket(),
+                    properties.endpoint(),
+                    exception.getMessage(),
+                    exception
+            );
             throw new ImageStorageException(
                     "Fotoğraf bulut depolamaya yüklenemedi",
                     exception
@@ -237,7 +263,24 @@ public class S3ImageStorageService implements ImageStorageService {
 
         try {
             s3Client.deleteObject(deleteRequest);
+        } catch (NoSuchBucketException exception) {
+            log.error(
+                    "Silme işlemi için MinIO/S3 bucket'ı bulunamadı! Bucket: {}",
+                    properties.bucket(),
+                    exception
+            );
+            throw new ImageStorageException(
+                    "Hedef depolama alanı (bucket: " + properties.bucket() + ") bulunamadı",
+                    exception
+            );
         } catch (SdkException exception) {
+            log.error(
+                    "Fotoğraf MinIO/S3 depolama servisinden silinemedi. Reference: {}, Bucket: {}, Hata: {}",
+                    storageReference,
+                    properties.bucket(),
+                    exception.getMessage(),
+                    exception
+            );
             throw new ImageStorageException(
                     "Fotoğraf bulut depolamadan silinemedi",
                     exception

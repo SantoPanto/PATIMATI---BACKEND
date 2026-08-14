@@ -66,8 +66,17 @@ app:
     url: http://localhost:4200 # Frontend'in ayağa kalktığı adres
   storage:
     s3:
+      # AWS S3 (Production)
+      # bucket: patimati-medya-kutusu
+      # region: eu-central-1
+
+      # Local MinIO (Development)
+      endpoint: http://localhost:9000
       bucket: patimati-medya-kutusu
+      access-key: minioadmin
+      secret-key: minioadmin
       region: eu-central-1
+      pathStyleAccess: true
       maxFileCount: 3
       maxFileSize: 5MB
       presignedUrlDuration: 15m

@@ -9,6 +9,7 @@ import org.springframework.util.unit.DataSize;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
@@ -44,6 +45,8 @@ class S3ImageStorageServiceTest {
                 "eu-central-1",
                 null,
                 false,
+                "minioadmin",
+                "minioadmin",
                 Duration.ofMinutes(15),
                 5,
                 DataSize.ofMegabytes(10)
@@ -180,5 +183,33 @@ class S3ImageStorageServiceTest {
                 .isEqualTo("ads/2026/07/cat.jpg");
         assertThat(temporaryUrl)
                 .isEqualTo("https://example.com/cat.jpg");
+    }
+
+    @Test
+    void shouldHandleNoSuchBucketExceptionWhenBucketDoesNotExist() {
+        byte[] jpegBytes = {
+                (byte) 0xFF,
+                (byte) 0xD8,
+                (byte) 0xFF,
+                0x00
+        };
+
+        MockMultipartFile image = new MockMultipartFile(
+                "images",
+                "cat.jpg",
+                "image/jpeg",
+                jpegBytes
+        );
+
+        when(s3Client.putObject(
+                any(PutObjectRequest.class),
+                any(RequestBody.class)
+        )).thenThrow(NoSuchBucketException.builder().message("The specified bucket does not exist").build());
+
+        assertThatThrownBy(
+                () -> storageService.uploadImages(List.of(image))
+        )
+                .isInstanceOf(ImageStorageException.class)
+                .hasMessageContaining("patimati-test");
     }
 }
