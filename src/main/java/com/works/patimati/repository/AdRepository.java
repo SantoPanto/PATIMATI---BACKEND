@@ -122,4 +122,16 @@ public interface AdRepository extends JpaRepository<Ad, Long> {
             @Param("origin") Point origin,
             @Param("radiusMeters") double radiusMeters,
             @Param("since") Instant since);
+
+    @Query(value = """
+             SELECT a.id AS adId, 0.0 AS distanceKm
+               FROM ads a
+              WHERE a.ad_type = :oppositeAdType
+                AND a.active = true
+                AND a.created_at >= :since
+              ORDER BY a.created_at DESC
+            """, nativeQuery = true)
+    List<AiCandidateRow> findAiCandidatesWithoutLocation(
+            @Param("oppositeAdType") String oppositeAdType,
+            @Param("since") Instant since);
 }

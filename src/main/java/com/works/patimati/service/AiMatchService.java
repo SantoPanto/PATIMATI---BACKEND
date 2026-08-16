@@ -1,0 +1,201 @@
+package com.works.patimati.service;
+
+import com.works.patimati.ai.dto.AiCandidate;
+import com.works.patimati.ai.AiCandidateRow;
+import com.works.patimati.entity.Ad;
+import com.works.patimati.repository.AdRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class AiMatchService {
+
+    private final AdRepository adRepository;
+    private final RestTemplate restTemplate = new RestTemplate();
+
+    @Value("${ai.service.url:http://localhost:8000}")
+    private String aiServiceUrl;
+
+    @Value("${ai.matching.window-days:90}")
+    private int windowDays;
+
+    @Value("${ai.matching.max-candidates:100}")
+    private int maxCandidates;
+
+    public List<Map<String, Object>> matchImages(List<MultipartFile> images, String listingType) throws Exception {
+        List<List<Float>> allEmbeddings = new ArrayList<>();
+        Set<String> allLabels = new HashSet<>();
+        String majoritySpecies = "unknown";
+        Map<String, Integer> speciesCount = new HashMap<>();
+
+        // 1. Analyze each image
+        for (MultipartFile file : images) {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+            
+            MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+            body.add("file", new ByteArrayResource(file.getBytes()) {
+                @Override
+                public String getFilename() {
+                    return file.getOriginalFilename() != null ? file.getOriginalFilename() : "image.jpg";
+                }
+            });
+
+            HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
+            
+            @SuppressWarnings("unchecked")
+            ResponseEntity<Map<String, Object>> response = restTemplate.postForEntity(
+                    aiServiceUrl + "/analyze",
+                    requestEntity,
+                    (Class<Map<String, Object>>) (Class<?>) Map.class
+            );
+
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                Map<String, Object> res = response.getBody();
+                @SuppressWarnings("unchecked")
+                List<Float> embedding = (List<Float>) res.get("embedding");
+                if (embedding != null) {
+                    allEmbeddings.add(embedding);
+                }
+                
+                @SuppressWarnings("unchecked")
+                List<String> labels = (List<String>) res.get("labels");
+                if (labels != null) {
+                    allLabels.addAll(labels);
+                }
+                
+                String species = (String) res.get("species");
+                if (species != null) {
+                    speciesCount.put(species, speciesCount.getOrDefault(species, 0) + 1);
+                }
+            }
+        }
+
+        if (allEmbeddings.isEmpty()) {
+            return List.of();
+        }
+
+        if (!speciesCount.isEmpty()) {
+            majoritySpecies = Collections.max(speciesCount.entrySet(), Map.Entry.comparingByValue()).getKey();
+        }
+
+        // 2. Fetch candidates
+        String oppositeAdType = "LOST".equalsIgnoreCase(listingType) ? "FOUND" : "LOST";
+        List<AiCandidateRow> rows = adRepository.findAiCandidatesWithoutLocation(
+                oppositeAdType,
+                Instant.now().minus(windowDays, ChronoUnit.DAYS)
+        );
+
+        if (rows.isEmpty()) {
+            return List.of();
+        }
+
+        if (rows.size() > maxCandidates) {
+            rows = rows.subList(0, maxCandidates);
+        }
+
+        List<AiCandidate> candidates = new ArrayList<>();
+        for (AiCandidateRow row : rows) {
+            Ad ad = adRepository.findById(row.getAdId()).orElse(null);
+            if (ad == null || ad.getAiEmbeddings() == null || ad.getAiEmbeddings().isEmpty()) {
+                continue;
+            }
+            
+            List<float[]> candidateEmbeddings = new ArrayList<>();
+            for (Ad.AiPhotoVector vector : ad.getAiEmbeddings()) {
+                candidateEmbeddings.add(vector.embedding());
+            }
+
+            AiCandidate candidate = new AiCandidate(
+                    ad.getId(),
+                    candidateEmbeddings,
+                    ad.getAiLabels() != null ? ad.getAiLabels() : List.of(),
+                    declaredSpecies(ad) != null ? declaredSpecies(ad) : "unknown",
+                    0.0,
+                    ad.getAiModelVersion()
+            );
+            candidates.add(candidate);
+        }
+
+        if (candidates.isEmpty()) {
+            return List.of();
+        }
+
+        // 3. Call Match API
+        Map<String, Object> matchRequest = new HashMap<>();
+        matchRequest.put("embeddings", allEmbeddings);
+        matchRequest.put("labels", new ArrayList<>(allLabels));
+        matchRequest.put("species", majoritySpecies);
+        matchRequest.put("candidates", candidates);
+
+        @SuppressWarnings("unchecked")
+        ResponseEntity<Map<String, Object>> matchResponse = restTemplate.postForEntity(
+                aiServiceUrl + "/match",
+                matchRequest,
+                (Class<Map<String, Object>>) (Class<?>) Map.class
+        );
+
+        if (matchResponse.getStatusCode().is2xxSuccessful() && matchResponse.getBody() != null) {
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> matches = (List<Map<String, Object>>) matchResponse.getBody().get("matches");
+            if (matches == null) return List.of();
+            
+            // Map the matched Ad info along with score
+            List<Map<String, Object>> result = new ArrayList<>();
+            for (Map<String, Object> match : matches) {
+                Boolean isMatch = (Boolean) match.get("match");
+                if (isMatch != null && isMatch) {
+                    Integer adId = (Integer) match.get("ad_id");
+                    Ad ad = adRepository.findById(adId.longValue()).orElse(null);
+                    if (ad != null) {
+                        Map<String, Object> item = new HashMap<>();
+                        item.put("score", match.get("score"));
+                        item.put("ad", mapToDTO(ad));
+                        result.add(item);
+                    }
+                }
+            }
+            return result;
+        }
+
+        return List.of();
+    }
+
+    private String declaredSpecies(Ad ad) {
+        if (ad.getSpecies() == null) return null;
+        return switch (ad.getSpecies()) {
+            case CAT -> "cat";
+            case DOG -> "dog";
+            default -> null;
+        };
+    }
+    
+    private Map<String, Object> mapToDTO(Ad ad) {
+        Map<String, Object> dto = new HashMap<>();
+        dto.put("id", ad.getId());
+        dto.put("title", ad.getTitle());
+        dto.put("description", ad.getDescription());
+        dto.put("photoUrls", ad.getPhotoUrls());
+        dto.put("createdAt", ad.getCreatedAt());
+        String ownerName = ad.getUser() != null ? ad.getUser().getFirstName() + " " + ad.getUser().getLastName() : null;
+        dto.put("ownerDisplayName", ownerName);
+        return dto;
+    }
+}
