@@ -141,6 +141,34 @@ public class UserService {
         return ResponseEntity.ok().body(new AuthResponse(token, convertToUserResponseDTO(user)));
     }
 
+    // --- GOOGLE OAUTH2 SUCCESS HANDLER KULLANICI İŞLEME ---
+    @Transactional
+    public User processOAuth2User(String email, String googleId, String firstName, String lastName) {
+        Optional<User> optionalUser = userRepository.findByEmail(email);
+
+        if (optionalUser.isPresent()) {
+            User existingUser = optionalUser.get();
+            if (existingUser.getGoogleId() == null) {
+                existingUser.setGoogleId(googleId);
+                return userRepository.save(existingUser);
+            }
+            return existingUser;
+        }
+
+        User newUser = User.builder()
+                .email(email)
+                .googleId(googleId)
+                .firstName(firstName)
+                .lastName(lastName)
+                .role(User.Role.USER)
+                .enabled(true)
+                .password(null) // SSO kullanıcılarında varsayılan olarak şifre yok
+                .phone(null)    // Varsayılan olarak boş telefon no
+                .build();
+
+        return userRepository.save(newUser);
+    }
+
     private UserResponseDTO convertToUserResponseDTO(User user) {
         if (user == null) {
             return null;
