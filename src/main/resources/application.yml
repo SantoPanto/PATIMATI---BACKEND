@@ -93,4 +93,4 @@ app:
   # WebSocket ve STOMP bağlantı ayarları
   websocket:
     # Virgülle ayrılmış origin listesi ortam değişkeniyle canlı ortamda değiştirilebilir.
-    allowed-origins: ${WEBSOCKET_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:4200}
+    allowed-origins: ${WEBSOCKET_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:4200,http://localhost:5173}

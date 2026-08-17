@@ -25,6 +25,11 @@ public class MessageService {
         User sender = findUserByEmail(senderEmail);
         User recipient = userRepository.findById(request.recipientId())
                 .orElseThrow(() -> new ResourceNotFoundException("Alıcı kullanıcı bulunamadı: " + request.recipientId()));
+
+        if (sender.getUid().equals(recipient.getUid())) {
+            throw new IllegalArgumentException("Kullanıcı kendisine mesaj gönderemez.");
+        }
+
         String filteredContent = fraudFilterService.filterContent(request.content());
         Message message = Message.builder()
                 .sender(sender)
@@ -36,14 +41,14 @@ public class MessageService {
 
         Message savedMessage = messageRepository.save(message);
 
-        return mapToResponse(savedMessage);
+        return mapToResponse(savedMessage, sender);
     }
     @Transactional(readOnly = true)
     public Page<MessageResponse> getChatHistory(String currentUserEmail, Long otherUserId, Pageable pageable) {
         User currentUser = findUserByEmail(currentUserEmail);
 
         return messageRepository.findChatHistory(currentUser.getUid(), otherUserId, pageable)
-                .map(this::mapToResponse);
+                .map(message -> mapToResponse(message, currentUser));
     }
     @Transactional
     public void markAsRead(String currentUserEmail, Long messageId) {
@@ -65,12 +70,23 @@ public class MessageService {
                 .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı bulunamadı: " + email));
     }
     private MessageResponse mapToResponse(Message message) {
+        return mapToResponse(message, message.getSender());
+    }
+
+    private MessageResponse mapToResponse(Message message, User currentUser) {
+        boolean isSenderCurrent = currentUser != null && currentUser.getUid().equals(message.getSender().getUid());
+        User partner = isSenderCurrent ? message.getRecipient() : message.getSender();
+        String partnerName = partner.getFirstName() + " " + partner.getLastName();
+
         return new MessageResponse(
                 message.getId(),
                 message.getSender().getUid(),
                 message.getSender().getFirstName() + " " + message.getSender().getLastName(),
                 message.getRecipient().getUid(),
                 message.getRecipient().getFirstName() + " " + message.getRecipient().getLastName(),
+                partner.getUid(),
+                partnerName,
+                null,
                 message.getContent(),
                 message.getTimestamp(),
                 message.isRead()

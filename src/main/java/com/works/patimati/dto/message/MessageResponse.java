@@ -8,8 +8,11 @@ public record MessageResponse(
         String senderName,
         Long recipientId,
         String recipientName,
+        Long partnerId,
+        String partnerName,
+        String partnerAvatar,
         String content,
         Instant timestamp,
         boolean isRead
 ) {
-}
+}
