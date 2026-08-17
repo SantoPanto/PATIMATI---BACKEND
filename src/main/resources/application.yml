@@ -54,6 +54,50 @@ ai:
     window-days: ${AI_MATCHING_WINDOW_DAYS:90}
     # Aday başına ~7 KB (768 float); 100 aday ≈ 700 KB mesaj.
     max-candidates: ${AI_MATCHING_MAX_CANDIDATES:100}
+    # Konumsuz fallback'in aday sınırı — mesafeye göre sıralanamadığı için
+    # BİLEREK max-candidates'ten küçük (Faz 2 revize blueprint §5/§21).
+    no-location-candidate-limit: ${AI_MATCHING_NO_LOCATION_LIMIT:30}
+    # Kaynak bazlı eşik geçersiz kılma — BİLEREK burada tanımlı DEĞİL.
+    # AI_MATCHING_INSTAGRAM_THRESHOLD ortam değişkeni verilmezse
+    # ExternalMatchingService'teki @Value("...:#{null}") null'a düşer ve
+    # AI kendi ortam değişkenindeki (MATCH_THRESHOLD, varsayılan 0.80)
+    # değeri kullanır. 0.80'i Instagram için doğrulanmış kesin bir değer
+    # olarak burada HARD-CODE ETMİYORUZ (blueprint §22) — bu yüzden boş
+    # string yerine anahtarın kendisi tanımsız bırakılıyor.
+  service:
+    # AiMatchClient'ın senkron çağırdığı AI HTTP ucu (RabbitMQ'nun aksine
+    # bu TEK yeni Java<->Python HTTP bağımlılığıdır — Faz 2 revize
+    # blueprint §1/§5).
+    base-url: ${AI_SERVICE_BASE_URL:http://localhost:8000}
+    match-timeout: ${AI_SERVICE_MATCH_TIMEOUT:5s}
+
+# Instagram ingestion (Faz 2 revize blueprint) — özellik bayrağı.
+# KAPALIYKEN mevcut PatiMati işlevselliği hiçbir şekilde etkilenmez.
+instagram:
+  ingestion:
+    enabled: ${INSTAGRAM_INGESTION_ENABLED:false}
+
+# Collector -> Backend medya transferinin paylaşılan sırrı (blueprint §48).
+# Kullanıcı JWT/OAuth altyapısıyla KARIŞTIRILMAZ, en dar kapsamlıdır.
+internal:
+  ingestion:
+    api-key: ${INTERNAL_INGESTION_API_KEY:}
+
+# PotentialMatch bildirim teslimatı (blueprint §4/§13) — gönder-sonra-
+# işaretle sırasının süpürücü parametreleri.
+potential-match:
+  max-send-attempts: ${POTENTIAL_MATCH_MAX_SEND_ATTEMPTS:5}
+  retry-grace-period: ${POTENTIAL_MATCH_RETRY_GRACE_PERIOD:PT2M}
+  retry-interval: ${POTENTIAL_MATCH_RETRY_INTERVAL:PT2M}
+
+# external_source_posts süpürücüleri (blueprint §5/§11) — takılı kalmış
+# gönderileri ve Aşama 2 (eşleştirme) yeniden denemelerini yönetir.
+external:
+  maintenance:
+    stale-grace-period: ${EXTERNAL_STALE_GRACE_PERIOD:PT6H}
+    stage2-retry-max-age: ${EXTERNAL_STAGE2_RETRY_MAX_AGE:P1D}
+    sweep-interval: ${EXTERNAL_SWEEP_INTERVAL:PT15M}
+    stage2-retry-interval: ${EXTERNAL_STAGE2_RETRY_INTERVAL:PT5M}
 
 # JWT Ayarları
 jwt:
