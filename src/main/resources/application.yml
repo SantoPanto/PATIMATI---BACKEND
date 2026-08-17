@@ -35,8 +35,8 @@ spring:
       client:
         registration:
           google:
-            client-id: SIZIN_GOOGLE_CLIENT_ID_BILGINIZ
-            client-secret: SIZIN_GOOGLE_CLIENT_SECRET_BILGINIZ
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
             scope:
               - email
               - profile
@@ -71,7 +71,7 @@ jwt:
 # Uygulama ve Depolama Ayarları
 app:
   frontend:
-    url: http://localhost:4200 # Frontend'in ayağa kalktığı adres
+    url: http://localhost:5173 # Frontend'in ayağa kalktığı adres
   storage:
     # VARSAYILAN = GERÇEK AWS S3. Yerelde MinIO için tek şalter:
     #   SPRING_PROFILES_ACTIVE=local        (bkz. application-local.yml)

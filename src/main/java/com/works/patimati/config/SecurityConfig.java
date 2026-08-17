@@ -1,7 +1,7 @@
 package com.works.patimati.config;
 
 import com.works.patimati.security.JwtAuthFilter;
-import com.works.patimati.security.OAuth2LoginSuccessHandler;
+import com.works.patimati.security.OAuth2AuthenticationSuccessHandler;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,9 +15,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 
 import java.util.Arrays;
@@ -30,12 +27,12 @@ public class SecurityConfig {
 
     // Bağımlılıkları tanımlıyoruz
     private final JwtAuthFilter jwtAuthFilter;
-    private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
+    private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
 
     // Constructor (Yapıcı Metot) ile Spring'in bu sınıfları otomatik enjekte etmesini sağlıyoruz
-    public SecurityConfig(JwtAuthFilter jwtAuthFilter, OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler) {
+    public SecurityConfig(JwtAuthFilter jwtAuthFilter, OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler) {
         this.jwtAuthFilter = jwtAuthFilter;
-        this.oAuth2LoginSuccessHandler = oAuth2LoginSuccessHandler;
+        this.oAuth2AuthenticationSuccessHandler = oAuth2AuthenticationSuccessHandler;
     }
 
     @Bean
@@ -63,6 +60,8 @@ public class SecurityConfig {
                                 "/api/auth/forgot-password",
                                 "/api/auth/reset-password",
                                 "/error",
+                                "/oauth2/**",
+                                "/login/oauth2/**",
                                 /*
                                  * WebSocket ve SockJS HTTP handshake isteklerinin
                                  * Spring Security filtresinden geçmesine izin verilir.
@@ -73,7 +72,7 @@ public class SecurityConfig {
                                  */
                                 "/ws-connect", // Doğrudan WebSocket bağlantısını kapsar.
                                 "/ws-connect/**" // SockJS’in kullandığı alt adresleri kapsar.
-                        ).permitAll() // Kayıt, giriş ve açık uçlara HERKES erişebilsin
+                        ).permitAll() // Kayıt, giriş, OAuth2 ve açık uçlara HERKES erişebilsin
                         .requestMatchers("/api/auth/userlist", "/api/admin/**").hasRole("ADMIN") // Yöneticilere özel uç noktalar
                         .anyRequest().authenticated() // Diğer tüm uç noktalar için token/giriş zorunlu olsun
                 )
@@ -115,7 +114,7 @@ public class SecurityConfig {
                                     HttpStatus.FORBIDDEN.value(),
                                     "Bu kaynağa erişmek için yönetici (ADMIN) yetkisine sahip olmalısınız.",
                                     request.getRequestURI()
-                            );
+                                );
 
                             response.getWriter().write(problemDetailJson);
                         })
@@ -123,7 +122,7 @@ public class SecurityConfig {
 
                 // 4. OAuth2 Giriş Ayarları ve Başarı Yöneticisi
                 .oauth2Login(oauth2 -> oauth2
-                        .successHandler(oAuth2LoginSuccessHandler)
+                        .successHandler(oAuth2AuthenticationSuccessHandler)
                 );
 
         // JWT filtresini UsernamePasswordAuthenticationFilter'dan önce çalışacak şekilde ekliyoruz
@@ -152,10 +151,5 @@ public class SecurityConfig {
         source.registerCorsConfiguration("/**", configuration);
 
         return source;
-    }
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
     }
 }
