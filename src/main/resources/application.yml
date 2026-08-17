@@ -1,5 +1,13 @@
 # Veritabanı ve Flyway Ayarları
 spring:
+  # --- Dosya Yükleme Ayarları ---
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 5MB
+      max-request-size: 20MB
+
+
   datasource:
     # DİKKAT: Kendi veritabanı adını (örn: patimati_db) yazmalısın
     url: ${DB_URL:jdbc:postgresql://localhost:5432/patimati_db}
