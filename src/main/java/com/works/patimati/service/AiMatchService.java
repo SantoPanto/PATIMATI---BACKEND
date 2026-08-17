@@ -29,7 +29,16 @@ public class AiMatchService {
 
     private final AdRepository adRepository;
     private final com.works.patimati.storage.ImageStorageService imageStorageService;
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
+
+    public AiMatchService(AdRepository adRepository, com.works.patimati.storage.ImageStorageService imageStorageService, org.springframework.boot.web.client.RestTemplateBuilder restTemplateBuilder) {
+        this.adRepository = adRepository;
+        this.imageStorageService = imageStorageService;
+        this.restTemplate = restTemplateBuilder
+                .setConnectTimeout(java.time.Duration.ofSeconds(10))
+                .setReadTimeout(java.time.Duration.ofSeconds(30))
+                .build();
+    }
 
     @Value("${ai.service.url:http://localhost:8000}")
     private String aiServiceUrl;
@@ -156,6 +165,12 @@ public class AiMatchService {
         if (matchResponse.getStatusCode().is2xxSuccessful() && matchResponse.getBody() != null) {
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> matches = (List<Map<String, Object>>) matchResponse.getBody().get("matches");
+            
+            Object skipped = matchResponse.getBody().get("skipped_candidates");
+            if (skipped != null && skipped instanceof Integer && (Integer) skipped > 0) {
+                log.info("Yapay zeka e\u00E7le\u00E7tirmede {} adet aday\u0131 (t\u00FCr vb. uyu\u00E7mazl\u0131\u011F\u0131ndan) sessizce eledi.", skipped);
+            }
+            
             if (matches == null) return List.of();
             
             // Map the matched Ad info along with score
