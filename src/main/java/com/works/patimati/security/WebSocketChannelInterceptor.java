@@ -57,13 +57,16 @@ public class WebSocketChannelInterceptor implements ChannelInterceptor {
             return message;
         }
 
-        String authorizationHeader = accessor.getFirstNativeHeader(AUTHORIZATION_HEADER);
-        if (!StringUtils.hasText(authorizationHeader)) {
-            authorizationHeader = accessor.getFirstNativeHeader("authorization");
+        // SockJS kısıtlamalarına karşın STOMP frame native header listesi okunur
+        List<String> authHeaders = accessor.getNativeHeader(AUTHORIZATION_HEADER);
+        if (authHeaders == null || authHeaders.isEmpty()) {
+            authHeaders = accessor.getNativeHeader("authorization");
         }
-        if (!StringUtils.hasText(authorizationHeader)) {
-            authorizationHeader = accessor.getFirstNativeHeader("passcode");
+        if (authHeaders == null || authHeaders.isEmpty()) {
+            authHeaders = accessor.getNativeHeader("passcode");
         }
+
+        String authorizationHeader = (authHeaders != null && !authHeaders.isEmpty()) ? authHeaders.get(0) : null;
 
         String token = extractBearerToken(authorizationHeader);
 
