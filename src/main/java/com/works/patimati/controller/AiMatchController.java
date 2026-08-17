@@ -28,7 +28,7 @@ public class AiMatchController {
             return ResponseEntity.ok(results);
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.internalServerError().body(e.getMessage());
+            return ResponseEntity.internalServerError().body("AI servisi ge\u00E7ici olarak hizmet veremiyor.");
         }
     }
 }
