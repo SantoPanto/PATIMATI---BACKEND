@@ -34,3 +34,6 @@ build/
 
 # Firebase Admin SDK Private Key
 src/main/resources/firebase-adminsdk.json
+
+#Google Authentication Service Account Key
+.env
