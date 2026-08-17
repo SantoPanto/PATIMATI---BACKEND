@@ -62,4 +62,14 @@ public interface AdminService {
      * Sahiplendirme ilanı şikayetlerini bağlam bilgileriyle sayfalı listeler.
      */
     Page<AdoptionComplaintAdminResponse> getAdoptionComplaints(Pageable pageable);
+
+    /**
+     * Belirtilen şikayeti sistemden siler / kaldırır.
+     */
+    void deleteComplaint(Long complaintId);
+
+    /**
+     * Admin ile belirtilen kullanıcı arasında doğrudan sohbet odası kurar ve oda ID'sini döner.
+     */
+    Long createAdminChatRoom(Long userId);
 }

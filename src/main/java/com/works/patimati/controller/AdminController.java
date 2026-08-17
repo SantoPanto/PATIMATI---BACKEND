@@ -131,4 +131,25 @@ public class AdminController {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         return ResponseEntity.ok(adminService.getAdoptionComplaints(pageable));
     }
+
+    /**
+     * İncelenen veya çözülen bir şikayeti sistemden kaldırır/siler.
+     */
+    @DeleteMapping("/complaints/{complaintId}")
+    public ResponseEntity<Map<String, String>> deleteComplaint(@PathVariable @Min(1) Long complaintId) {
+        adminService.deleteComplaint(complaintId);
+        return ResponseEntity.ok(Map.of("message", "Complaint with ID " + complaintId + " has been successfully deleted."));
+    }
+
+    /**
+     * Admin ile şikayet edilen/ilgili kullanıcı arasında doğrudan sohbet odası kurar.
+     */
+    @PostMapping("/chats/create-with-user/{userId}")
+    public ResponseEntity<Map<String, Object>> createAdminChatWithUser(@PathVariable @Min(1) Long userId) {
+        Long chatRoomId = adminService.createAdminChatRoom(userId);
+        return ResponseEntity.ok(Map.of(
+            "message", "Chat room successfully created with user ID " + userId,
+            "chatRoomId", chatRoomId
+        ));
+    }
 }
