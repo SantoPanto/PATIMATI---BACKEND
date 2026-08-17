@@ -23,7 +23,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class AiMatchService {
 
