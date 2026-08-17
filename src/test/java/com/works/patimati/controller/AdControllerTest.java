@@ -34,6 +34,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -188,6 +189,21 @@ class AdControllerTest {
                 .andExpect(jsonPath("$.content[0].id").value(7))
                 .andExpect(jsonPath("$.content[0].adType")
                         .value("LOST"));
+    }
+
+    @Test
+    void shouldNotExposeRemovedTestEndpoint() throws Exception {
+        /*
+         * B-4 güvenlik kontrolü:
+         * Kaldırılan test adresi bulunmamalı ve servis çağrılmamalıdır.
+         */
+        mockMvc.perform(
+                        get("/api/ads/all")
+                                .principal(authentication())
+                )
+                .andExpect(status().isMethodNotAllowed());
+
+        verifyNoInteractions(adService);
     }
 
     @Test

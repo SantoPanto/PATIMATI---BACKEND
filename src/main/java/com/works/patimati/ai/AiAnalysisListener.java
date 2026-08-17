@@ -19,10 +19,14 @@ import java.util.Optional;
 /**
  * AI'dan dönen sonucu ilana yazar (entegrasyon sözleşmesi §4).
  *
- * <p><b>Tekrar teslime dayanıklıdır.</b> RabbitMQ "en az bir kez" teslim eder,
- * yani aynı mesaj iki kez gelebilir. Burada yapılan iş {@code ad_id} üzerinden
- * idempotenttir: aynı sonucu iki kez yazmak aynı satırı aynı değerlerle
- * günceller. Bu yüzden ek bir tekrar-koruması gerekmez (§8).
+ * <p><b>Satır yazımı tekrar teslime dayanıklıdır.</b> RabbitMQ "en az bir kez"
+ * teslim eder, yani aynı mesaj iki kez gelebilir. İlana yazma işi
+ * {@code ad_id} üzerinden idempotenttir: aynı sonucu iki kez yazmak aynı
+ * satırı aynı değerlerle günceller (§8).
+ *
+ * <p>⚠ <b>Ama BİLDİRİM idempotent değil.</b> §8'in "ek bir tekrar-koruması
+ * gerekmez" cümlesi <i>satır yazımı</i> için doğrudur; bildirim ayrı bir
+ * olaydır ve her teslimde yeniden gönderilir. Açık madde: B6.
  */
 @Component
 @RequiredArgsConstructor
@@ -72,9 +76,14 @@ public class AiAnalysisListener {
 
         logSkipped(result);
 
-        // Eşiği geçen eşleşmeler için bildirim. Bildirim gönderme kararı burada
-        // değil, notifier'da: "hangi çifte daha önce bildirim gitti" bilgisini
-        // o tutuyor (§7 kural 4 — bildirim tekrarı önlenmeli).
+        // Eşiği geçen eşleşmeler için bildirim.
+        //
+        // ⚠ Burada eskiden "hangi çifte daha önce bildirim gitti bilgisini
+        // notifier tutuyor" yazıyordu. YANLIŞTI: notifier de hiçbir şey
+        // tutmuyor (ölçüldü, 17.08). İki bileşen de ötekinin yaptığını
+        // sanıyordu. Sonuç: aynı mesaj tekrar teslim edilirse ya da ilan
+        // yeniden analiz edilirse aynı çifte bildirim TEKRAR gider —
+        // sözleşme §7 kural 4 bunu yasaklıyor. Açık madde: B6.
         List<AiAnalysisResult.Match> matches = result.matches() == null
                 ? List.of() : result.matches();
         matchNotifier.notifyMatches(ad, matches);

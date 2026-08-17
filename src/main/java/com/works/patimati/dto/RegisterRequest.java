@@ -23,7 +23,7 @@ public class RegisterRequest {
     @Size(min = 6, max = 20, message = "Password must be between 6 and 20 characters")
     private String password;
 
-    @NotBlank(message = "Phone number is required")
+    @NotBlank(message = "Telefon numarası boş bırakılamaz")
     @Size(min = 9, max = 15, message = "Phone number must be between 9 and 15 characters")
     @Pattern(regexp = "^(?:\\+90\\d{10}|0\\s?\\d{3}\\s?\\d{3}\\s?\\d{2}\\s?\\d{2}|\\d{10})(?:\\s\\+\\d+)?$", message = "Phone number format fail")
     private String phone;

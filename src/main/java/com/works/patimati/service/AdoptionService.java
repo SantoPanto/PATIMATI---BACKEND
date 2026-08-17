@@ -3,6 +3,7 @@ package com.works.patimati.service;
 import com.works.patimati.dto.ad.AdResponse;
 import com.works.patimati.dto.ad.AdoptionAdCreateRequest;
 import com.works.patimati.dto.ad.AdoptionAdUpdateRequest;
+import com.works.patimati.dto.ad.ResolveAdoptionAdRequest;
 import com.works.patimati.dto.complaint.AdComplaintRequestDTO;
 import com.works.patimati.dto.complaint.ComplaintResponse;
 import org.springframework.data.domain.Page;
@@ -38,6 +39,11 @@ public interface AdoptionService {
      * İlan sahibinin sahiplendirme ilanını kaldırmasını (soft delete) sağlar.
      */
     void deleteAdoptionAd(String ownerEmail, Long adId);
+
+    /**
+     * İlan sahibinin sahiplendirme ilanını sahiplendirildi olarak kapatmasını ve ödül puanı dağıtılmasını sağlar.
+     */
+    void resolveAdoptionAd(String ownerEmail, Long adId, ResolveAdoptionAdRequest request);
 
     /**
      * Herkese açık aktif sahiplendirme ilanlarını listeler.

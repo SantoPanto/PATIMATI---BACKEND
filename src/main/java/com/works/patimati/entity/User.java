@@ -46,6 +46,14 @@ public class User {
     @Builder.Default
     private boolean enabled = true;
 
+    @Builder.Default
+    @Column(name = "lost_points", nullable = false)
+    private int lostPoints = 0;
+
+    @Builder.Default
+    @Column(name = "adoption_points", nullable = false)
+    private int adoptionPoints = 0;
+
     @org.hibernate.annotations.CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private java.time.Instant createdAt;

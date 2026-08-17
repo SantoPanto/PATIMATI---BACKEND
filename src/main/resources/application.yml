@@ -1,5 +1,13 @@
 # Veritabanı ve Flyway Ayarları
 spring:
+  # --- Dosya Yükleme Ayarları ---
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 5MB
+      max-request-size: 20MB
+
+
   datasource:
     # DİKKAT: Kendi veritabanı adını (örn: patimati_db) yazmalısın
     url: ${DB_URL:jdbc:postgresql://localhost:5432/patimati_db}
@@ -27,8 +35,8 @@ spring:
       client:
         registration:
           google:
-            client-id: SIZIN_GOOGLE_CLIENT_ID_BILGINIZ
-            client-secret: SIZIN_GOOGLE_CLIENT_SECRET_BILGINIZ
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
             scope:
               - email
               - profile
@@ -63,16 +71,26 @@ jwt:
 # Uygulama ve Depolama Ayarları
 app:
   frontend:
-    url: http://localhost:4200 # Frontend'in ayağa kalktığı adres
+    url: http://localhost:5173 # Frontend'in ayağa kalktığı adres
   storage:
+    # VARSAYILAN = GERÇEK AWS S3. Yerelde MinIO için tek şalter:
+    #   SPRING_PROFILES_ACTIVE=local        (bkz. application-local.yml)
+    # Değişken verilmezse üretim tarafına düşer; yanlışlıkla sunucuda
+    # localhost'a bakma ihtimali böylece yapısal olarak kapanıyor.
     s3:
-      bucket: patimati-medya-kutusu
-      region: eu-central-1
-      maxFileCount: 3
-      maxFileSize: 5MB
-      presignedUrlDuration: 15m
+      bucket: ${S3_BUCKET:patimati-medya-kutusu}
+      region: ${S3_REGION:eu-central-1}
+      # Boş ⇒ endpointOverride hiç çağrılmaz, gerçek AWS uçları kullanılır.
+      endpoint: ${S3_ENDPOINT:}
+      # AWS'de doğrusu virtual-host adresleme; path-style yalnız MinIO içindir.
+      path-style-access: ${S3_PATH_STYLE:false}
+      # access-key / secret-key BİLEREK yok: boş kalınca S3Config
+      # DefaultCredentialsProvider'a düşer (IAM rolü, AWS_ACCESS_KEY_ID vb.).
+      max-file-count: 3
+      max-file-size: 5MB
+      presigned-url-duration: 15m
 
   # WebSocket ve STOMP bağlantı ayarları
   websocket:
     # Virgülle ayrılmış origin listesi ortam değişkeniyle canlı ortamda değiştirilebilir.
-    allowed-origins: ${WEBSOCKET_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:4200}
+    allowed-origins: ${WEBSOCKET_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:4200,http://localhost:5173}

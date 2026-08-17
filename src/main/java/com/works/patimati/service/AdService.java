@@ -7,6 +7,7 @@
     import com.works.patimati.dto.ad.AdCreateRequest;
     import com.works.patimati.dto.ad.AdResponse;
     import com.works.patimati.dto.ad.AdUpdateRequest;
+    import com.works.patimati.dto.ad.ResolveLostAdRequest;
     import com.works.patimati.entity.Ad;
     import com.works.patimati.entity.User;
     import com.works.patimati.entity.enums.AiStatus;
@@ -21,6 +22,9 @@
     import org.slf4j.LoggerFactory;
     import org.springframework.data.domain.Page;
     import org.springframework.data.domain.Pageable;
+    import org.springframework.security.access.AccessDeniedException;
+    import org.springframework.security.core.Authentication;
+    import org.springframework.security.core.context.SecurityContextHolder;
     import org.locationtech.jts.geom.Coordinate;
     import org.locationtech.jts.geom.GeometryFactory;
     import org.locationtech.jts.geom.Point;
@@ -44,6 +48,7 @@
         private final AdMapper adMapper;
         private final ImageStorageService imageStorageService;
         private final AiAnalysisPublisher aiAnalysisPublisher;
+        private final RewardService rewardService;
         private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
         /**
@@ -134,6 +139,10 @@
             Ad ad = adRepository.findByIdAndActiveTrue(adId)
                     .orElseThrow(() -> adNotFound(adId));
 
+            if (ad.isSuspended() && !isOwnerOrAdmin(ad)) {
+                throw new AccessDeniedException("Askıya alınmış ilanı görüntüleme yetkiniz yoktur.");
+            }
+
             return toResponseWithTemporaryPhotoUrls(ad);
         }
 
@@ -142,15 +151,75 @@
                 Ad.AdType adType,
                 Pageable pageable
         ) {
-            Page<Ad> ads = adType == null
-                    ? adRepository.findAllByActive(true, pageable)
-                    : adRepository.findAllByAdTypeAndActive(
-                    adType,
-                    true,
-                    pageable
-            );
+            User currentUser = getCurrentUser();
+            boolean isAdmin = isCurrentUserAdmin(currentUser);
+
+            Page<Ad> ads;
+            if (isAdmin) {
+                ads = adType == null
+                        ? adRepository.findAllByActive(true, pageable)
+                        : adRepository.findAllByAdTypeAndActive(
+                        adType,
+                        true,
+                        pageable
+                );
+            } else if (currentUser != null) {
+                ads = adType == null
+                        ? adRepository.findAllActiveForUser(currentUser.getUid(), pageable)
+                        : adRepository.findAllByAdTypeActiveForUser(
+                        adType,
+                        currentUser.getUid(),
+                        pageable
+                );
+            } else {
+                ads = adType == null
+                        ? adRepository.findAllByActiveTrueAndSuspendedFalse(pageable)
+                        : adRepository.findAllByAdTypeAndActiveTrueAndSuspendedFalse(
+                        adType,
+                        pageable
+                );
+            }
 
             return ads.map(this::toResponseWithTemporaryPhotoUrls);
+        }
+
+        private Authentication getCurrentAuthentication() {
+            return SecurityContextHolder.getContext().getAuthentication();
+        }
+
+        private User getCurrentUser() {
+            Authentication auth = getCurrentAuthentication();
+            if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+                return null;
+            }
+            String email = auth.getName();
+            if (email == null || email.isBlank()) {
+                return null;
+            }
+            return userRepository.findByEmail(email).orElse(null);
+        }
+
+        private boolean isCurrentUserAdmin(User currentUser) {
+            Authentication auth = getCurrentAuthentication();
+            if (auth != null && auth.getAuthorities() != null) {
+                boolean hasAdminRole = auth.getAuthorities().stream()
+                        .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()) || "ADMIN".equals(a.getAuthority()));
+                if (hasAdminRole) {
+                    return true;
+                }
+            }
+            return currentUser != null && currentUser.getRole() == User.Role.ADMIN;
+        }
+
+        private boolean isOwnerOrAdmin(Ad ad) {
+            User currentUser = getCurrentUser();
+            if (isCurrentUserAdmin(currentUser)) {
+                return true;
+            }
+            if (currentUser == null) {
+                return false;
+            }
+            return ad.getUser() != null && currentUser.getUid() != null && currentUser.getUid().equals(ad.getUser().getUid());
         }
 
         @Transactional(readOnly = true)
@@ -191,6 +260,23 @@
 
             ad.setActive(false);
             adRepository.saveAndFlush(ad);
+        }
+
+        @Transactional
+        public void resolveLostAd(String ownerEmail, Long adId, ResolveLostAdRequest request) {
+            User owner = findUserByEmail(ownerEmail);
+            Ad ad = findActiveOwnedAd(adId, owner.getUid());
+
+            if (ad.getAdType() != Ad.AdType.LOST) {
+                throw new IllegalArgumentException("İlan bir kayıp ilanı değildir.");
+            }
+
+            ad.setActive(false);
+            adRepository.saveAndFlush(ad);
+
+            Long finderId = (request != null) ? request.finderId() : null;
+            rewardService.awardLostPoint(finderId);
+            log.info("Kayıp ilanı bulundu olarak işaretlendi. adId={}, ownerId={}, finderId={}", adId, owner.getUid(), finderId);
         }
 
         @Transactional(readOnly = true)
@@ -294,12 +380,5 @@
             } catch (Exception e) {
                 log.error("Push notification gönderilemedi: {}", e.getMessage());
             }
-        }
-
-        @Transactional(readOnly = true)
-        public List<AdResponse> getAllAdsForTesting() {
-            return adRepository.findAll().stream()
-                    .map(this::toResponseWithTemporaryPhotoUrls)
-                    .toList();
         }
     }

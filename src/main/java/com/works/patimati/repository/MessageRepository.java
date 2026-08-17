@@ -62,4 +62,24 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
      * kullanıcı ID'siyle sorgu yapılması gereksiz sorguyu engeller.
      */
     long countByRecipient_UidAndReadFalse(Long recipientId);
+
+    /**
+     * Belirli bir kullanıcının taraf olduğu her bir sohbet için en son mesajı getirir.
+     * Odaları en son mesaj tarihine göre DESC sıralar.
+     */
+    @Query("""
+            SELECT m FROM Message m
+            WHERE m.id IN (
+                SELECT MAX(m2.id) FROM Message m2
+                WHERE m2.sender.uid = :userId OR m2.recipient.uid = :userId
+                GROUP BY CASE WHEN m2.sender.uid = :userId THEN m2.recipient.uid ELSE m2.sender.uid END
+            )
+            ORDER BY m.timestamp DESC
+            """)
+    List<Message> findRecentMessagesPerConversation(@Param("userId") Long userId);
+
+    /**
+     * Belirli bir göndericiden gelen ve kullanıcının henüz okumadığı mesajların sayısı.
+     */
+    long countBySender_UidAndRecipient_UidAndReadFalse(Long senderId, Long recipientId);
 }

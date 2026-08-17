@@ -21,6 +21,7 @@ import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -159,7 +160,12 @@ public class AdMapper {
     }
 
     private Set<PetColor> copyColors(Set<PetColor> colors) {
-        return colors == null ? new LinkedHashSet<>() : new LinkedHashSet<>(colors);
+        if (colors == null || colors.isEmpty()) {
+            return new LinkedHashSet<>();
+        }
+        return colors.stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
     private Set<PetColor> immutableColors(Set<PetColor> colors) {

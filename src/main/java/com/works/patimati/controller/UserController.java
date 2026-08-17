@@ -1,12 +1,14 @@
 package com.works.patimati.controller;
 
 import com.works.patimati.dto.*;
+import com.works.patimati.dto.User.UpdateProfileRequest;
 import com.works.patimati.dto.User.UserResponseDTO;
 import com.works.patimati.service.PasswordResetService;
 import com.works.patimati.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -55,8 +57,18 @@ public class UserController {
     }
 
     @GetMapping("/userlist")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<UserResponseDTO>> getAllUsers() {
         List<UserResponseDTO> users = authService.getAllUsers();
         return ResponseEntity.ok(users);
+    }
+    @PutMapping("/profile")
+    public ResponseEntity<?> updateProfile(@Valid @RequestBody UpdateProfileRequest request) {
+        return authService.updateProfile(request);
+    }
+
+    @PutMapping("/fcm-token")
+    public ResponseEntity<?> updateFcmToken(@Valid @RequestBody FcmTokenUpdateDTO request) {
+        return authService.updateFcmToken(request);
     }
 }
