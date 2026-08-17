@@ -88,6 +88,9 @@ public interface AdRepository extends JpaRepository<Ad, Long> {
      *       eşleştirmek anlamsız. ADOPTION hiç aday olmaz.</li>
      *   <li><b>ai_status = DONE ve vektör dolu</b> — vektörü olmayan aday
      *       kıyaslanamaz.</li>
+     *   <li><b>Askıya alınmamış</b> — askıdaki ilanı yalnızca sahibi ve
+     *       yöneticiler görebilir. Aday havuzuna girerse eşleşme üzerinden
+     *       başlığı, açıklaması ve sahibinin adı üçüncü bir kişiye açılır.</li>
      *   <li><b>Yarıçap</b> — bildirim yarıçapından (5 km) farklıdır ve olmalıdır:
      *       kaybolan hayvan yürür, günlerce uzaklaşabilir.</li>
      *   <li><b>Zaman penceresi</b> — eski ilanlar gürültü yaratır.</li>
@@ -111,6 +114,7 @@ public interface AdRepository extends JpaRepository<Ad, Long> {
                AND a.ad_type = :oppositeAdType
                AND a.ai_status = 'DONE'
                AND a.ai_embeddings IS NOT NULL
+               AND a.suspended = FALSE
                AND a.created_at >= :since
                AND a.location IS NOT NULL
                AND ST_DWithin(a.location::geography, CAST(:origin AS geography), :radiusMeters)
