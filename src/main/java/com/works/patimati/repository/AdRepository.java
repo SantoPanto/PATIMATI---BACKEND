@@ -132,6 +132,9 @@ public interface AdRepository extends JpaRepository<Ad, Long> {
                FROM ads a
               WHERE a.ad_type = :oppositeAdType
                 AND a.active = true
+                AND a.ai_status = 'DONE'
+                AND a.ai_embeddings IS NOT NULL
+                AND a.suspended = FALSE
                 AND a.created_at >= :since
               ORDER BY a.created_at DESC
             """, nativeQuery = true)
