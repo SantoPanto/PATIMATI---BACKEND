@@ -40,20 +40,30 @@ public interface PotentialMatchRecipientRepository extends JpaRepository<Potenti
      *
      * <p>Yalnızca hâlâ {@code PENDING} ise geçiş yapar: eşzamanlı süpürücü
      * çalışmasıyla yarışsa bile ikinci çağrı 0 satır etkiler ve durur.
+     *
+     * <p><b>{@code clearAutomatically = true} ZORUNLUDUR.</b> Bu toplu
+     * ({@code @Modifying}) bir JPQL UPDATE'tir ve doğrudan veritabanına
+     * yazar — Hibernate'in birinci seviye önbelleğini (persistence context)
+     * OTOMATİK OLARAK senkronlamaz. Bu metottan hemen önce aynı satır
+     * {@code findById} ile yüklenmişse (tam olarak {@code attemptSend}'in
+     * yaptığı şey), önbellek güncellenmeden bırakılırsa aynı işlem (transaction)
+     * içindeki sonraki bir okuma hâlâ eski {@code PENDING} değerini görür —
+     * veritabanı satırı gerçekte {@code NOTIFIED} olsa bile. Bu, gerçek
+     * PostgreSQL'e karşı yazılan bir testte yakalandı (bkz. commit günlüğü).
      */
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Transactional
     @Query("UPDATE PotentialMatchRecipient r SET r.status = com.works.patimati.entity.enums.MatchStatus.NOTIFIED, " +
             "r.notifiedAt = :now, r.sendAttempts = r.sendAttempts + 1 " +
             "WHERE r.id = :id AND r.status = com.works.patimati.entity.enums.MatchStatus.PENDING")
     int markNotifiedIfPending(@Param("id") Long id, @Param("now") Instant now);
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Transactional
     @Query("UPDATE PotentialMatchRecipient r SET r.sendAttempts = r.sendAttempts + 1 WHERE r.id = :id")
     void incrementSendAttempts(@Param("id") Long id);
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Transactional
     @Query("UPDATE PotentialMatchRecipient r SET r.status = com.works.patimati.entity.enums.MatchStatus.NOTIFICATION_FAILED " +
             "WHERE r.id = :id AND r.status = com.works.patimati.entity.enums.MatchStatus.PENDING")
@@ -72,4 +82,9 @@ public interface PotentialMatchRecipientRepository extends JpaRepository<Potenti
     @Query("SELECT r FROM PotentialMatchRecipient r WHERE r.status = com.works.patimati.entity.enums.MatchStatus.PENDING " +
             "AND r.sendAttempts >= :maxAttempts")
     List<PotentialMatchRecipient> findExhaustedPending(@Param("maxAttempts") int maxAttempts);
+
+    // Kullanıcının kendi "olası eşleşmeler" listesi — GET /api/me/potential-matches.
+    // En yeni önce. Yalnızca çağıranın KENDİ alıcı satırları döner; başka bir
+    // kullanıcının satırı asla bu sorgudan gelmez.
+    List<PotentialMatchRecipient> findByRecipient_UidOrderByCreatedAtDesc(Long recipientUid);
 }

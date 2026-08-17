@@ -1,20 +1,28 @@
 package com.works.patimati.service;
 
 import com.works.patimati.ai.AiMatchNotifier;
+import com.works.patimati.dto.match.PotentialMatchDecisionRequest;
+import com.works.patimati.dto.match.PotentialMatchSummaryResponse;
 import com.works.patimati.entity.Ad;
 import com.works.patimati.entity.PotentialMatch;
 import com.works.patimati.entity.PotentialMatchRecipient;
 import com.works.patimati.entity.User;
+import com.works.patimati.entity.enums.MatchStatus;
 import com.works.patimati.entity.external.ExternalPetRecord;
+import com.works.patimati.exception.ResourceNotFoundException;
 import com.works.patimati.repository.AdRepository;
 import com.works.patimati.repository.PotentialMatchRecipientRepository;
 import com.works.patimati.repository.PotentialMatchRepository;
+import com.works.patimati.repository.UserRepository;
 import com.works.patimati.repository.external.ExternalPetRecordRepository;
+import com.works.patimati.repository.external.ExternalSourceMediaRepository;
+import com.works.patimati.storage.ImageStorageService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,6 +58,9 @@ public class PotentialMatchService {
     private final AdRepository adRepository;
     private final ExternalPetRecordRepository externalPetRecordRepository;
     private final AiMatchNotifier notifier;
+    private final UserRepository userRepository;
+    private final ExternalSourceMediaRepository externalSourceMediaRepository;
+    private final ImageStorageService imageStorageService;
 
     @Value("${potential-match.max-send-attempts:5}")
     private int maxSendAttempts;
@@ -194,5 +205,112 @@ public class PotentialMatchService {
                         recipient.getId(), recipient.getPotentialMatch().getId());
             }
         }
+    }
+
+    // ------------------------------------------------------------------
+    // Okuma/karar uçları — GET /api/me/potential-matches, POST .../decision
+    // (Faz 2 revize blueprint §10 — frontend minimum). Yalnızca çağıranın
+    // KENDİ alıcı satırları görünür/değiştirilebilir.
+    // ------------------------------------------------------------------
+
+    @Transactional(readOnly = true)
+    public List<PotentialMatchSummaryResponse> findForUser(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı bulunamadı"));
+        return recipientRepository.findByRecipient_UidOrderByCreatedAtDesc(user.getUid()).stream()
+                .map(this::toSummary)
+                .toList();
+    }
+
+    /**
+     * @throws AccessDeniedException kayıt başka bir kullanıcıya aitse (403)
+     * @throws IllegalStateException geçerli durum NOTIFIED/VIEWED değilse (409) — örn.
+     *         zaten karar verilmiş ya da EXPIRED bir kayıt için tekrar karar verilemez
+     */
+    @Transactional
+    public PotentialMatchSummaryResponse recordDecision(
+            String email, Long recipientId, PotentialMatchDecisionRequest.Decision decision) {
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı bulunamadı"));
+
+        PotentialMatchRecipient recipient = recipientRepository.findById(recipientId)
+                .orElseThrow(() -> new ResourceNotFoundException("Eşleşme kaydı bulunamadı"));
+
+        if (!recipient.getRecipient().getUid().equals(user.getUid())) {
+            throw new AccessDeniedException("Bu eşleşme kaydı size ait değil");
+        }
+
+        if (recipient.getStatus() != MatchStatus.NOTIFIED && recipient.getStatus() != MatchStatus.VIEWED) {
+            throw new IllegalStateException(
+                    "Bu kayıt şu anda '" + recipient.getStatus() + "' durumunda — yalnızca NOTIFIED/VIEWED "
+                            + "durumundaki bir kayıt için karar verilebilir");
+        }
+
+        MatchStatus newStatus = decision == PotentialMatchDecisionRequest.Decision.CONFIRMED
+                ? MatchStatus.CONFIRMED : MatchStatus.REJECTED;
+        recipient.setStatus(newStatus);
+        recipient.setDecidedAt(Instant.now());
+        recipientRepository.save(recipient);
+
+        return toSummary(recipient);
+    }
+
+    private PotentialMatchSummaryResponse toSummary(PotentialMatchRecipient recipient) {
+        PotentialMatch match = recipient.getPotentialMatch();
+        PotentialMatchSummaryResponse.Counterparty counterparty;
+
+        if (match.getCandidateKind() == PotentialMatch.CandidateKind.AD) {
+            // role=OWNER_B -> çağıran adB sahibi -> karşı taraf adA; aksi hâlde tersi.
+            Ad other = recipient.getRole() == PotentialMatchRecipient.Role.OWNER_B
+                    ? match.getAdA() : match.getAdB();
+            counterparty = new PotentialMatchSummaryResponse.Counterparty(
+                    "AD", other.getId(), other.getTitle(), representativeAdPhoto(other),
+                    other.getAdType() != null ? other.getAdType().name() : null,
+                    null, null, null, null);
+        } else {
+            ExternalPetRecord record = match.getExternalRecord();
+            counterparty = new PotentialMatchSummaryResponse.Counterparty(
+                    "EXTERNAL", record.getId(), null, representativeExternalPhoto(record),
+                    null,
+                    record.getCategory() != null ? record.getCategory().name() : null,
+                    record.getSpecies(), record.getBreed(),
+                    record.getPost() != null ? record.getPost().getCanonicalUrl() : null);
+        }
+
+        return new PotentialMatchSummaryResponse(
+                recipient.getId(), match.getId(), recipient.getStatus().name(),
+                match.getFinalScore(), recipient.getCreatedAt(), counterparty);
+    }
+
+    private String representativeAdPhoto(Ad ad) {
+        if (ad.getPhotoUrls() == null || ad.getPhotoUrls().isEmpty()) {
+            return null;
+        }
+        try {
+            return imageStorageService.createTemporaryReadUrl(ad.getPhotoUrls().get(0));
+        } catch (RuntimeException e) {
+            log.warn("İlan {} için fotoğraf adresi üretilemedi: {}", ad.getId(), e.getMessage());
+            return null;
+        }
+    }
+
+    private String representativeExternalPhoto(ExternalPetRecord record) {
+        if (record.getPost() == null) {
+            return null;
+        }
+        return externalSourceMediaRepository.findByPostOrderByOrdinalAsc(record.getPost()).stream()
+                .filter(m -> m.getStorageKey() != null)
+                .findFirst()
+                .map(m -> {
+                    try {
+                        return imageStorageService.createTemporaryReadUrl(m.getStorageKey());
+                    } catch (RuntimeException e) {
+                        log.warn("External kayıt {} için fotoğraf adresi üretilemedi: {}",
+                                record.getId(), e.getMessage());
+                        return null;
+                    }
+                })
+                .orElse(null);
     }
 }

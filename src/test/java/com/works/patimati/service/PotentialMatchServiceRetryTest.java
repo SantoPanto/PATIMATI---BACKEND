@@ -7,7 +7,10 @@ import com.works.patimati.entity.enums.MatchStatus;
 import com.works.patimati.repository.AdRepository;
 import com.works.patimati.repository.PotentialMatchRecipientRepository;
 import com.works.patimati.repository.PotentialMatchRepository;
+import com.works.patimati.repository.UserRepository;
 import com.works.patimati.repository.external.ExternalPetRecordRepository;
+import com.works.patimati.repository.external.ExternalSourceMediaRepository;
+import com.works.patimati.storage.ImageStorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -47,10 +50,14 @@ class PotentialMatchServiceRetryTest {
         AdRepository adRepository = mock(AdRepository.class);
         ExternalPetRecordRepository externalPetRecordRepository = mock(ExternalPetRecordRepository.class);
         notifier = mock(AiMatchNotifier.class);
+        UserRepository userRepository = mock(UserRepository.class);
+        ExternalSourceMediaRepository externalSourceMediaRepository = mock(ExternalSourceMediaRepository.class);
+        ImageStorageService imageStorageService = mock(ImageStorageService.class);
 
         service = new PotentialMatchService(
                 potentialMatchRepository, recipientRepository, adRepository,
-                externalPetRecordRepository, notifier);
+                externalPetRecordRepository, notifier, userRepository,
+                externalSourceMediaRepository, imageStorageService);
 
         ReflectionTestUtils.setField(service, "maxSendAttempts", 2);
         ReflectionTestUtils.setField(service, "retryGracePeriod", Duration.ofSeconds(0));
