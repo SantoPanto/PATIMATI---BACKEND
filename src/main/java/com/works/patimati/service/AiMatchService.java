@@ -28,6 +28,7 @@ import java.util.*;
 public class AiMatchService {
 
     private final AdRepository adRepository;
+    private final com.works.patimati.storage.ImageStorageService imageStorageService;
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Value("${ai.service.url:http://localhost:8000}")
@@ -160,16 +161,13 @@ public class AiMatchService {
             // Map the matched Ad info along with score
             List<Map<String, Object>> result = new ArrayList<>();
             for (Map<String, Object> match : matches) {
-                Boolean isMatch = (Boolean) match.get("match");
-                if (isMatch != null && isMatch) {
-                    Integer adId = (Integer) match.get("ad_id");
-                    Ad ad = adRepository.findById(adId.longValue()).orElse(null);
-                    if (ad != null) {
-                        Map<String, Object> item = new HashMap<>();
-                        item.put("score", match.get("score"));
-                        item.put("ad", mapToDTO(ad));
-                        result.add(item);
-                    }
+                Integer adId = (Integer) match.get("ad_id");
+                Ad ad = adRepository.findById(adId.longValue()).orElse(null);
+                if (ad != null) {
+                    Map<String, Object> item = new HashMap<>();
+                    item.put("score", match.get("score"));
+                    item.put("ad", mapToDTO(ad));
+                    result.add(item);
                 }
             }
             return result;
@@ -192,7 +190,19 @@ public class AiMatchService {
         dto.put("id", ad.getId());
         dto.put("title", ad.getTitle());
         dto.put("description", ad.getDescription());
-        dto.put("photoUrls", ad.getPhotoUrls());
+        
+        List<String> mappedUrls = new ArrayList<>();
+        if (ad.getPhotoUrls() != null) {
+            for (String url : ad.getPhotoUrls()) {
+                if (url != null && url.startsWith("s3://")) {
+                    mappedUrls.add(imageStorageService.createTemporaryReadUrl(url));
+                } else {
+                    mappedUrls.add(url);
+                }
+            }
+        }
+        dto.put("photoUrls", mappedUrls);
+        
         dto.put("createdAt", ad.getCreatedAt());
         String ownerName = ad.getUser() != null ? ad.getUser().getFirstName() + " " + ad.getUser().getLastName() : null;
         dto.put("ownerDisplayName", ownerName);
