@@ -3,7 +3,17 @@ package com.works.patimati.ai;
 import com.works.patimati.ai.dto.AiAnalysisResult;
 import com.works.patimati.entity.Ad;
 import com.works.patimati.entity.enums.AiStatus;
+import com.works.patimati.entity.enums.ExternalCategory;
+import com.works.patimati.entity.enums.ExternalProcessingStatus;
+import com.works.patimati.entity.external.ExternalPetRecord;
+import com.works.patimati.entity.external.ExternalSourceMedia;
+import com.works.patimati.entity.external.ExternalSourcePost;
+import com.works.patimati.external.ExternalMatchingService;
 import com.works.patimati.repository.AdRepository;
+import com.works.patimati.repository.external.ExternalPetRecordRepository;
+import com.works.patimati.repository.external.ExternalSourceMediaRepository;
+import com.works.patimati.repository.external.ExternalSourcePostRepository;
+import com.works.patimati.service.PotentialMatchService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,15 +24,24 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 /**
- * AI'dan dönen sonucu ilana yazar (entegrasyon sözleşmesi §4).
+ * AI'dan dönen sonucu ilana YA DA external kayda yazar (entegrasyon
+ * sözleşmesi §4; Faz 2 revize blueprint §1/§2).
  *
- * <p><b>Tekrar teslime dayanıklıdır.</b> RabbitMQ "en az bir kez" teslim eder,
- * yani aynı mesaj iki kez gelebilir. Burada yapılan iş {@code ad_id} üzerinden
- * idempotenttir: aynı sonucu iki kez yazmak aynı satırı aynı değerlerle
- * günceller. Bu yüzden ek bir tekrar-koruması gerekmez (§8).
+ * <p><b>Yönlendirme:</b> {@code result.externalRecordId()} doluysa Aşama 1
+ * (yalnızca analiz) sonucu bir {@link ExternalPetRecord}'a yazılır ve
+ * ardından kategori uyumluysa (LOST/FOUND, needs_review değilse) Aşama 2
+ * ({@link ExternalMatchingService}) tetiklenir. Aksi hâlde native davranış
+ * — {@link Ad}'a yazılır — AYNEN korunur, tek fark eşleşmelerin artık
+ * {@link AiMatchNotifier} yerine {@link PotentialMatchService} üzerinden
+ * kalıcı/dedup'lı hâle gelmesidir.
+ *
+ * <p><b>Tekrar teslime dayanıklıdır</b> (§8): her iki yol da idempotent-by-
+ * overwrite'tır; {@code PotentialMatchService} ayrıca DB seviyesinde
+ * dedup'lıdır.
  */
 @Component
 @RequiredArgsConstructor
@@ -31,22 +50,35 @@ public class AiAnalysisListener {
     private static final Logger log = LoggerFactory.getLogger(AiAnalysisListener.class);
 
     private final AdRepository adRepository;
-    private final AiMatchNotifier matchNotifier;
+    private final ExternalPetRecordRepository externalPetRecordRepository;
+    private final ExternalSourcePostRepository externalSourcePostRepository;
+    private final ExternalSourceMediaRepository externalSourceMediaRepository;
+    private final PotentialMatchService potentialMatchService;
+    private final ExternalMatchingService externalMatchingService;
 
     @RabbitListener(queues = AiRabbitConfig.RESULT_QUEUE,
                     containerFactory = "aiListenerContainerFactory")
     @Transactional
     public void onResult(AiAnalysisResult result) {
-        if (result == null || result.adId() == null) {
-            // adId olmadan yazacak satırı bulamayız. Mesajı reddedip yeniden
-            // kuyruğa koymak sonsuz döngü olurdu; günlüğe yazıp bırakıyoruz.
-            log.error("AI sonucunda ad_id yok, mesaj atlandı: {}", result);
+        if (result == null || (result.adId() == null && result.externalRecordId() == null)) {
+            log.error("AI sonucunda ne ad_id ne external_record_id var, mesaj atlandı: {}", result);
             return;
         }
 
+        if (result.isForExternalRecord()) {
+            handleExternalResult(result);
+        } else {
+            handleNativeResult(result);
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // NATIVE — davranış aynı, yalnızca eşleşme kalıcılığı değişti.
+    // ------------------------------------------------------------------
+
+    private void handleNativeResult(AiAnalysisResult result) {
         Optional<Ad> found = adRepository.findById(result.adId());
         if (found.isEmpty()) {
-            // İlan analiz sürerken silinmiş olabilir — normal bir durum.
             log.warn("AI sonucu geldi ama ilan bulunamadı: adId={}", result.adId());
             return;
         }
@@ -55,12 +87,7 @@ public class AiAnalysisListener {
         ad.setAiProcessedAt(result.processedAt() != null ? result.processedAt() : Instant.now());
 
         if (!result.isOk()) {
-            String code = result.error() != null ? result.error().code() : "UNKNOWN";
-            String message = result.error() != null ? result.error().message() : "";
-            log.warn("AI analizi başarısız: adId={} kod={} mesaj={}", result.adId(), code, message);
-
-            // İlan YAYINDA KALIR (§4). AI bir ektir; analiz edilememesi ilanı
-            // görünmez yapmamalı. Yalnızca eşleştirmeye aday olarak girmez.
+            logError("adId=" + result.adId(), result);
             ad.setAiStatus(AiStatus.FAILED);
             adRepository.save(ad);
             return;
@@ -69,22 +96,147 @@ public class AiAnalysisListener {
         applyAnalysis(ad, result);
         ad.setAiStatus(AiStatus.DONE);
         adRepository.save(ad);
-
         logSkipped(result);
 
-        // Eşiği geçen eşleşmeler için bildirim. Bildirim gönderme kararı burada
-        // değil, notifier'da: "hangi çifte daha önce bildirim gitti" bilgisini
-        // o tutuyor (§7 kural 4 — bildirim tekrarı önlenmeli).
-        List<AiAnalysisResult.Match> matches = result.matches() == null
-                ? List.of() : result.matches();
-        matchNotifier.notifyMatches(ad, matches);
+        List<AiAnalysisResult.Match> matches = result.matches() == null ? List.of() : result.matches();
+        for (AiAnalysisResult.Match match : matches) {
+            if (!match.match()) {
+                continue;
+            }
+            if (match.externalRecordId() != null) {
+                // Flow B: native ilan artık external Instagram adaylarını da görüyor.
+                potentialMatchService.recordExternalMatch(
+                        ad.getId(), match.externalRecordId(),
+                        (float) match.visual(), (float) match.label(), (float) match.location(),
+                        (float) match.score(), ad.getAiModelVersion());
+            } else if (match.adId() != null) {
+                potentialMatchService.recordAdMatch(
+                        ad.getId(), match.adId(),
+                        (float) match.visual(), (float) match.label(), (float) match.location(),
+                        (float) match.score(), ad.getAiModelVersion());
+            }
+        }
 
         log.info("AI analizi tamamlandı: adId={} tür={} cins={} eşleşme={} model={}",
-                ad.getId(), ad.getAiSpecies(), ad.getAiBreed(), matches.size(),
-                ad.getAiModelVersion());
+                ad.getId(), ad.getAiSpecies(), ad.getAiBreed(), matches.size(), ad.getAiModelVersion());
     }
 
-    /** Sonuçtaki analiz bloğunu ilana yazar. */
+    // ------------------------------------------------------------------
+    // EXTERNAL — Aşama 1 sonucu + Aşama 2 tetikleme kararı.
+    // ------------------------------------------------------------------
+
+    private void handleExternalResult(AiAnalysisResult result) {
+        Optional<ExternalPetRecord> found = externalPetRecordRepository.findById(result.externalRecordId());
+        if (found.isEmpty()) {
+            log.warn("AI sonucu geldi ama external kayıt bulunamadı: externalRecordId={}",
+                    result.externalRecordId());
+            return;
+        }
+
+        ExternalPetRecord record = found.get();
+        ExternalSourcePost post = record.getPost();
+        record.setAiProcessedAt(result.processedAt() != null ? result.processedAt() : Instant.now());
+
+        if (!result.isOk()) {
+            logError("externalRecordId=" + result.externalRecordId(), result);
+            record.setAiStatus(AiStatus.FAILED);
+            externalPetRecordRepository.save(record);
+            post.setProcessingStatus(ExternalProcessingStatus.FAILED);
+            post.setFailureReason(result.error() != null ? result.error().message() : "AI analizi başarısız");
+            externalSourcePostRepository.save(post);
+            return;
+        }
+
+        applyExternalAnalysis(record, post, result);
+        record.setAiStatus(AiStatus.DONE);
+        externalPetRecordRepository.save(record);
+
+        boolean compatible = (record.getCategory() == ExternalCategory.LOST
+                || record.getCategory() == ExternalCategory.FOUND)
+                && !record.isNeedsReview();
+
+        if (compatible) {
+            post.setProcessingStatus(ExternalProcessingStatus.ANALYZED);
+            externalSourcePostRepository.save(post);
+            // Aşama 2: candidates BURADA gönderilmez (kuyruk mesajı zaten
+            // boş adayla gönderildi) — senkron ayrı bir çağrıdır.
+            externalMatchingService.attemptMatching(record);
+        } else {
+            post.setProcessingStatus(ExternalProcessingStatus.COMPLETED);
+            externalSourcePostRepository.save(post);
+            log.info("External kayıt {} eşleştirmeye girmiyor: kategori={} needsReview={}",
+                    record.getId(), record.getCategory(), record.isNeedsReview());
+        }
+    }
+
+    /**
+     * Sonuçtaki analiz bloğunu external kayda yazar — {@link #applyAnalysis}
+     * ile aynı vektör/etiket mantığı, farkı NLP çıktısının (kategori vb.)
+     * de burada işlenmesi.
+     */
+    private void applyExternalAnalysis(ExternalPetRecord record, ExternalSourcePost post, AiAnalysisResult result) {
+        AiAnalysisResult.Analysis analysis = result.analysis();
+        if (analysis == null) {
+            log.warn("Sonuç 'ok' ama analiz bloğu boş: externalRecordId={}", result.externalRecordId());
+            return;
+        }
+
+        List<String> mediaUrls = externalSourceMediaRepository.findByPostOrderByOrdinalAsc(post).stream()
+                .map(ExternalSourceMedia::getStorageKey)
+                .toList();
+        record.setAiEmbeddings(pairVectorsWithUrls(mediaUrls, analysis.embeddings()));
+        record.setAiLabels(analysis.labels());
+        record.setAiIsPet(analysis.isPet());
+        record.setSpecies(analysis.species());
+        record.setBreed(analysis.breed());
+        record.setBreedConfidence((float) analysis.breedConfidence());
+        record.setAiModelVersion(result.modelVersion());
+        if (analysis.colors() != null) {
+            record.setColors(analysis.colors().stream().map(AiAnalysisResult.Color::name).toList());
+        }
+
+        AiAnalysisResult.NlpAttributes nlp = result.nlpAttributes();
+        if (nlp != null && nlp.category() != null) {
+            record.setCategory(parseCategory(nlp.category()));
+            record.setCategoryConfidence(nlp.categoryConfidence() == null ? null : nlp.categoryConfidence().floatValue());
+            record.setGender(nlp.gender());
+            record.setAgeText(nlp.ageText());
+            record.setPetName(nlp.petName());
+            record.setLocationText(nlp.locationText() != null ? nlp.locationText() : post.getLocationText());
+            record.setLocationConfidence(nlp.locationConfidence() == null ? null : nlp.locationConfidence().floatValue());
+            record.setDistinguishingFeatures(nlp.distinguishingFeatures());
+            record.setNeedsReview(Boolean.TRUE.equals(nlp.needsReview()));
+        } else {
+            // Metin sinyali yok (caption VE triggering_comment ikisi de boştu,
+            // ya da AI sağlayıcısı hiç yanıt veremedi) — asla zorla bir karar
+            // üretilmez, UNCERTAIN varsayılanında kalır.
+            record.setCategory(ExternalCategory.UNCERTAIN);
+            record.setLocationText(post.getLocationText());
+        }
+
+        // Görsel+metin füzyonu (blueprint §29): metin LOST/FOUND dese bile
+        // görsel fotoğrafta hayvan bile görmüyorsa zorla üretilmez.
+        if (Boolean.FALSE.equals(analysis.isPet())
+                && (record.getCategory() == ExternalCategory.LOST || record.getCategory() == ExternalCategory.FOUND)) {
+            log.info("External kayıt {}: metin {} dedi ama görsel hayvan görmedi — UNCERTAIN'a düşürülüyor",
+                    record.getId(), record.getCategory());
+            record.setCategory(ExternalCategory.UNCERTAIN);
+            record.setNeedsReview(true);
+        }
+    }
+
+    private ExternalCategory parseCategory(String raw) {
+        try {
+            return ExternalCategory.valueOf(raw.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException | NullPointerException e) {
+            return ExternalCategory.UNCERTAIN;
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Paylaşılan yardımcılar (native AiAnalysisPublisher/Listener ile aynı mantık).
+    // ------------------------------------------------------------------
+
     private void applyAnalysis(Ad ad, AiAnalysisResult result) {
         AiAnalysisResult.Analysis analysis = result.analysis();
         if (analysis == null) {
@@ -97,50 +249,21 @@ public class AiAnalysisListener {
         ad.setAiSpecies(analysis.species());
         ad.setAiBreed(analysis.breed());
         ad.setAiBreedConfidence((float) analysis.breedConfidence());
-
-        // "Fotoğrafta gerçekten hayvan var mı" cevabı. AI bunu baştan beri
-        // gönderiyordu ama hiçbir yere yazılmıyordu: ekran görüntüsüyle açılan
-        // ilan normal ilan gibi DONE olup aday havuzuna giriyordu.
-        // null gelirse null yazılır — "AI söylemedi" ile "hayvan yok" farklıdır.
         ad.setAiIsPet(analysis.isPet());
         if (Boolean.FALSE.equals(analysis.isPet())) {
-            // Sessiz kalmasın: ilan yayında kalıyor ama fotoğrafı işe yaramıyor.
-            log.info("İlan {} fotoğraflarında kedi/köpek görülmedi (is_pet=false)",
-                    ad.getId());
+            log.info("İlan {} fotoğraflarında kedi/köpek görülmedi (is_pet=false)", ad.getId());
         }
-
-        // model_version KRİTİK: hangi modelle üretildiğini söyler. Bu alan
-        // olmadan hangi vektörlerin bayat olduğu anlaşılamaz ve model
-        // değiştiğinde sessizce yanlış benzerlik hesaplanır.
         ad.setAiModelVersion(result.modelVersion());
 
-        if (analysis.embeddings() != null
-                && analysis.embeddings().size() < ad.getPhotoUrls().size()) {
-            // Bazı fotoğraflar indirilemedi ya da bozuktu; analiz kalanlarla
-            // yapıldı. Kayıp sessiz kalmasın.
+        if (analysis.embeddings() != null && analysis.embeddings().size() < ad.getPhotoUrls().size()) {
             log.info("İlan {} için {} fotoğraftan {} tanesi analiz edildi",
                     ad.getId(), ad.getPhotoUrls().size(), analysis.embeddings().size());
         }
         if (result.failedPhotos() != null && !result.failedPhotos().isEmpty()) {
-            result.failedPhotos().forEach(f ->
-                    log.info("  indirilemedi: {} — {}", f.url(), f.error()));
+            result.failedPhotos().forEach(f -> log.info("  indirilemedi: {} — {}", f.url(), f.error()));
         }
     }
 
-    /**
-     * Vektörleri fotoğraf adresleriyle eşler.
-     *
-     * <p><b>Burada KALICI depolama referansı saklanır</b> ({@code s3://...}),
-     * AI'ya gönderilen süreli adres değil. Süreli adres 15 dakikada ölür;
-     * veritabanına yazmanın anlamı olmaz.
-     *
-     * <p>Sözleşme, {@code analysis.embeddings} sırasının {@code photo_urls} ile
-     * aynı olduğunu söyler. Yine de sayılar tutmayabilir: indirilemeyen
-     * fotoğraflar atlanır. O yüzden kısa olan listeye göre eşliyoruz —
-     * yanlış adresi yanlış vektöre bağlamaktansa eksik bağlamak yeğdir.
-     * (Yayıncı taraf da bu yüzden kısmi liste göndermiyor; bkz.
-     * {@code AiAnalysisPublisher.toDownloadableUrls}.)
-     */
     private List<Ad.AiPhotoVector> pairVectorsWithUrls(List<String> urls, List<float[]> vectors) {
         if (vectors == null || vectors.isEmpty()) {
             return List.of();
@@ -152,21 +275,18 @@ public class AiAnalysisListener {
         for (int i = 0; i < count; i++) {
             paired.add(new Ad.AiPhotoVector(safeUrls.get(i), vectors.get(i)));
         }
-        // Adres sayısı vektörden azsa (beklenmez) kalan vektörler adressiz eklenir:
-        // vektörü atmak, eşleştirme yeteneğini kaybetmek demek olurdu.
         for (int i = count; i < vectors.size(); i++) {
             paired.add(new Ad.AiPhotoVector(null, vectors.get(i)));
         }
         return paired;
     }
 
-    /**
-     * Elenen adayları raporlar.
-     *
-     * <p>{@code modelSurumuUyusmuyor > 0} ise ilgili ilanların vektörleri
-     * bayatlamıştır ve yeniden analiz edilmeleri gerekir — bu yüzden uyarı
-     * seviyesinde yazılıyor, gözden kaçmasın.
-     */
+    private void logError(String context, AiAnalysisResult result) {
+        String code = result.error() != null ? result.error().code() : "UNKNOWN";
+        String message = result.error() != null ? result.error().message() : "";
+        log.warn("AI analizi başarısız: {} kod={} mesaj={}", context, code, message);
+    }
+
     private void logSkipped(AiAnalysisResult result) {
         AiAnalysisResult.SkippedCandidates skipped = result.skippedCandidates();
         if (skipped == null || skipped.toplam() == 0) {

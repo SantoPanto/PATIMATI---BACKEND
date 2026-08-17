@@ -33,18 +33,10 @@ public class AiAnalysisPublisher {
     private final RabbitTemplate aiRabbitTemplate;
     private final AdRepository adRepository;
     private final ImageStorageService imageStorageService;
+    private final MatchCandidateGatherer candidateGatherer;
 
-    /** Aday yarıçapı. Bildirim yarıçapından (5 km) FARKLIDIR — hayvan yürür. */
-    @Value("${ai.matching.radius-km:25}")
-    private double radiusKm;
-
-    /** Aday zaman penceresi; eski ilanlar gürültü yaratır. */
-    @Value("${ai.matching.window-days:90}")
-    private int windowDays;
-
-    /** Mesaj boyutu sınırı. 100 aday ≈ 700 KB (aday başına ~7 KB, 768 float). */
-    @Value("${ai.matching.max-candidates:100}")
-    private int maxCandidates;
+    // Yarıçap/pencere/aday-sınırı artık MatchCandidateGatherer'da yaşıyor —
+    // hem native hem external aday sorguları için TEK yerde okunuyor.
 
     /**
      * İlanı analiz kuyruğuna gönderir.
@@ -70,14 +62,20 @@ public class AiAnalysisPublisher {
                 return;
             }
 
-            AiAnalysisRequest request = new AiAnalysisRequest(
+            AiAnalysisRequest request = AiAnalysisRequest.forAd(
                     AiRabbitConfig.SCHEMA_VERSION,
                     UUID.randomUUID().toString(),
                     ad.getId(),
                     ad.getAdType().name(),
                     declaredSpecies(ad),
                     photoUrls,
-                    collectCandidates(ad));
+                    // Faz 2 revize blueprint §1: bu tek satır hem konumsuz
+                    // ilanlar için var olan boş-liste hatasını düzeltir hem de
+                    // Flow B'yi (native ilan artık external Instagram
+                    // adaylarını da görür) hiçbir yeni tetikleyici mekanizma
+                    // eklemeden sağlar — MatchCandidateGatherer her iki
+                    // tabloyu birden okur.
+                    candidateGatherer.findCandidatesForAd(ad));
 
             aiRabbitTemplate.convertAndSend(
                     AiRabbitConfig.EXCHANGE,
@@ -188,94 +186,7 @@ public class AiAnalysisPublisher {
         };
     }
 
-    /**
-     * Karşıt tipteki, yakındaki, analizi bitmiş ilanları toplar.
-     *
-     * <p>Vektörü olmayan aday sessizce atlanır: {@code ai_status = DONE} olsa
-     * bile vektör alanı boşsa kıyaslanacak bir şey yoktur.
-     */
-    private List<AiCandidate> collectCandidates(Ad ad) {
-        if (ad.getLocation() == null) {
-            log.info("İlan {} konumsuz, aday süzmesi yapılamadı", ad.getId());
-            return List.of();
-        }
-
-        String opposite = switch (ad.getAdType()) {
-            case LOST -> Ad.AdType.FOUND.name();
-            case FOUND -> Ad.AdType.LOST.name();
-            default -> null;
-        };
-        if (opposite == null) {
-            return List.of();
-        }
-
-        List<AiCandidateRow> rows = adRepository.findAiCandidates(
-                ad.getId(),
-                opposite,
-                ad.getLocation(),
-                radiusKm * 1000.0,
-                Instant.now().minus(windowDays, ChronoUnit.DAYS));
-
-        if (rows.isEmpty()) {
-            return List.of();
-        }
-        if (rows.size() > maxCandidates) {
-            log.info("İlan {} için {} aday bulundu, en yakın {} tanesi gönderiliyor",
-                    ad.getId(), rows.size(), maxCandidates);
-            rows = rows.subList(0, maxCandidates);
-        }
-
-        // Mesafeleri kimliğe göre saklayıp entity'leri TEK sorguda çekiyoruz.
-        Map<Long, Double> distances = new LinkedHashMap<>();
-        rows.forEach(r -> distances.put(r.getAdId(), r.getDistanceKm()));
-
-        List<AiCandidate> candidates = new ArrayList<>(distances.size());
-        for (Ad candidate : adRepository.findAllById(distances.keySet())) {
-            List<float[]> vectors = extractVectors(candidate);
-            if (vectors.isEmpty()) {
-                continue;
-            }
-            // Adayın türü de BEYANDAN alınır, AI tahmininden değil — yeni ilanda
-            // (declaredSpecies) zaten öyle yapılıyordu, aday tarafı geride kalmıştı.
-            //
-            // Neden önemli: AI, güveni %80'in altındaysa "unknown" der ve bu nadir
-            // değil (ölçüldü: gerçek bir kedi fotoğrafı "unknown" çıktı). AI
-            // tarafındaki tür engeli ise İKİ taraf da bilindiğinde çalışıyor.
-            // Aday "unknown" olduğu anda engel sessizce devre dışı kalıyor ve
-            // kedi ilanı köpek ilanına aday olarak gidiyordu.
-            //
-            // Ölçüm (2026-08-05, kuyruğa yazılan mesaj okunarak):
-            //   önce : aday species='unknown' -> engel yok,  skor 0.1521
-            //   sonra: aday species='cat'     -> species_mismatch, skor 0.0
-            //
-            // Sözleşme §7 kural 2: kullanıcı beyanı önceliklidir, AI tahmini ezmez.
-            String candidateSpecies = declaredSpecies(candidate);
-            if (candidateSpecies == null) {
-                candidateSpecies = candidate.getAiSpecies() == null
-                        ? "unknown" : candidate.getAiSpecies();
-            }
-
-            candidates.add(new AiCandidate(
-                    candidate.getId(),
-                    vectors,
-                    candidate.getAiLabels() == null ? List.of() : candidate.getAiLabels(),
-                    candidateSpecies,
-                    distances.getOrDefault(candidate.getId(), 0.0),
-                    candidate.getAiModelVersion()));
-        }
-
-        // findAllById sırayı korumaz; yakından uzağa sıralamayı geri kuruyoruz.
-        candidates.sort(Comparator.comparingDouble(AiCandidate::distanceKm));
-        return candidates;
-    }
-
-    private List<float[]> extractVectors(Ad ad) {
-        if (ad.getAiEmbeddings() == null) {
-            return List.of();
-        }
-        return ad.getAiEmbeddings().stream()
-                .map(Ad.AiPhotoVector::embedding)
-                .filter(Objects::nonNull)
-                .toList();
-    }
+    // Aday toplama artık MatchCandidateGatherer'da yaşıyor (Faz 2 revize
+    // blueprint §1/§31) — hem native↔native hem native↔external adayları
+    // aynı yerde, aynı konumsuz-fallback kuralıyla üretmek için.
 }
