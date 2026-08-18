@@ -54,6 +54,19 @@ spring:
 
 # AI eşleştirme ayarları (entegrasyon sözleşmesi §5)
 ai:
+  service:
+    # AI servisinin taban adresi. Kodda da bir varsayılanı vardı ama burada
+    # yazılı olmadığı için hangi değişkenle ezileceği hiçbir yerde görünmüyordu.
+    url: ${AI_SERVICE_URL:http://localhost:8000}
+    # AI ile PAYLAŞILAN SIR (sözleşme §10 / A1). Verilirse backend, AI'ya giden
+    # her istekte X-Api-Key başlığını gönderir.
+    #
+    # ⚠ İki taraf birlikte yapılandırılmalı: yalnız AI'da anahtar varsa
+    # çağrılar 401 alır, yalnız burada varsa AI başlığı yok sayar. Değer AI
+    # deposundaki AI_API_KEY ile AYNI olmalı.
+    #
+    # Boş bırakılırsa başlık hiç eklenmez — bugünkü kurulum aynen çalışır.
+    api-key: ${AI_API_KEY:}
   matching:
     # Aday yarıçapı. Bildirim yarıçapından (5 km) BİLEREK farklı:
     # kaybolan hayvan yürür, günlerce uzaklaşabilir.
