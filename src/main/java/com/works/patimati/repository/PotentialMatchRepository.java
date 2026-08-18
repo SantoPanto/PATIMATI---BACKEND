@@ -68,4 +68,8 @@ public interface PotentialMatchRepository extends JpaRepository<PotentialMatch, 
     Optional<PotentialMatch> findByCandidateKindAndAdAAndExternalRecord(
             PotentialMatch.CandidateKind kind, com.works.patimati.entity.Ad adA,
             com.works.patimati.entity.external.ExternalPetRecord externalRecord);
+
+    // Admin paneli: bir external kaydın herhangi bir native ilanla eşleşip eşleşmediğini gösterir.
+    boolean existsByCandidateKindAndExternalRecord(
+            PotentialMatch.CandidateKind kind, com.works.patimati.entity.external.ExternalPetRecord externalRecord);
 }

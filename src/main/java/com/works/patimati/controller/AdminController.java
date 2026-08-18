@@ -2,6 +2,7 @@ package com.works.patimati.controller;
 
 import com.works.patimati.dto.ad.AdResponse;
 import com.works.patimati.dto.admin.AdComplaintAdminResponse;
+import com.works.patimati.dto.admin.ExternalPostAdminResponse;
 import com.works.patimati.dto.admin.UserComplaintAdminResponse;
 import com.works.patimati.dto.admin.UserDetailForAdminDTO;
 import com.works.patimati.service.AdminService;
@@ -130,5 +131,17 @@ public class AdminController {
     ) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         return ResponseEntity.ok(adminService.getAdoptionComplaints(pageable));
+    }
+
+    /**
+     * Collector'ın topladığı tüm Instagram gönderilerini (eşleşsin eşleşmesin) listeler.
+     */
+    @GetMapping("/external-posts")
+    public ResponseEntity<Page<ExternalPostAdminResponse>> getExternalPosts(
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(MAX_PAGE_SIZE) int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "detectedAt"));
+        return ResponseEntity.ok(adminService.getExternalPosts(pageable));
     }
 }

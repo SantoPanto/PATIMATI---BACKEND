@@ -58,7 +58,9 @@ public class ExternalSourceMedia {
     @Builder.Default
     private String mediaType = "IMAGE";
 
-    @Column(name = "source_reference", length = 512)
+    // Gerçek Instagram CDN URL'leri (imzalı sorgu parametreleriyle) 512
+    // karakteri rahatlıkla aşabiliyor -- bkz. V12 migration.
+    @Column(name = "source_reference", columnDefinition = "text")
     private String sourceReference;
 
     @Column(name = "storage_key", length = 512)

@@ -12,6 +12,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -96,13 +98,29 @@ public class ExternalMediaIngestionService {
         return new Result(mediaRow.getId(), storageKey, mediaRow.getProcessingState().name());
     }
 
+    /**
+     * {@code analysisPublisher.publish} kendi transaction'ını
+     * ({@code REQUIRES_NEW}) açar — bu metod hâlâ AÇIK olan {@code attach()}
+     * transaction'ı içinden senkron çağrılırsa, yeni transaction az önce
+     * burada yazılan (henüz COMMIT OLMAMIŞ) {@code storageKey}'i asla
+     * göremez ve analiz sessizce atlanır (gerçek bir üretim hatası olarak
+     * bulundu — bkz. commit geçmişi). Bu yüzden tetikleme, mevcut
+     * transaction COMMIT OLDUKTAN SONRAYA ertelenir; o noktada gönderiyi
+     * ID'sinden taze okuyup öyle yayınlar.
+     */
     private void maybeTriggerAnalysis(ExternalSourcePost post) {
         long storedCount = mediaRepository.countByPostAndProcessingState(
                 post, ExternalSourceMedia.ProcessingState.STORED);
         if (post.getMediaCount() > 0 && storedCount >= post.getMediaCount()) {
             log.info("Gönderi {} için tüm medya ({}) depolandı, analiz tetikleniyor",
                     post.getId(), storedCount);
-            analysisPublisher.publish(post);
+            Long postId = post.getId();
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    postRepository.findById(postId).ifPresent(analysisPublisher::publish);
+                }
+            });
         }
     }
 }
