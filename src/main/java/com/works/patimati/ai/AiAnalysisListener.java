@@ -24,9 +24,10 @@ import java.util.Optional;
  * {@code ad_id} üzerinden idempotenttir: aynı sonucu iki kez yazmak aynı
  * satırı aynı değerlerle günceller (§8).
  *
- * <p>⚠ <b>Ama BİLDİRİM idempotent değil.</b> §8'in "ek bir tekrar-koruması
- * gerekmez" cümlesi <i>satır yazımı</i> için doğrudur; bildirim ayrı bir
- * olaydır ve her teslimde yeniden gönderilir. Açık madde: B6.
+ * <p>⚠ <b>Bildirim ayrı bir olaydır</b> ve §8'in "ek bir tekrar-koruması
+ * gerekmez" cümlesi onun için geçerli değildir: tekrar teslimde yeniden
+ * gönderilirdi. Koruması artık {@link AiMatchNotifier} içinde, {@code ad_match}
+ * satırının {@code notification_sent_at} damgasıyla kuruluyor (B6).
  */
 @Component
 @RequiredArgsConstructor
@@ -76,17 +77,19 @@ public class AiAnalysisListener {
 
         logSkipped(result);
 
-        // Eşiği geçen eşleşmeler için bildirim.
+        // Eşleşmelerin KAYDI ve eşiği geçenler için bildirim.
         //
         // ⚠ Burada eskiden "hangi çifte daha önce bildirim gitti bilgisini
         // notifier tutuyor" yazıyordu. YANLIŞTI: notifier de hiçbir şey
-        // tutmuyor (ölçüldü, 17.08). İki bileşen de ötekinin yaptığını
-        // sanıyordu. Sonuç: aynı mesaj tekrar teslim edilirse ya da ilan
-        // yeniden analiz edilirse aynı çifte bildirim TEKRAR gider —
-        // sözleşme §7 kural 4 bunu yasaklıyor. Açık madde: B6.
+        // tutmuyordu (ölçüldü, 17.08). İki bileşen de ötekinin yaptığını
+        // sanıyordu. Artık kayıt gerçekten yazılıyor ve damga oradan okunuyor.
+        //
+        // Eşik AI'nın cevabından geçiyor: kaydın "o an eşik neydi" sorusuna
+        // doğru cevap verebilmesi için değerin KAYNAĞINDAN gelmesi gerekiyor.
+        // Backend yapılandırmasından okunsaydı iki kaynak sessizce kayardı.
         List<AiAnalysisResult.Match> matches = result.matches() == null
                 ? List.of() : result.matches();
-        matchNotifier.notifyMatches(ad, matches);
+        matchNotifier.recordAndNotify(ad, matches, result.matchThreshold());
 
         log.info("AI analizi tamamlandı: adId={} tür={} cins={} eşleşme={} model={}",
                 ad.getId(), ad.getAiSpecies(), ad.getAiBreed(), matches.size(),
