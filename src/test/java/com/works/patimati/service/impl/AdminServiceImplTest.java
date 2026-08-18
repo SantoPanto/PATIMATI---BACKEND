@@ -5,9 +5,14 @@ import com.works.patimati.exception.ResourceNotFoundException;
 import com.works.patimati.repository.AdComplaintRepository;
 import com.works.patimati.repository.AdRepository;
 import com.works.patimati.repository.AdoptionComplaintRepository;
+import com.works.patimati.repository.PotentialMatchRepository;
 import com.works.patimati.repository.UserComplaintRepository;
 import com.works.patimati.repository.UserRepository;
+import com.works.patimati.repository.external.ExternalPetRecordRepository;
+import com.works.patimati.repository.external.ExternalSourceMediaRepository;
+import com.works.patimati.repository.external.ExternalSourcePostRepository;
 import com.works.patimati.service.AdService;
+import com.works.patimati.storage.ImageStorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -26,6 +31,11 @@ class AdminServiceImplTest {
     private UserComplaintRepository userComplaintRepository;
     private AdoptionComplaintRepository adoptionComplaintRepository;
     private AdService adService;
+    private ExternalSourcePostRepository externalSourcePostRepository;
+    private ExternalPetRecordRepository externalPetRecordRepository;
+    private ExternalSourceMediaRepository externalSourceMediaRepository;
+    private PotentialMatchRepository potentialMatchRepository;
+    private ImageStorageService imageStorageService;
     private AdminServiceImpl adminService;
 
     @BeforeEach
@@ -36,6 +46,11 @@ class AdminServiceImplTest {
         userComplaintRepository = mock(UserComplaintRepository.class);
         adoptionComplaintRepository = mock(AdoptionComplaintRepository.class);
         adService = mock(AdService.class);
+        externalSourcePostRepository = mock(ExternalSourcePostRepository.class);
+        externalPetRecordRepository = mock(ExternalPetRecordRepository.class);
+        externalSourceMediaRepository = mock(ExternalSourceMediaRepository.class);
+        potentialMatchRepository = mock(PotentialMatchRepository.class);
+        imageStorageService = mock(ImageStorageService.class);
 
         adminService = new AdminServiceImpl(
                 userRepository,
@@ -43,7 +58,12 @@ class AdminServiceImplTest {
                 adComplaintRepository,
                 userComplaintRepository,
                 adoptionComplaintRepository,
-                adService
+                adService,
+                externalSourcePostRepository,
+                externalPetRecordRepository,
+                externalSourceMediaRepository,
+                potentialMatchRepository,
+                imageStorageService
         );
     }
 

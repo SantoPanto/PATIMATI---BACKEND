@@ -28,6 +28,13 @@ spring:
     # Baseline sürüm numarasını V1 script'imizle eşleştiriyoruz
     baseline-version: 1
     baseline-description: "Init Schema"
+    # main ile feature dalları paralel migration numaraları üretebiliyor
+    # (örn. main V9/V10 eklerken feature dalı kendi V9-V12'sini zaten
+    # uygulamış, sonradan V11-V14'e yeniden numaralandırıldı). Böyle bir
+    # ortam merge edildiğinde DB'de zaten UYGULANMIŞ daha yüksek sürümden
+    # SONRA daha düşük sürümlü yeni migration'lar gelir — outOfOrder
+    # olmadan Flyway bunu validate hatası sayar.
+    out-of-order: true
 
   # OAuth2 Google Giriş Ayarları
   security:
