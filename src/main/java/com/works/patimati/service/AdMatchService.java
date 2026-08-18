@@ -9,6 +9,7 @@ import com.works.patimati.exception.ResourceNotFoundException;
 import com.works.patimati.repository.AdMatchRepository;
 import com.works.patimati.repository.AdRepository;
 import com.works.patimati.repository.UserRepository;
+import com.works.patimati.storage.ImageStorageService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,6 +35,7 @@ public class AdMatchService {
     private final AdMatchRepository adMatchRepository;
     private final AdRepository adRepository;
     private final UserRepository userRepository;
+    private final ImageStorageService imageStorageService;
 
     /**
      * Oturum açmış kullanıcının taraf olduğu (sourceAd veya matchedAd) tüm eşleşmeleri
@@ -55,49 +57,46 @@ public class AdMatchService {
     }
 
     /**
-     * Yeni bir eşleşme kaydeder veya önceden var olan benzersiz eşleşme çiftinin skorunu günceller.
+     * Yeni bir eşleşme kaydeder veya önceden var olan benzersiz eşleşmenin skorunu günceller.
      *
-     * <p>Ayna çift kayıtlarını (örn: 5 <-> 12 ve 12 <-> 5) engellemek amacıyla ID'ler kaydedilmeden
-     * hemen önce matematiksel olarak sıralanır (Kanatsal / Canonical ID Sorting):
-     * {@code sourceAdId = Math.min(id1, id2)}, {@code matchedAdId = Math.max(id1, id2)}.
+     * <p>Her satır bildirim gidecek olan {@code userId}'ye aittir. Her iki taraf için (kaybeden ve bulan)
+     * kendi kullanıcı ID'leriyle ayrı satırlar oluşturulur ve bildirim damgaları (notification_sent_at)
+     * bağımsız olarak tutulur.
      *
      * @param request Eşleşme kaydetme/güncelleme talebi
      * @return Kaydedilen/Güncellenen eşleşmenin DTO karşılığı
      */
     @Transactional
     public AdMatchResponseDTO saveOrUpdateMatch(AdMatchSaveRequest request) {
-        Long rawSourceId = request.getSourceAdId();
-        Long rawMatchedId = request.getMatchedAdId();
+        Long sourceAdId = request.getSourceAdId();
+        Long matchedAdId = request.getMatchedAdId();
 
-        if (rawSourceId == null || rawMatchedId == null) {
+        if (sourceAdId == null || matchedAdId == null) {
             throw new IllegalArgumentException("İlan ID değerleri boş olamaz.");
         }
 
-        // İlan ID'lerinin yönünü sabitleme (Math.min / Math.max sorting)
-        Long firstAdId = Math.min(rawSourceId, rawMatchedId);
-        Long secondAdId = Math.max(rawSourceId, rawMatchedId);
+        Ad sourceAd = adRepository.findById(sourceAdId)
+                .orElseThrow(() -> new ResourceNotFoundException("Kaynak ilan bulunamadı: " + sourceAdId));
 
-        Ad firstAd = adRepository.findById(firstAdId)
-                .orElseThrow(() -> new ResourceNotFoundException("İlan bulunamadı: " + firstAdId));
-
-        Ad secondAd = adRepository.findById(secondAdId)
-                .orElseThrow(() -> new ResourceNotFoundException("İlan bulunamadı: " + secondAdId));
+        Ad matchedAd = adRepository.findById(matchedAdId)
+                .orElseThrow(() -> new ResourceNotFoundException("Eşleşen ilan bulunamadı: " + matchedAdId));
 
         User targetUser;
         if (request.getUserId() != null) {
             targetUser = userRepository.findById(request.getUserId())
                     .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı bulunamadı: " + request.getUserId()));
         } else {
-            targetUser = firstAd.getUser() != null ? firstAd.getUser() : secondAd.getUser();
+            targetUser = sourceAd.getUser() != null ? sourceAd.getUser() : matchedAd.getUser();
             if (targetUser == null) {
                 throw new IllegalStateException("İlanların sahibi bulunamadı.");
             }
         }
 
-        // Veritabanında sabitlenen (firstAdId, secondAdId) çifti kontrolü
-        Optional<AdMatch> existingMatchOpt = adMatchRepository.findBySourceAd_IdAndMatchedAd_Id(
-                firstAdId,
-                secondAdId
+        // Veritabanında (user_id, source_ad_id, matched_ad_id) üçlüsüne göre kayıt kontrolü
+        Optional<AdMatch> existingMatchOpt = adMatchRepository.findByUser_UidAndSourceAd_IdAndMatchedAd_Id(
+                targetUser.getUid(),
+                sourceAdId,
+                matchedAdId
         );
 
         AdMatch matchEntity;
@@ -114,14 +113,14 @@ public class AdMatchService {
                     request.getBlockReason(),
                     request.isPassedThreshold()
             );
-            log.info("Var olan eşleşme skoru güncellendi (kanonik ID sırasıyla): matchId={} firstAdId={} secondAdId={}",
-                    matchEntity.getId(), firstAdId, secondAdId);
+            log.info("Var olan eşleşme skoru güncellendi: matchId={} userId={} sourceAdId={} matchedAdId={}",
+                    matchEntity.getId(), targetUser.getUid(), sourceAdId, matchedAdId);
         } else {
-            // Yeni kayıt oluştur (sourceAd = firstAd, matchedAd = secondAd)
+            // Yeni kayıt oluştur (sourceAd -> matchedAd yönüyle)
             matchEntity = AdMatch.builder()
                     .user(targetUser)
-                    .sourceAd(firstAd)
-                    .matchedAd(secondAd)
+                    .sourceAd(sourceAd)
+                    .matchedAd(matchedAd)
                     .totalScore(request.getTotalScore())
                     .visualScore(request.getVisualScore())
                     .tagScore(request.getTagScore())
@@ -133,8 +132,8 @@ public class AdMatchService {
                     .notificationSentAt(null)
                     .build();
 
-            log.info("Yeni eşleşme kaydı oluşturuldu (kanonik ID sırasıyla): firstAdId={} secondAdId={}",
-                    firstAdId, secondAdId);
+            log.info("Yeni eşleşme kaydı oluşturuldu: userId={} sourceAdId={} matchedAdId={}",
+                    targetUser.getUid(), sourceAdId, matchedAdId);
         }
 
         AdMatch saved = adMatchRepository.save(matchEntity);
@@ -221,6 +220,14 @@ public class AdMatchService {
         String photoUrl = (ad.getPhotoUrls() != null && !ad.getPhotoUrls().isEmpty())
                 ? ad.getPhotoUrls().get(0)
                 : null;
+
+        if (photoUrl != null && !photoUrl.isBlank()) {
+            try {
+                photoUrl = imageStorageService.createTemporaryReadUrl(photoUrl);
+            } catch (Exception e) {
+                log.warn("Fotoğraf için geçici indirme URL'si oluşturulamadı: {}", photoUrl, e);
+            }
+        }
 
         return AdMatchResponseDTO.AdSummaryDTO.builder()
                 .id(ad.getId())

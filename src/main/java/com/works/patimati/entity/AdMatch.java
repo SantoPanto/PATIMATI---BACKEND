@@ -13,21 +13,21 @@ import java.time.Instant;
  * <p>Domain Driven Design (DDD) prensiplerine uygun olarak tasarlanmış olup,
  * eşleştirme şeffaflığı, düşük skor analizlerinin tutulması ve bildirim spam koruması sağlar.
  *
- * <p>Veritabanı seviyesinde {@code (source_ad_id, matched_ad_id)} üzerinde benzersiz kısıt (Unique Constraint)
- * tanımlanarak aynı eşleşme çiftinin birden fazla kaydı engellenir.
+ * <p>Veritabanı seviyesinde {@code (user_id, source_ad_id, matched_ad_id)} üzerinde benzersiz kısıt (Unique Constraint)
+ * tanımlanarak aynı kullanıcı için aynı eşleşme çiftinin birden fazla kaydı engellenir.
  */
 @Entity
 @Table(
-        name = "ad_matches",
+        name = "ad_match",
         uniqueConstraints = {
                 @UniqueConstraint(
-                        name = "uk_ad_match_source_matched",
-                        columnNames = {"source_ad_id", "matched_ad_id"}
+                        name = "uk_ad_match_user_source_matched",
+                        columnNames = {"user_id", "source_ad_id", "matched_ad_id"}
                 )
         },
         indexes = {
-                @Index(name = "idx_ad_matches_user_score", columnList = "user_id, total_score DESC"),
-                @Index(name = "idx_ad_matches_passed_threshold", columnList = "passed_threshold")
+                @Index(name = "idx_ad_match_user_score", columnList = "user_id, total_score DESC"),
+                @Index(name = "idx_ad_match_passed_threshold", columnList = "passed_threshold")
         }
 )
 @Getter
