@@ -34,6 +34,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import org.locationtech.jts.geom.Point;
+import static org.mockito.ArgumentMatchers.eq;
 
 class AdServiceTest {
 
@@ -321,5 +323,62 @@ class AdServiceTest {
 
         assertThat(result).isNotNull();
         verify(adRepository).findAllByActiveTrueAndSuspendedFalse(pageable);
+    }
+
+    @Test
+    void shouldUsePublicNearbyQueryAndMapCoordinatesCorrectly() {
+        /*
+         * Public haritada gösterilebilecek örnek bir ilan hazırlanır.
+         */
+        Ad ad = Ad.builder()
+                .id(7L)
+                .active(true)
+                .suspended(false)
+                .build();
+
+        AdResponse expectedResponse = mock(AdResponse.class);
+
+        /*
+         * Repository'nin public harita sorgusu bir ilan döndürecek
+         * şekilde taklit edilir.
+         */
+        when(adRepository.findPublicNearbyAds(
+                any(Point.class),
+                eq(5000.0)
+        )).thenReturn(List.of(ad));
+
+        /*
+         * Entity'nin güvenli response DTO'suna dönüştürülmesi taklit edilir.
+         */
+        when(adMapper.toResponse(ad, List.of()))
+                .thenReturn(expectedResponse);
+
+        List<AdResponse> result = adService.findPublicNearbyAds(
+                40.195,
+                29.060,
+                5000.0
+        );
+
+        /*
+         * Repository'ye gönderilen PostGIS koordinatını yakalıyoruz.
+         * Böylece enlem ve boylamın yanlış sırada kullanılmadığını doğruluyoruz.
+         */
+        ArgumentCaptor<Point> pointCaptor =
+                ArgumentCaptor.forClass(Point.class);
+
+        verify(adRepository).findPublicNearbyAds(
+                pointCaptor.capture(),
+                eq(5000.0)
+        );
+
+        // X değeri boylam olmalıdır.
+        assertThat(pointCaptor.getValue().getX())
+                .isEqualTo(29.060);
+
+        // Y değeri enlem olmalıdır.
+        assertThat(pointCaptor.getValue().getY())
+                .isEqualTo(40.195);
+
+        assertThat(result).containsExactly(expectedResponse);
     }
 }
