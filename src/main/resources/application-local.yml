@@ -1,0 +1,22 @@
+# Yerel geliştirme profili — fotoğraf deposu olarak AWS S3 yerine MinIO.
+#
+# Açmak için TEK şey:  SPRING_PROFILES_ACTIVE=local
+#
+# MinIO S3 uyumludur; kodda hiçbir değişiklik gerekmez, yalnız uç adresi ve
+# path-style adresleme verilir.
+#
+#   minio.exe server <veri-dizini> --address 127.0.0.1:9000 --console-address 127.0.0.1:9001
+#   Kova: patimati-medya-kutusu   (yoksa MinIO konsolundan bir kez oluştur)
+app:
+  storage:
+    s3:
+      # Makineye özel tek ayar bu. MinIO'yu 127.0.0.1'e bağladıysan
+      #   S3_ENDPOINT=http://127.0.0.1:9000
+      # ver; profil dosyasına dokunmadan çalışır, kimsenin ayarı bozulmaz.
+      endpoint: ${S3_ENDPOINT:http://localhost:9000}
+      # ŞART: MinIO virtual-host adreslemeyi (kova.localhost) varsayılan olarak
+      # karşılamaz ve o alan adı zaten çözülmez. Presigned URL'ler path-style
+      # üretilmeli. Bekçisi: S3PresignedUrlSekliTest.
+      path-style-access: true
+      access-key: ${MINIO_ACCESS_KEY:minioadmin}
+      secret-key: ${MINIO_SECRET_KEY:minioadmin}

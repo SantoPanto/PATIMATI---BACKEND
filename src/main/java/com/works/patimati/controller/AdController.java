@@ -3,6 +3,7 @@ package com.works.patimati.controller;
 import com.works.patimati.dto.ad.AdCreateRequest;
 import com.works.patimati.dto.ad.AdResponse;
 import com.works.patimati.dto.ad.AdUpdateRequest;
+import com.works.patimati.dto.ad.ResolveLostAdRequest;
 import com.works.patimati.entity.Ad;
 import com.works.patimati.entity.User;
 import com.works.patimati.repository.UserRepository;
@@ -59,7 +60,12 @@ public class AdController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<AdResponse> createAd(
             @Valid @RequestPart("ad") AdCreateRequest request,
-            @RequestPart(value = "images", required = false) List<MultipartFile> images,
+            /*
+             * B-8 görevi
+             * "images" alanı gönderilmezse istek Service'e
+             * ulaşmadan 400 bad request döner.
+             */
+            @RequestPart(value = "images", required = true) List<MultipartFile> images,
             Authentication authentication
     ) {
         AdResponse response = adService.createAd(authentication.getName(), request, images);
@@ -71,7 +77,8 @@ public class AdController {
                 .body(response);
     }
 
-    @GetMapping("/{adId}")
+    // Metin tabanlı eski test adreslerinin ilan ID'si olarak algılanmasını engeller.
+    @GetMapping("/{adId:[0-9]+}")
     public ResponseEntity<AdResponse> getAd(
             @PathVariable @Min(1) Long adId
     ) {
@@ -143,6 +150,18 @@ public class AdController {
         return ResponseEntity.noContent().build();
     }
 
+    @PutMapping("/lost/{adId}/resolve-found")
+    public ResponseEntity<java.util.Map<String, String>> resolveLostAd(
+            Authentication authentication,
+            @PathVariable @Min(1) Long adId,
+            @RequestBody(required = false) ResolveLostAdRequest request
+    ) {
+        adService.resolveLostAd(authentication.getName(), adId, request);
+        return ResponseEntity.ok(
+                java.util.Map.of("message", "Kayıp ilanı başarıyla bulundu olarak işaretlendi ve ödül puanı tanımlandı.")
+        );
+    }
+
     @GetMapping("/nearby")
     public ResponseEntity<List<AdResponse>> getNearbyAds(
             @RequestParam
@@ -161,11 +180,5 @@ public class AdController {
         return ResponseEntity.ok(
                 adService.findNearbyAds(latitude, longitude, radius)
         );
-    }
-
-    @GetMapping("/all")
-    public ResponseEntity<List<AdResponse>> getAllAdsForTesting() {
-        List<AdResponse> ads = adService.getAllAdsForTesting();
-        return ResponseEntity.ok(ads);
     }
 }

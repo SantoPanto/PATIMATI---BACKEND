@@ -53,12 +53,20 @@ public class WebSocketChannelInterceptor implements ChannelInterceptor {
         );
 
         // Heartbeat veya STOMP dışı mesajlarda accessor bulunmayabilir.
-        if (accessor == null || accessor.getCommand() != StompCommand.CONNECT) {
+        if (accessor == null || (accessor.getCommand() != StompCommand.CONNECT && accessor.getCommand() != StompCommand.STOMP)) {
             return message;
         }
 
-        String authorizationHeader =
-                accessor.getFirstNativeHeader(AUTHORIZATION_HEADER);
+        // SockJS kısıtlamalarına karşın STOMP frame native header listesi okunur
+        List<String> authHeaders = accessor.getNativeHeader(AUTHORIZATION_HEADER);
+        if (authHeaders == null || authHeaders.isEmpty()) {
+            authHeaders = accessor.getNativeHeader("authorization");
+        }
+        if (authHeaders == null || authHeaders.isEmpty()) {
+            authHeaders = accessor.getNativeHeader("passcode");
+        }
+
+        String authorizationHeader = (authHeaders != null && !authHeaders.isEmpty()) ? authHeaders.get(0) : null;
 
         String token = extractBearerToken(authorizationHeader);
 
@@ -108,25 +116,23 @@ public class WebSocketChannelInterceptor implements ChannelInterceptor {
      * STOMP CONNECT native header'ından Bearer token değerini ayırır.
      */
     private String extractBearerToken(String authorizationHeader) {
-        if (!StringUtils.hasText(authorizationHeader)
-                || !authorizationHeader.startsWith(BEARER_PREFIX)) {
-
+        if (!StringUtils.hasText(authorizationHeader)) {
             throw new AuthenticationCredentialsNotFoundException(
-                    "WebSocket bağlantısı için "
-                            + "Authorization: Bearer <token> başlığı gereklidir."
+                    "WebSocket bağlantısı için Authorization başlığı gereklidir."
             );
         }
 
-        String token = authorizationHeader
-                .substring(BEARER_PREFIX.length())
-                .trim();
+        String trimmed = authorizationHeader.trim();
+        if (trimmed.regionMatches(true, 0, BEARER_PREFIX, 0, BEARER_PREFIX.length())) {
+            trimmed = trimmed.substring(BEARER_PREFIX.length()).trim();
+        }
 
-        if (!StringUtils.hasText(token)) {
+        if (!StringUtils.hasText(trimmed)) {
             throw new AuthenticationCredentialsNotFoundException(
-                    "WebSocket bağlantısındaki Bearer token boş olamaz."
+                    "WebSocket bağlantısındaki token boş olamaz."
             );
         }
 
-        return token;
+        return trimmed;
     }
 }

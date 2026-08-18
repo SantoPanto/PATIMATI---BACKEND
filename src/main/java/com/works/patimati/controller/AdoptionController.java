@@ -3,6 +3,7 @@ package com.works.patimati.controller;
 import com.works.patimati.dto.ad.AdResponse;
 import com.works.patimati.dto.ad.AdoptionAdCreateRequest;
 import com.works.patimati.dto.ad.AdoptionAdUpdateRequest;
+import com.works.patimati.dto.ad.ResolveAdoptionAdRequest;
 import com.works.patimati.service.AdoptionService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
@@ -69,6 +70,21 @@ public class AdoptionController {
         adoptionService.deleteAdoptionAd(authentication.getName(), adId);
         return ResponseEntity.ok(
                 Map.of("message", "Adoption ad with ID " + adId + " has been successfully deleted.")
+        );
+    }
+
+    /**
+     * İlan sahibinin sahiplendirme ilanını sahiplendirildi olarak işaretleyip kapatmasını sağlar.
+     */
+    @PutMapping("/{adId}/resolve-adopted")
+    public ResponseEntity<Map<String, String>> resolveAdoptionAd(
+            Authentication authentication,
+            @PathVariable @Min(1) Long adId,
+            @RequestBody(required = false) ResolveAdoptionAdRequest request
+    ) {
+        adoptionService.resolveAdoptionAd(authentication.getName(), adId, request);
+        return ResponseEntity.ok(
+                Map.of("message", "Sahiplendirme ilanı başarıyla sahiplendirildi olarak işaretlendi ve ödül puanı tanımlandı.")
         );
     }
 }

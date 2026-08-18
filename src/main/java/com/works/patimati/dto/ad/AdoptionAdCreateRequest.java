@@ -31,16 +31,17 @@ public record AdoptionAdCreateRequest(
         @NotNull(message = "Tür zorunludur")
         Species species,
 
-        @NotBlank(message = "Irk/Cins zorunludur")
         @Size(max = 100, message = "Irk en fazla 100 karakter olabilir")
         String breed,
 
-        @NotNull(message = "Cinsiyet zorunludur")
+
         PetGender gender,
 
-        @NotNull(message = "Yaş grubu zorunludur")
+
         AgeGroup ageGroup,
 
+        @com.fasterxml.jackson.annotation.JsonAlias({"color", "colors"})
+        @com.fasterxml.jackson.databind.annotation.JsonDeserialize(using = com.works.patimati.jackson.PetColorSetDeserializer.class)
         @Size(max = 9, message = "En fazla 9 renk seçilebilir")
         Set<PetColor> colors,
 

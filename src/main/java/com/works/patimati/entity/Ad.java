@@ -61,7 +61,7 @@ public class Ad {
             joinColumns = @JoinColumn(name = "ad_id")
     )
     @Enumerated(EnumType.STRING)
-    @Column(name = "color", nullable = false, length = 30)
+    @Column(name = "color", length = 30)
     @Builder.Default
     private Set<PetColor> colors = new LinkedHashSet<>();
 

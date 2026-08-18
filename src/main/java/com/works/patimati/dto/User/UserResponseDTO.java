@@ -4,7 +4,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.locationtech.jts.geom.Point;
 
 @Data
 @Builder
@@ -18,5 +17,10 @@ public class UserResponseDTO {
     private String role;
     private String phone;
     private boolean enabled;
-    private Point location;
+    private Double latitude;
+    private Double longitude;
+    private int lostPoints;
+    private int adoptionPoints;
+    private int lostBadgeLevel;
+    private int adoptionBadgeLevel;
 }

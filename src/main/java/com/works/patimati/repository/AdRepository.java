@@ -55,6 +55,19 @@ public interface AdRepository extends JpaRepository<Ad, Long> {
             Pageable pageable
     );
 
+    // Standart kullanıcının görebileceği aktif ilanlar (askıda olmayanlar VEYA kullanıcının kendi askıdaki ilanları)
+    @Query("SELECT a FROM Ad a WHERE a.active = true AND (a.suspended = false OR (a.user IS NOT NULL AND a.user.uid = :userId))")
+    Page<Ad> findAllActiveForUser(@Param("userId") Long userId, Pageable pageable);
+
+    // Türüne göre standart kullanıcının görebileceği aktif ilanlar (askıda olmayanlar VEYA kullanıcının kendi askıdaki ilanları)
+    @Query("SELECT a FROM Ad a WHERE a.active = true AND a.adType = :adType AND (a.suspended = false OR (a.user IS NOT NULL AND a.user.uid = :userId))")
+    Page<Ad> findAllByAdTypeActiveForUser(
+            @Param("adType") Ad.AdType adType,
+            @Param("userId") Long userId,
+            Pageable pageable
+    );
+
+
     // KISIM 3
     // PARAMETREDE ::geography YAZILAMAZ — Hibernate parametre adını
     // "userPoint::geography" diye okur ve sorgu çalışma anında patlar.
@@ -62,6 +75,29 @@ public interface AdRepository extends JpaRepository<Ad, Long> {
     @Query(
             value = "SELECT * FROM ads a WHERE a.active = true AND ST_DWithin(a.location::geography, CAST(:userPoint AS geography), :distanceInMeters) = true", nativeQuery = true)
     List<Ad> findNearbyAds(@Param("userPoint") Point userPoint, @Param("distanceInMeters") double distanceInMeters);
+
+    /**
+     * Herkese açık haritada gösterilebilecek yakın ilanları getirir.
+     *
+     * <p>Public uç nokta kimlik bilgisi taşımadığı için sahip ve yönetici
+     * istisnası uygulanmaz; yalnızca aktif ve askıda olmayan ilanlar döner.</p>
+     */
+    @Query(value = """
+        SELECT *
+          FROM ads a
+         WHERE a.active = TRUE
+           AND a.suspended = FALSE
+           AND a.location IS NOT NULL
+           AND ST_DWithin(
+                   a.location::geography,
+                   CAST(:userPoint AS geography),
+                   :distanceInMeters
+               ) = TRUE
+        """, nativeQuery = true)
+        List<Ad> findPublicNearbyAds(
+                @Param("userPoint") Point userPoint,
+                @Param("distanceInMeters") double distanceInMeters
+    );
 
     /**
      * AI eşleştirmesine girecek adayları süzer (entegrasyon sözleşmesi §5).
@@ -75,6 +111,9 @@ public interface AdRepository extends JpaRepository<Ad, Long> {
      *       eşleştirmek anlamsız. ADOPTION hiç aday olmaz.</li>
      *   <li><b>ai_status = DONE ve vektör dolu</b> — vektörü olmayan aday
      *       kıyaslanamaz.</li>
+     *   <li><b>Askıya alınmamış</b> — askıdaki ilanı yalnızca sahibi ve
+     *       yöneticiler görebilir. Aday havuzuna girerse eşleşme üzerinden
+     *       başlığı, açıklaması ve sahibinin adı üçüncü bir kişiye açılır.</li>
      *   <li><b>Yarıçap</b> — bildirim yarıçapından (5 km) farklıdır ve olmalıdır:
      *       kaybolan hayvan yürür, günlerce uzaklaşabilir.</li>
      *   <li><b>Zaman penceresi</b> — eski ilanlar gürültü yaratır.</li>
@@ -98,6 +137,7 @@ public interface AdRepository extends JpaRepository<Ad, Long> {
                AND a.ad_type = :oppositeAdType
                AND a.ai_status = 'DONE'
                AND a.ai_embeddings IS NOT NULL
+               AND a.suspended = FALSE
                AND a.created_at >= :since
                AND a.location IS NOT NULL
                AND ST_DWithin(a.location::geography, CAST(:origin AS geography), :radiusMeters)
@@ -108,5 +148,20 @@ public interface AdRepository extends JpaRepository<Ad, Long> {
             @Param("oppositeAdType") String oppositeAdType,
             @Param("origin") Point origin,
             @Param("radiusMeters") double radiusMeters,
+            @Param("since") Instant since);
+
+    @Query(value = """
+             SELECT a.id AS adId, 0.0 AS distanceKm
+               FROM ads a
+              WHERE a.ad_type = :oppositeAdType
+                AND a.active = true
+                AND a.ai_status = 'DONE'
+                AND a.ai_embeddings IS NOT NULL
+                AND a.suspended = FALSE
+                AND a.created_at >= :since
+              ORDER BY a.created_at DESC
+            """, nativeQuery = true)
+    List<AiCandidateRow> findAiCandidatesWithoutLocation(
+            @Param("oppositeAdType") String oppositeAdType,
             @Param("since") Instant since);
 }

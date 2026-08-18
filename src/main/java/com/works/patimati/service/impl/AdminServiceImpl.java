@@ -86,6 +86,7 @@ public class AdminServiceImpl implements AdminService {
         Ad ad = adRepository.findById(adId)
                 .orElseThrow(() -> new ResourceNotFoundException("İlan bulunamadı ID: " + adId));
         ad.setSuspended(true);
+        ad.setActive(false);
         adRepository.save(ad);
     }
 
@@ -95,6 +96,7 @@ public class AdminServiceImpl implements AdminService {
         Ad ad = adRepository.findById(adId)
                 .orElseThrow(() -> new ResourceNotFoundException("İlan bulunamadı ID: " + adId));
         ad.setSuspended(false);
+        ad.setActive(true);
         adRepository.save(ad);
     }
 
@@ -211,5 +213,19 @@ public class AdminServiceImpl implements AdminService {
                     complaint.getCreatedAt()
             );
         });
+    }
+
+    @Transactional
+    @Override
+    public void deleteComplaint(Long complaintId) {
+        if (adComplaintRepository.existsById(complaintId)) {
+            adComplaintRepository.deleteById(complaintId);
+        } else if (userComplaintRepository.existsById(complaintId)) {
+            userComplaintRepository.deleteById(complaintId);
+        } else if (adoptionComplaintRepository.existsById(complaintId)) {
+            adoptionComplaintRepository.deleteById(complaintId);
+        } else {
+            throw new ResourceNotFoundException("Şikayet bulunamadı ID: " + complaintId);
+        }
     }
 }
