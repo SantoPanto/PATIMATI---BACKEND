@@ -31,14 +31,13 @@ public record AdoptionAdCreateRequest(
         @NotNull(message = "Tür zorunludur")
         Species species,
 
-        @NotBlank(message = "Irk/Cins zorunludur")
         @Size(max = 100, message = "Irk en fazla 100 karakter olabilir")
         String breed,
 
-        @NotNull(message = "Cinsiyet zorunludur")
+
         PetGender gender,
 
-        @NotNull(message = "Yaş grubu zorunludur")
+
         AgeGroup ageGroup,
 
         @com.fasterxml.jackson.annotation.JsonAlias({"color", "colors"})

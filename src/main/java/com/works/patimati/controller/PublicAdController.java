@@ -14,6 +14,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+
+import java.util.List;
+
 @Validated
 @RestController
 @RequestMapping("/api/public/ads")
@@ -40,6 +45,31 @@ public class PublicAdController {
 
         return ResponseEntity.ok(
                 adService.getPublicActiveAds(adType, pageable)
+        );
+    }
+
+    /**
+     * Haritayı besleyen yakın ilanları kimlik doğrulaması istemeden döndürür.
+     *
+     * <p>Public akışta yalnızca aktif ve askıda olmayan ilanlar gösterilir.
+     * Sahip ve yönetici istisnası burada uygulanmaz.</p>
+     */
+    @GetMapping("/nearby")
+    public ResponseEntity<List<AdResponse>> getPublicNearbyAds(
+            @RequestParam
+            @DecimalMin("-90.0")
+            @DecimalMax("90.0") double latitude,
+
+            @RequestParam
+            @DecimalMin("-180.0")
+            @DecimalMax("180.0") double longitude,
+
+            @RequestParam(defaultValue = "5000")
+            @DecimalMin(value = "1.0", inclusive = true)
+            @DecimalMax("100000.0") double radius
+    ) {
+        return ResponseEntity.ok(
+                adService.findPublicNearbyAds(latitude, longitude, radius)
         );
     }
 

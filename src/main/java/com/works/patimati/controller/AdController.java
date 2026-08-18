@@ -60,7 +60,12 @@ public class AdController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<AdResponse> createAd(
             @Valid @RequestPart("ad") AdCreateRequest request,
-            @RequestPart(value = "images", required = false) List<MultipartFile> images,
+            /*
+             * B-8 görevi
+             * "images" alanı gönderilmezse istek Service'e
+             * ulaşmadan 400 bad request döner.
+             */
+            @RequestPart(value = "images", required = true) List<MultipartFile> images,
             Authentication authentication
     ) {
         AdResponse response = adService.createAd(authentication.getName(), request, images);

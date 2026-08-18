@@ -320,6 +320,41 @@ public class AdService {
         );
     }
 
+
+        /**
+         * Public harita için aktif ve askıda olmayan yakın ilanları getirir.
+         *
+         * <p>Koordinat oluşturulurken JTS sıralaması gereği önce boylam (X),
+         * sonra enlem (Y) verilir.</p>
+         */
+        @Transactional(readOnly = true)
+        public List<AdResponse> findPublicNearbyAds(
+                double latitude,
+                double longitude,
+                double radiusInMeters
+        ) {
+            // JTS Coordinate sırası longitude (X), latitude (Y) şeklindedir.
+            Point userPoint = geometryFactory.createPoint(
+                    new Coordinate(longitude, latitude)
+            );
+
+            return adRepository.findPublicNearbyAds(
+                            userPoint,
+                            radiusInMeters
+                    )
+                    .stream()
+                    // Entity doğrudan açılmaz; ilan güvenli DTO yanıtına dönüştürülür.
+                    .map(this::toResponseWithTemporaryPhotoUrls)
+                    .toList();
+        }
+
+        private User findUserByEmail(String email) {
+            return userRepository.findByEmail(email)
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Oturum sahibine ait kullanıcı kaydı bulunamadı"
+                    ));
+        }
+
     public AdResponse toResponseWithTemporaryPhotoUrls(Ad ad) {
         List<String> temporaryPhotoUrls = ad.getPhotoUrls() == null
                 ? List.of()
