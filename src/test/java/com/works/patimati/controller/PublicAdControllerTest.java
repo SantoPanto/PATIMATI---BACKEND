@@ -1,6 +1,7 @@
 package com.works.patimati.controller;
 
 import com.works.patimati.exception.GlobalExceptionHandler;
+import com.works.patimati.dto.ad.AdCountersResponse;
 import com.works.patimati.service.AdService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,6 +15,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 class PublicAdControllerTest {
 
@@ -66,5 +68,17 @@ class PublicAdControllerTest {
                 29.060,
                 5000.0
         );
+    }
+
+    @Test
+    void shouldReturnAdCountersWithoutAuthentication() throws Exception {
+        when(adService.getAdCounters()).thenReturn(new AdCountersResponse(12L, 7L));
+
+        mockMvc.perform(get("/api/public/ads/counters"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.activeAds").value(12))
+                .andExpect(jsonPath("$.happyEndings").value(7));
+
+        verify(adService).getAdCounters();
     }
 }

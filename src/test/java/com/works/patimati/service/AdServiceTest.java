@@ -2,10 +2,12 @@ package com.works.patimati.service;
 
 import com.works.patimati.ai.AiAnalysisPublisher;
 import com.works.patimati.dto.ad.AdCreateRequest;
+import com.works.patimati.dto.ad.AdCountersResponse;
 import com.works.patimati.dto.ad.AdResponse;
 import com.works.patimati.dto.ad.AdUpdateRequest;
 import com.works.patimati.entity.Ad;
 import com.works.patimati.entity.User;
+import com.works.patimati.entity.enums.AdResolutionStatus;
 import com.works.patimati.mapper.AdMapper;
 import com.works.patimati.repository.AdRepository;
 import com.works.patimati.repository.UserRepository;
@@ -258,6 +260,20 @@ class AdServiceTest {
         assertThat(ad.isActive()).isFalse();
         verify(adRepository).saveAndFlush(ad);
         verify(imageStorageService, never()).deleteImages(any());
+    }
+
+    @Test
+    void shouldReturnPublicActiveAndHappyEndingCounters() {
+        when(adRepository.countByActiveTrueAndSuspendedFalse()).thenReturn(12L);
+        when(adRepository.countByResolutionStatusIn(List.of(
+                AdResolutionStatus.FOUND,
+                AdResolutionStatus.ADOPTED
+        ))).thenReturn(7L);
+
+        AdCountersResponse result = adService.getAdCounters();
+
+        assertThat(result.activeAds()).isEqualTo(12L);
+        assertThat(result.happyEndings()).isEqualTo(7L);
     }
 
     @AfterEach

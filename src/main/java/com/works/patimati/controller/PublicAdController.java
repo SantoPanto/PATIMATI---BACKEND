@@ -1,6 +1,7 @@
 package com.works.patimati.controller;
 
 import com.works.patimati.dto.ad.AdResponse;
+import com.works.patimati.dto.ad.AdCountersResponse;
 import com.works.patimati.entity.Ad;
 import com.works.patimati.service.AdService;
 import jakarta.validation.constraints.Max;
@@ -27,6 +28,11 @@ public class PublicAdController {
 
     private static final int MAX_PAGE_SIZE = 100;
     private final AdService adService;
+
+    @GetMapping("/counters")
+    public ResponseEntity<AdCountersResponse> getAdCounters() {
+        return ResponseEntity.ok(adService.getAdCounters());
+    }
 
     /**
      * Herkese açık aktif ve askıda olmayan ilanları sayfalı biçimde listeler.
