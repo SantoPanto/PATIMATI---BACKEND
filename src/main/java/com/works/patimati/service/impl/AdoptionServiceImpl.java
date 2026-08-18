@@ -3,19 +3,23 @@ package com.works.patimati.service.impl;
 import com.works.patimati.dto.ad.AdResponse;
 import com.works.patimati.dto.ad.AdoptionAdCreateRequest;
 import com.works.patimati.dto.ad.AdoptionAdUpdateRequest;
+import com.works.patimati.dto.ad.ResolveAdoptionAdRequest;
 import com.works.patimati.dto.complaint.AdComplaintRequestDTO;
 import com.works.patimati.dto.complaint.ComplaintResponse;
 import com.works.patimati.entity.Ad;
 import com.works.patimati.entity.AdoptionComplaint;
 import com.works.patimati.entity.User;
 import com.works.patimati.entity.enums.AiStatus;
+import com.works.patimati.entity.enums.CoatPattern;
 import com.works.patimati.entity.enums.ComplaintStatus;
+import com.works.patimati.entity.enums.EyeColor;
 import com.works.patimati.exception.ResourceNotFoundException;
 import com.works.patimati.repository.AdRepository;
 import com.works.patimati.repository.AdoptionComplaintRepository;
 import com.works.patimati.repository.UserRepository;
 import com.works.patimati.service.AdService;
 import com.works.patimati.service.AdoptionService;
+import com.works.patimati.service.RewardService;
 import com.works.patimati.storage.ImageStorageService;
 import com.works.patimati.storage.InvalidImageException;
 import lombok.RequiredArgsConstructor;
@@ -46,6 +50,7 @@ public class AdoptionServiceImpl implements AdoptionService {
     private final AdoptionComplaintRepository adoptionComplaintRepository;
     private final ImageStorageService imageStorageService;
     private final AdService adService;
+    private final RewardService rewardService;
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), WGS_84_SRID);
 
     @Transactional
@@ -81,8 +86,22 @@ public class AdoptionServiceImpl implements AdoptionService {
                 .gender(request.gender())
                 .ageGroup(request.ageGroup())
                 .colors(request.colors() != null ? request.colors() : Set.of())
-                .coatPattern(request.coatPattern())
-                .eyeColor(request.eyeColor())
+                /*
+                 * coatPattern ve eyeColor isteğe bağlı alanlar (DTO'da @NotNull yok)
+                 * ama ads tablosunda NOT NULL. Ad entity'sinde @Builder.Default ile
+                 * UNKNOWN tanımlı; ancak builder metodunu null ile ÇAĞIRMAK bu
+                 * varsayılanı ezer. Bu yüzden alan gönderilmediğinde insert
+                 * "null value in column coat_pattern violates not-null constraint"
+                 * ile düşüyordu ve sahiplendirme ilanı hiç oluşturulamıyordu.
+                 * (AdService bu builder metotlarını hiç çağırmadığı için orada
+                 * varsayılanlar çalışıyor.)
+                 */
+                .coatPattern(request.coatPattern() != null
+                        ? request.coatPattern()
+                        : CoatPattern.UNKNOWN)
+                .eyeColor(request.eyeColor() != null
+                        ? request.eyeColor()
+                        : EyeColor.UNKNOWN)
                 .microchipNumber(request.microchipNumber())
                 .location(location)
                 .photoUrls(photoReferences)
@@ -123,7 +142,14 @@ public class AdoptionServiceImpl implements AdoptionService {
         ad.setBreed(request.breed() != null ? request.breed().trim() : "MIXED_OR_UNKNOWN");
         ad.setGender(request.gender());
         ad.setAgeGroup(request.ageGroup());
-        ad.setColors(request.colors() != null ? request.colors() : Set.of());
+        if (request.colors() != null && !request.colors().isEmpty()) {
+            Set<com.works.patimati.entity.enums.PetColor> validColors = request.colors().stream()
+                    .filter(java.util.Objects::nonNull)
+                    .collect(java.util.stream.Collectors.toCollection(java.util.LinkedHashSet::new));
+            ad.setColors(validColors);
+        } else {
+            ad.setColors(new java.util.LinkedHashSet<>());
+        }
         if (request.coatPattern() != null) ad.setCoatPattern(request.coatPattern());
         if (request.eyeColor() != null) ad.setEyeColor(request.eyeColor());
         ad.setMicrochipNumber(request.microchipNumber());
@@ -146,6 +172,24 @@ public class AdoptionServiceImpl implements AdoptionService {
         ad.setActive(false);
         adRepository.save(ad);
         log.info("Sahiplendirme ilanı kaldırıldı (soft delete). adId={}", adId);
+    }
+
+    @Transactional
+    @Override
+    public void resolveAdoptionAd(String ownerEmail, Long adId, ResolveAdoptionAdRequest request) {
+        Ad ad = adRepository.findByIdAndActiveTrue(adId)
+                .orElseThrow(() -> new ResourceNotFoundException("Sahiplendirme ilanı bulunamadı ID: " + adId));
+
+        validateAdOwnerAndType(ad, ownerEmail);
+
+        ad.setActive(false);
+        adRepository.save(ad);
+
+        Long ownerId = ad.getUser().getUid();
+        Long adopterId = (request != null) ? request.adopterId() : null;
+
+        rewardService.awardAdoptionPoints(ownerId, adopterId);
+        log.info("Sahiplendirme ilanı sahiplendirildi olarak kapatıldı. adId={}, ownerId={}, adopterId={}", adId, ownerId, adopterId);
     }
 
     @Transactional(readOnly = true)

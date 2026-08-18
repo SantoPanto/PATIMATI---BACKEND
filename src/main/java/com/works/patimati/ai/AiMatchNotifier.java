@@ -22,8 +22,16 @@ import org.springframework.stereotype.Service;
  * karar verir, bu sınıf yalnızca "şu alıcıya şu eşleşmeyi bildir" der.
  *
  * <p><b>Dil önemli:</b> "eşleşti" değil <b>"olası eşleşme"</b> diyoruz — bu
- * bir üslup tercihi değil, ölçüm sonucu (AI deposu, ölçüm raporu §4). Son
- * karar kullanıcınındır.
+ * bir üslup tercihi değil, ölçüm sonucu: gerçek fotoğraflarda "aynı hayvan"
+ * ve "farklı hayvan" skorları çakışıyor, hiçbir eşik ikisini temiz ayırmıyor
+ * (ölçüm raporu §4). Son karar kullanıcınındır.
+ *
+ * <p><b>Tekrar teslim / yeniden analiz sonrası aynı çifte bildirim ikinci
+ * kez gitmesin diye</b> (eskiden bu sınıfın açık bıraktığı bir sorundu):
+ * artık {@code PotentialMatchService} DB seviyesinde dedup'lıyor ve yalnızca
+ * gerçekten YENİ bir {@link PotentialMatchRecipient} satırı için
+ * {@link #sendOne} çağrılıyor — bu sınıf hâlâ hiçbir şey saklamıyor, ama
+ * artık saklamak zorunda da değil.
  */
 @Service
 @RequiredArgsConstructor

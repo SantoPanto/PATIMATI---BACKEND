@@ -28,13 +28,15 @@ import java.util.List;
  *                      atlanır — farklı sürümlerin vektörleri kıyaslanamaz ve
  *                      hata vermeden yanlış benzerlik üretir
  */
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public record AiCandidate(
-        Long adId,
+        @JsonProperty("ad_id") Long adId,
         List<float[]> embeddings,
         List<String> labels,
         String species,
-        double distanceKm,
-        String modelVersion,
-        Long externalRecordId
+        @JsonProperty("distance_km") double distanceKm,
+        @JsonProperty("model_version") String modelVersion,
+        @JsonProperty("external_record_id") Long externalRecordId
 ) {
 }

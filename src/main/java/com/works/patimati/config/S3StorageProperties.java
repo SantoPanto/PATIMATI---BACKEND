@@ -25,6 +25,10 @@ public record S3StorageProperties(
 
         boolean pathStyleAccess,
 
+        String accessKey,
+
+        String secretKey,
+
         @NotNull
         Duration presignedUrlDuration,
 

@@ -40,8 +40,12 @@ import java.util.Optional;
  * kalıcı/dedup'lı hâle gelmesidir.
  *
  * <p><b>Tekrar teslime dayanıklıdır</b> (§8): her iki yol da idempotent-by-
- * overwrite'tır; {@code PotentialMatchService} ayrıca DB seviyesinde
- * dedup'lıdır.
+ * overwrite'tır. RabbitMQ "en az bir kez" teslim eder, yani aynı mesaj iki
+ * kez gelebilir; satır yazımı {@code ad_id}/{@code externalRecordId}
+ * üzerinden idempotenttir. Eski yaklaşımın (bkz. {@link AiMatchNotifier})
+ * açık bıraktığı "tekrar teslimde aynı çifte bildirim iki kez gider"
+ * sorunu, bildirimi {@code PotentialMatchService} üzerinden DB seviyesinde
+ * dedup'layarak kapatılmıştır.
  */
 @Component
 @RequiredArgsConstructor

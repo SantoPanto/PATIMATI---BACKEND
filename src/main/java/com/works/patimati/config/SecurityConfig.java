@@ -2,7 +2,7 @@ package com.works.patimati.config;
 
 import com.works.patimati.security.InternalServiceAuthFilter;
 import com.works.patimati.security.JwtAuthFilter;
-import com.works.patimati.security.OAuth2LoginSuccessHandler;
+import com.works.patimati.security.OAuth2AuthenticationSuccessHandler;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,26 +16,26 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 
 import java.util.Arrays;
 import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
 
     // Bağımlılıkları tanımlıyoruz
     private final JwtAuthFilter jwtAuthFilter;
-    private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
+    private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
     private final InternalServiceAuthFilter internalServiceAuthFilter;
 
     // Constructor (Yapıcı Metot) ile Spring'in bu sınıfları otomatik enjekte etmesini sağlıyoruz
-    public SecurityConfig(JwtAuthFilter jwtAuthFilter, OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler,
+    public SecurityConfig(JwtAuthFilter jwtAuthFilter, OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler,
                            InternalServiceAuthFilter internalServiceAuthFilter) {
         this.jwtAuthFilter = jwtAuthFilter;
-        this.oAuth2LoginSuccessHandler = oAuth2LoginSuccessHandler;
+        this.oAuth2AuthenticationSuccessHandler = oAuth2AuthenticationSuccessHandler;
         this.internalServiceAuthFilter = internalServiceAuthFilter;
     }
 
@@ -64,6 +64,8 @@ public class SecurityConfig {
                                 "/api/auth/forgot-password",
                                 "/api/auth/reset-password",
                                 "/error",
+                                "/oauth2/**",
+                                "/login/oauth2/**",
                                 /*
                                  * WebSocket ve SockJS HTTP handshake isteklerinin
                                  * Spring Security filtresinden geçmesine izin verilir.
@@ -74,8 +76,8 @@ public class SecurityConfig {
                                  */
                                 "/ws-connect", // Doğrudan WebSocket bağlantısını kapsar.
                                 "/ws-connect/**" // SockJS’in kullandığı alt adresleri kapsar.
-                        ).permitAll() // Kayıt, giriş ve açık uçlara HERKES erişebilsin
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN") // Yöneticilere özel uç noktalar
+                        ).permitAll() // Kayıt, giriş, OAuth2 ve açık uçlara HERKES erişebilsin
+                        .requestMatchers("/api/auth/userlist", "/api/admin/**").hasRole("ADMIN") // Yöneticilere özel uç noktalar
                         // /internal/** normal kullanıcı JWT'si DEĞİL, paylaşılan-sır
                         // başlığı ister (InternalServiceAuthFilter). Burada permitAll
                         // GÖRÜNMÜYOR bilerek: filtre, anahtar tutmazsa isteği zaten
@@ -84,7 +86,7 @@ public class SecurityConfig {
                         .anyRequest().authenticated() // Diğer tüm uç noktalar için token/giriş zorunlu olsun
                 )
 
-                // 3. EN ÖNEMLİ KISIM: Yetkisiz erişimlerde ProblemDetail formatında JSON dön
+                // 3. EN ÖNEMLİ KISIM: Yetkisiz ve Yetkisiz Erişim (401 ve 403) Durumlarında ProblemDetail JSON dön
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint((request, response, authException) -> {
                             response.setContentType("application/json;charset=UTF-8");
@@ -106,11 +108,30 @@ public class SecurityConfig {
 
                             response.getWriter().write(problemDetailJson);
                         })
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            response.setContentType("application/json;charset=UTF-8");
+                            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+
+                            String problemDetailJson = String.format(
+                                    "{" +
+                                            "\"type\":\"about:blank\"," +
+                                            "\"title\":\"Erişim Reddedildi\"," +
+                                            "\"status\":%d," +
+                                            "\"detail\":\"%s\"," +
+                                            "\"instance\":\"%s\"" +
+                                            "}",
+                                    HttpStatus.FORBIDDEN.value(),
+                                    "Bu kaynağa erişmek için yönetici (ADMIN) yetkisine sahip olmalısınız.",
+                                    request.getRequestURI()
+                                );
+
+                            response.getWriter().write(problemDetailJson);
+                        })
                 )
 
                 // 4. OAuth2 Giriş Ayarları ve Başarı Yöneticisi
                 .oauth2Login(oauth2 -> oauth2
-                        .successHandler(oAuth2LoginSuccessHandler)
+                        .successHandler(oAuth2AuthenticationSuccessHandler)
                 );
 
         // JWT filtresini UsernamePasswordAuthenticationFilter'dan önce çalışacak şekilde ekliyoruz
@@ -128,7 +149,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         // Frontend'in çalıştığı adreslere izin ver
-        configuration.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:4200"));
+        configuration.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:4200", "http://localhost:5173"));
 
         // İzin verilen HTTP metodları
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
@@ -143,10 +164,5 @@ public class SecurityConfig {
         source.registerCorsConfiguration("/**", configuration);
 
         return source;
-    }
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
     }
 }
