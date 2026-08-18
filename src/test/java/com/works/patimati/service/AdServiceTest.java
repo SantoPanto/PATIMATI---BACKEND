@@ -23,6 +23,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.multipart.MultipartFile;
+import com.works.patimati.storage.InvalidImageException;
 
 import java.util.List;
 import java.util.Optional;
@@ -31,11 +32,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.locationtech.jts.geom.Point;
 import static org.mockito.ArgumentMatchers.eq;
+
 
 class AdServiceTest {
 
@@ -111,6 +114,53 @@ class AdServiceTest {
         assertThat(ad.isActive()).isTrue();
         assertThat(ad.getPhotoUrls()).containsExactlyElementsOf(
                 storedReferences
+        );
+    }
+
+    @Test
+    void shouldRejectAdCreationWhenImagesAreMissing() {
+        AdCreateRequest request = mock(AdCreateRequest.class);
+
+        /*
+         * Service doğrudan çağrıldığında fotoğraf listesinin null olması
+         * da iş kuralını aşmamalıdır.
+         */
+        assertThatThrownBy(
+                () -> adService.createAd(
+                        "owner@patimati.com",
+                        request,
+                        null
+                )
+        )
+                .isInstanceOf(InvalidImageException.class)
+                .hasMessageContaining("en az bir fotoğraf");
+
+        /*
+         * Boş bir fotoğraf listesi gönderildiğinde de aynı iş kuralının
+         * uygulanması gerekir.
+         */
+        assertThatThrownBy(
+                () -> adService.createAd(
+                        "owner@patimati.com",
+                        request,
+                        List.of()
+                )
+        )
+                .isInstanceOf(InvalidImageException.class)
+                .hasMessageContaining("en az bir fotoğraf");
+
+        /*
+         * Fotoğraf kontrolü metodun en başında yapıldığı için kullanıcı
+         * sorgusu, dosya yükleme, veritabanı kaydı ve AI kuyruğu gibi
+         * hiçbir yan etki oluşmamalıdır.
+         */
+        verifyNoInteractions(
+                userRepository,
+                imageStorageService,
+                adMapper,
+                adRepository,
+                aiAnalysisPublisher,
+                rewardService
         );
     }
 
