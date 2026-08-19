@@ -1,8 +1,9 @@
 package com.works.patimati.storage;
 
-import com.works.patimati.config.S3StorageProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -10,11 +11,8 @@ import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.presigner.S3Presigner;
-import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 
 import java.io.IOException;
 import java.net.URI;
@@ -26,26 +24,35 @@ import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
-public class S3ImageStorageService implements ImageStorageService {
+/**
+ * Cloudflare R2 / AWS S3 canlı ortam (production) depolama servisi implementasyonu.
+ *
+ * <p>Canlı ortamda ("prod" profili) Cloudflare R2 uç noktası üzerinden dosya yükleme
+ * ve silme işlemlerini yürütür. Görseller presigned URL yerine Cloudflare Custom Domain / CDN
+ * adresi (örneğin: https://media.patimati.com/ads/2026/08/...) üzerinden doğrudan sunulur.
+ */
+@Service
+@Profile("prod")
+public class S3ImageStorageServiceImpl implements ImageStorageService {
 
     private static final Logger log =
-            LoggerFactory.getLogger(S3ImageStorageService.class);
+            LoggerFactory.getLogger(S3ImageStorageServiceImpl.class);
 
     private static final String JPEG_CONTENT_TYPE = MediaType.IMAGE_JPEG_VALUE;
     private static final String STORAGE_SCHEME = "s3";
 
     private final S3Client s3Client;
-    private final S3Presigner s3Presigner;
-    private final S3StorageProperties properties;
+    private final String bucketName;
+    private final String publicDomain;
 
-    public S3ImageStorageService(
+    public S3ImageStorageServiceImpl(
             S3Client s3Client,
-            S3Presigner s3Presigner,
-            S3StorageProperties properties
+            @Value("${aws.s3.bucket-name:${app.storage.s3.bucket:patimati-medya-kutusu}}") String bucketName,
+            @Value("${app.storage.r2.public-domain}") String publicDomain
     ) {
         this.s3Client = s3Client;
-        this.s3Presigner = s3Presigner;
-        this.properties = properties;
+        this.bucketName = bucketName;
+        this.publicDomain = publicDomain;
     }
 
     @Override
@@ -54,10 +61,9 @@ public class S3ImageStorageService implements ImageStorageService {
             return List.of();
         }
 
-        if (images.size() > properties.maxFileCount()) {
+        if (images.size() > 3) {
             throw new InvalidImageException(
-                    "Bir ilana en fazla " + properties.maxFileCount()
-                            + " fotoğraf yüklenebilir"
+                    "Bir ilana en fazla 3 fotoğraf yüklenebilir"
             );
         }
 
@@ -77,36 +83,25 @@ public class S3ImageStorageService implements ImageStorageService {
 
     @Override
     public String createTemporaryReadUrl(String storageReference) {
+        if (storageReference == null || storageReference.isBlank()) {
+            throw new InvalidImageException("Fotoğraf depolama referansı boş olamaz");
+        }
+
         String objectKey = extractObjectKey(storageReference);
 
-        GetObjectRequest getObjectRequest = GetObjectRequest.builder()
-                .bucket(properties.bucket())
-                .key(objectKey)
-                .build();
-
-        GetObjectPresignRequest presignRequest =
-                GetObjectPresignRequest.builder()
-                        .signatureDuration(properties.presignedUrlDuration())
-                        .getObjectRequest(getObjectRequest)
-                        .build();
-
-        try {
-            return s3Presigner.presignGetObject(presignRequest)
-                    .url()
-                    .toExternalForm();
-        } catch (SdkException exception) {
-            log.error(
-                    "Fotoğraf için geçici indirme URL'si oluşturulurken hata alındı. Reference: {}, Bucket: {}, Hata: {}",
-                    storageReference,
-                    properties.bucket(),
-                    exception.getMessage(),
-                    exception
-            );
-            throw new ImageStorageException(
-                    "Fotoğraf için geçici indirme adresi oluşturulamadı",
-                    exception
-            );
+        // Zaten http:// veya https:// protokolü içeriyorsa (örn: tamamen formatlanmış CDN adresi)
+        if (objectKey.startsWith("http://") || objectKey.startsWith("https://")) {
+            return objectKey;
         }
+
+        String cleanDomain = publicDomain.endsWith("/")
+                ? publicDomain.substring(0, publicDomain.length() - 1)
+                : publicDomain;
+        String cleanKey = objectKey.startsWith("/")
+                ? objectKey.substring(1)
+                : objectKey;
+
+        return cleanDomain + "/" + cleanKey;
     }
 
     @Override
@@ -125,7 +120,7 @@ public class S3ImageStorageService implements ImageStorageService {
         String objectKey = createObjectKey();
 
         PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-                .bucket(properties.bucket())
+                .bucket(bucketName)
                 .key(objectKey)
                 .contentType(JPEG_CONTENT_TYPE)
                 .contentLength((long) imageBytes.length)
@@ -136,23 +131,22 @@ public class S3ImageStorageService implements ImageStorageService {
                     putObjectRequest,
                     RequestBody.fromBytes(imageBytes)
             );
-            return createStorageReference(objectKey);
+            // Madde 3: Veritabanına tam URI (s3://...) yerine doğrudan objectKey string'i döndürülür
+            return objectKey;
         } catch (NoSuchBucketException exception) {
             log.error(
-                    "MinIO/S3 üzerinde '{}' isimli bucket bulunamadı! Lütfen MinIO console üzerinden (http://localhost:9001) veya CLI ile bucket'ı oluşturun. Endpoint: {}",
-                    properties.bucket(),
-                    properties.endpoint(),
+                    "Cloudflare R2 üzerinde '{}' isimli bucket bulunamadı! Bucket: {}",
+                    bucketName,
                     exception
             );
             throw new ImageStorageException(
-                    "Hedef depolama alanı (bucket: " + properties.bucket() + ") bulunamadı",
+                    "Hedef depolama alanı (bucket: " + bucketName + ") bulunamadı",
                     exception
             );
         } catch (SdkException exception) {
             log.error(
-                    "Fotoğraf MinIO/S3 depolama servisine yüklenemedi. Bucket: {}, Endpoint: {}, Hata: {}",
-                    properties.bucket(),
-                    properties.endpoint(),
+                    "Fotoğraf Cloudflare R2 depolama servisine yüklenemedi. Bucket: {}, Hata: {}",
+                    bucketName,
                     exception.getMessage(),
                     exception
             );
@@ -168,11 +162,9 @@ public class S3ImageStorageService implements ImageStorageService {
             throw new InvalidImageException("Boş fotoğraf yüklenemez");
         }
 
-        if (image.getSize() > properties.maxFileSize().toBytes()) {
+        if (image.getSize() > 5 * 1024 * 1024) {
             throw new InvalidImageException(
-                    "Fotoğraf boyutu "
-                            + properties.maxFileSize().toMegabytes()
-                            + " MB sınırını aşamaz"
+                    "Fotoğraf boyutu 5 MB sınırını aşamaz"
             );
         }
 
@@ -220,10 +212,6 @@ public class S3ImageStorageService implements ImageStorageService {
         );
     }
 
-    private String createStorageReference(String objectKey) {
-        return STORAGE_SCHEME + "://" + properties.bucket() + "/" + objectKey;
-    }
-
     private String extractObjectKey(String storageReference) {
         if (storageReference == null || storageReference.isBlank()) {
             throw new InvalidImageException(
@@ -231,32 +219,45 @@ public class S3ImageStorageService implements ImageStorageService {
             );
         }
 
-        try {
-            URI reference = URI.create(storageReference);
-            String objectKey = reference.getPath();
-
-            if (!STORAGE_SCHEME.equalsIgnoreCase(reference.getScheme())
-                    || !properties.bucket().equals(reference.getHost())
-                    || objectKey == null
-                    || objectKey.length() <= 1) {
-                throw new InvalidImageException(
-                        "Geçersiz fotoğraf depolama referansı"
-                );
-            }
-
-            return objectKey.substring(1);
-        } catch (IllegalArgumentException exception) {
-            throw new InvalidImageException(
-                    "Geçersiz fotoğraf depolama referansı"
-            );
+        // Zaten http veya https protokolü barındırıyorsa
+        if (storageReference.startsWith("http://") || storageReference.startsWith("https://")) {
+            return storageReference;
         }
+
+        // s3://bucketName/objectKey formatı için geriye dönük uyumluluk
+        if (storageReference.startsWith(STORAGE_SCHEME + "://")) {
+            try {
+                URI reference = URI.create(storageReference);
+                String objectKey = reference.getPath();
+
+                if (objectKey != null && objectKey.length() > 1) {
+                    return objectKey.substring(1);
+                }
+            } catch (IllegalArgumentException ignored) {
+            }
+        }
+
+        // Doğrudan objectKey string'i ise (örn: ads/2026/08/...jpg)
+        return storageReference;
     }
 
     private void deleteImage(String storageReference) {
         String objectKey = extractObjectKey(storageReference);
 
+        // Zaten tam URL gelmişse, domain sonrasını key olarak çıkar
+        if (objectKey.startsWith("http://") || objectKey.startsWith("https://")) {
+            try {
+                URI uri = URI.create(objectKey);
+                String path = uri.getPath();
+                if (path != null && path.length() > 1) {
+                    objectKey = path.substring(1);
+                }
+            } catch (IllegalArgumentException ignored) {
+            }
+        }
+
         DeleteObjectRequest deleteRequest = DeleteObjectRequest.builder()
-                .bucket(properties.bucket())
+                .bucket(bucketName)
                 .key(objectKey)
                 .build();
 
@@ -264,19 +265,19 @@ public class S3ImageStorageService implements ImageStorageService {
             s3Client.deleteObject(deleteRequest);
         } catch (NoSuchBucketException exception) {
             log.error(
-                    "Silme işlemi için MinIO/S3 bucket'ı bulunamadı! Bucket: {}",
-                    properties.bucket(),
+                    "Silme işlemi için Cloudflare R2 bucket'ı bulunamadı! Bucket: {}",
+                    bucketName,
                     exception
             );
             throw new ImageStorageException(
-                    "Hedef depolama alanı (bucket: " + properties.bucket() + ") bulunamadı",
+                    "Hedef depolama alanı (bucket: " + bucketName + ") bulunamadı",
                     exception
             );
         } catch (SdkException exception) {
             log.error(
-                    "Fotoğraf MinIO/S3 depolama servisinden silinemedi. Reference: {}, Bucket: {}, Hata: {}",
+                    "Fotoğraf Cloudflare R2 depolama servisinden silinemedi. Reference: {}, Bucket: {}, Hata: {}",
                     storageReference,
-                    properties.bucket(),
+                    bucketName,
                     exception.getMessage(),
                     exception
             );
@@ -295,7 +296,7 @@ public class S3ImageStorageService implements ImageStorageService {
                 deleteImage(storageReference);
             } catch (RuntimeException rollbackException) {
                 log.warn(
-                        "Başarısız yükleme sonrası S3 nesnesi temizlenemedi: {}",
+                        "Başarısız yükleme sonrası Cloudflare R2 nesnesi temizlenemedi: {}",
                         storageReference,
                         rollbackException
                 );
