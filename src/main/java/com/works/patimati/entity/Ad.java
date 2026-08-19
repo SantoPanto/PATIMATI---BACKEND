@@ -7,6 +7,7 @@ import com.works.patimati.entity.enums.EyeColor;
 import com.works.patimati.entity.enums.PetColor;
 import com.works.patimati.entity.enums.PetGender;
 import com.works.patimati.entity.enums.PresenceStatus;
+import com.works.patimati.entity.enums.AdResolutionStatus;
 import com.works.patimati.entity.enums.Species;
 import jakarta.persistence.*;
 import lombok.*;
@@ -143,6 +144,11 @@ public class Ad {
     @Column(nullable = false)
     @Builder.Default
     private boolean active = true;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "resolution_status", nullable = false, length = 20)
+    @Builder.Default
+    private AdResolutionStatus resolutionStatus = AdResolutionStatus.NONE;
 
     @Column(name = "suspended", nullable = false)
     @Builder.Default

@@ -2,6 +2,7 @@ package com.works.patimati.repository;
 
 import com.works.patimati.ai.AiCandidateRow;
 import com.works.patimati.entity.Ad;
+import com.works.patimati.entity.enums.AdResolutionStatus;
 import org.locationtech.jts.geom.Point;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -11,6 +12,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,6 +36,10 @@ public interface AdRepository extends JpaRepository<Ad, Long> {
 
     // Halka açık aktif ve askıda olmayan ilanları listeler.
     Page<Ad> findAllByActiveTrueAndSuspendedFalse(Pageable pageable);
+
+    long countByActiveTrueAndSuspendedFalse();
+
+    long countByResolutionStatusIn(Collection<AdResolutionStatus> resolutionStatuses);
 
     // İlanları türüne ve aktiflik durumuna göre filtreler.
     Page<Ad> findAllByAdTypeAndActive(
