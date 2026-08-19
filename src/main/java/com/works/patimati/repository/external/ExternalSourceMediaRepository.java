@@ -15,6 +15,9 @@ public interface ExternalSourceMediaRepository extends JpaRepository<ExternalSou
 
     List<ExternalSourceMedia> findByPostOrderByOrdinalAsc(ExternalSourcePost post);
 
+    /** {@link #findByPostOrderByOrdinalAsc} ile aynı, sayfa içindeki tüm gönderiler için TEK sorguda (N+1'i önler). */
+    List<ExternalSourceMedia> findByPostInOrderByOrdinalAsc(List<ExternalSourcePost> posts);
+
     long countByPostAndProcessingState(ExternalSourcePost post, ExternalSourceMedia.ProcessingState state);
 
     Optional<ExternalSourceMedia> findByPostAndContentSha256AndProcessingState(

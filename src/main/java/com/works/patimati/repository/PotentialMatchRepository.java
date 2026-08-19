@@ -72,4 +72,11 @@ public interface PotentialMatchRepository extends JpaRepository<PotentialMatch, 
     // Admin paneli: bir external kaydın herhangi bir native ilanla eşleşip eşleşmediğini gösterir.
     boolean existsByCandidateKindAndExternalRecord(
             PotentialMatch.CandidateKind kind, com.works.patimati.entity.external.ExternalPetRecord externalRecord);
+
+    // {@link #existsByCandidateKindAndExternalRecord} ile aynı, sayfa içindeki tüm kayıtlar için TEK sorguda
+    // (N+1'i önler) -- çağıran, dönen satırların external_record_id'lerini bir Set'e toplayıp "eşleşti mi"
+    // kontrolünü öyle yapar.
+    java.util.List<PotentialMatch> findByCandidateKindAndExternalRecordIn(
+            PotentialMatch.CandidateKind kind,
+            java.util.List<com.works.patimati.entity.external.ExternalPetRecord> externalRecords);
 }

@@ -145,3 +145,22 @@ app:
   websocket:
     # Virgülle ayrılmış origin listesi ortam değişkeniyle canlı ortamda değiştirilebilir.
     allowed-origins: ${WEBSOCKET_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:4200,http://localhost:5173}
+
+# Üretimde bir ters proxy'nin (Nginx/Cloudflare/ALB/Railway vb.) arkasında
+# çalışıyoruz -- "native" gömülü Tomcat'in kendi forwarded-header desteğini
+# (RemoteIpValve muadili) açar, bu da request.getRemoteAddr()'ı gerçekten
+# YENİDEN YAZAR. BİLİNÇLİ OLARAK "framework" DEĞİL: o strateji Spring'in
+# ForwardedHeaderFilter'ını kullanır ve yalnızca URL/şema/host yeniden
+# kurulumunu (redirect'ler, getRequestURL) düzeltir -- getRemoteAddr()'a HİÇ
+# dokunmaz. LoginRateLimiter (IP bazlı brute-force koruması) tam olarak
+# getRemoteAddr()'a güvendiği için bu ayrım burada kritik: "framework"
+# seçilseydi rate limiter hâlâ istemcinin uydurduğu X-Forwarded-For'u
+# görmeye devam ederdi.
+server:
+  # PATIMATI-AI-social'daki AYNI sorunun aynı çözümü (bkz. o reponun
+  # Dockerfile'ındaki "$PORT'u onurlandırma" notu) -- Railway her servise
+  # rastgele bir $PORT atar, sabit 8080'i dinleyen bir uygulamaya trafik hiç
+  # ulaşmaz. ${PORT:8080}: PORT ortam değişkeni varsa onu kullan, yoksa
+  # (yerel geliştirme) 8080'e düş -- kimsenin local kurulumu bozulmuyor.
+  port: ${PORT:8080}
+  forward-headers-strategy: native

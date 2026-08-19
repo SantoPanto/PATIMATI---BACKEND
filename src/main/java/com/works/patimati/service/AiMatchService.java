@@ -21,6 +21,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -106,7 +107,12 @@ public class AiMatchService {
         }
 
         // 2. Fetch candidates
-        String oppositeAdType = "LOST".equalsIgnoreCase(listingType) ? "FOUND" : "LOST";
+        String oppositeAdType = resolveOppositeAdType(listingType);
+        if (oppositeAdType == null) {
+            // Geçerli bir tür (ADOPTION) ama karşıtı yok -- aranacak bir
+            // eşleşme kavramı yok, hata değil.
+            return List.of();
+        }
         List<AiCandidateRow> rows = adRepository.findAiCandidatesWithoutLocation(
                 oppositeAdType,
                 Instant.now().minus(windowDays, ChronoUnit.DAYS)
@@ -120,13 +126,19 @@ public class AiMatchService {
             rows = rows.subList(0, maxCandidates);
         }
 
+        // findAllById ile tek sorguda çekilip Map'e konuyor -- öncesinde
+        // her satır için ayrı bir findById çağrılıyordu (N+1).
+        List<Long> candidateAdIds = rows.stream().map(AiCandidateRow::getAdId).toList();
+        Map<Long, Ad> candidateAdsById = adRepository.findAllById(candidateAdIds).stream()
+                .collect(Collectors.toMap(Ad::getId, ad -> ad));
+
         List<AiCandidate> candidates = new ArrayList<>();
         for (AiCandidateRow row : rows) {
-            Ad ad = adRepository.findById(row.getAdId()).orElse(null);
+            Ad ad = candidateAdsById.get(row.getAdId());
             if (ad == null || ad.getAiEmbeddings() == null || ad.getAiEmbeddings().isEmpty()) {
                 continue;
             }
-            
+
             List<float[]> candidateEmbeddings = new ArrayList<>();
             for (Ad.AiPhotoVector vector : ad.getAiEmbeddings()) {
                 candidateEmbeddings.add(vector.embedding());
@@ -172,12 +184,30 @@ public class AiMatchService {
             }
             
             if (matches == null) return List.of();
-            
+
+            // ad_id null gelebilir (bugün bu uç yalnızca native aday
+            // gönderdiği için teorik, ama savunma amaçlı) -- longValue()'dan
+            // ÖNCE kontrol edilmezse NPE fırlatırdı. findAllById ile tek
+            // sorguda toplu çekiliyor -- öncesinde her eşleşme için ayrı bir
+            // findById çağrılıyordu (N+1).
+            List<Long> matchedAdIds = new ArrayList<>();
+            for (Map<String, Object> match : matches) {
+                Integer adId = (Integer) match.get("ad_id");
+                if (adId != null) {
+                    matchedAdIds.add(adId.longValue());
+                }
+            }
+            Map<Long, Ad> matchedAdsById = adRepository.findAllById(matchedAdIds).stream()
+                    .collect(Collectors.toMap(Ad::getId, ad -> ad));
+
             // Map the matched Ad info along with score
             List<Map<String, Object>> result = new ArrayList<>();
             for (Map<String, Object> match : matches) {
                 Integer adId = (Integer) match.get("ad_id");
-                Ad ad = adRepository.findById(adId.longValue()).orElse(null);
+                if (adId == null) {
+                    continue;
+                }
+                Ad ad = matchedAdsById.get(adId.longValue());
                 if (ad != null) {
                     Map<String, Object> item = new HashMap<>();
                     item.put("score", match.get("score"));
@@ -189,6 +219,33 @@ public class AiMatchService {
         }
 
         return List.of();
+    }
+
+    /**
+     * {@code listingType}'ı {@link Ad.AdType}'a doğrular ve karşıt türünü
+     * döner (LOST&harr;FOUND). ADOPTION geçerli bir tür ama karşıtı yoktur --
+     * {@code null} döner, çağıran bunu boş sonuç olarak ele alır.
+     *
+     * <p>Öncesinde yalnızca {@code "LOST".equalsIgnoreCase(listingType)}
+     * kontrol ediliyordu: "LOST" dışında HER ŞEY (yazım hatası dahil)
+     * sessizce "FOUND"un karşıtı sayılıyor, yanlış adaylarla eşleştiriliyordu.
+     * Artık geçersiz bir değer {@link IllegalArgumentException} fırlatır --
+     * {@code GlobalExceptionHandler} bunu zaten 400'e çeviriyor.
+     */
+    private String resolveOppositeAdType(String listingType) {
+        Ad.AdType type;
+        try {
+            type = Ad.AdType.valueOf(listingType.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException | NullPointerException e) {
+            throw new IllegalArgumentException(
+                    "Geçersiz listingType: '" + listingType + "'. Geçerli değerler: "
+                            + Arrays.toString(Ad.AdType.values()));
+        }
+        return switch (type) {
+            case LOST -> Ad.AdType.FOUND.name();
+            case FOUND -> Ad.AdType.LOST.name();
+            case ADOPTION -> null;
+        };
     }
 
     private String declaredSpecies(Ad ad) {

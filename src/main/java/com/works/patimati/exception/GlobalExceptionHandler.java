@@ -6,11 +6,14 @@ import com.works.patimati.storage.ImageStorageException;
 import com.works.patimati.storage.InvalidImageException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -28,6 +31,8 @@ import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ProblemDetail> handleNotFound(
@@ -236,6 +241,52 @@ public class GlobalExceptionHandler {
                 HttpStatus.PAYLOAD_TOO_LARGE,
                 "Dosya boyutu sınırı aşıldı",
                 "Yüklenen fotoğrafların toplam boyutu izin verilen sınırı aşıyor",
+                request
+        );
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ProblemDetail> handleMethodNotSupported(
+            HttpRequestMethodNotSupportedException exception,
+            HttpServletRequest request
+    ) {
+        // Yeni Exception.class catch-all'ının (aşağıda) yakaladığı GERÇEK bir
+        // regresyon: bu istisna için burada özel bir handler YOKTU, o yüzden
+        // önceden Spring'in kendi DefaultHandlerExceptionResolver'ı devreye
+        // girip doğru 405'i üretiyordu. Exception.class handler'ı
+        // ExceptionHandlerExceptionResolver seviyesinde HER istisnayı
+        // yakaladığı için (tip hiyerarşisi bakımdan Exception her şeyin
+        // atasıdır), Spring'in kendi varsayılan çözümleyicisine sıra hiç
+        // gelmiyordu -- AdControllerTest.shouldNotExposeRemovedTestEndpoint
+        // 405 yerine 500 almaya başlayarak bunu yakaladı. Doğru semantiği
+        // burada açıkça geri veriyoruz.
+        return problem(
+                HttpStatus.METHOD_NOT_ALLOWED,
+                "Desteklenmeyen HTTP metodu",
+                exception.getMessage(),
+                request
+        );
+    }
+
+    // Son çare: yukarıdaki hiçbir spesifik handler'a uymayan her şey buraya
+    // düşer. Spring, en spesifik eşleşen handler'ı @ExceptionHandler tip
+    // hiyerarşisine göre seçer (dosyadaki sıralamadan bağımsız) -- bu yüzden
+    // burada olması yukarıdaki handler'ların DAVRANIŞINI değiştirmez, yalnızca
+    // önceden hiç yakalanmayan (ör. NullPointerException, beklenmeyen
+    // RuntimeException) istekler artık çıplak 500 + boş gövde yerine tutarlı
+    // bir ProblemDetail alır. İstemciye ham exception.getMessage() DÖNMEZ
+    // (iç sınıf adı/SQL/stack detayı sızdırabilir) -- tam detay yalnızca
+    // sunucu logunda, ERROR seviyesinde.
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ProblemDetail> handleUnexpected(
+            Exception exception,
+            HttpServletRequest request
+    ) {
+        log.error("Beklenmeyen hata: {} {}", request.getMethod(), request.getRequestURI(), exception);
+        return problem(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "Beklenmeyen bir hata oluştu",
+                "Sunucu tarafında beklenmeyen bir hata oluştu. Sorun devam ederse destek ile iletişime geçin.",
                 request
         );
     }

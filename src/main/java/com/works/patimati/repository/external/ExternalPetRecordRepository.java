@@ -74,4 +74,7 @@ public interface ExternalPetRecordRepository extends JpaRepository<ExternalPetRe
             @Param("maxResults") int maxResults);
 
     Optional<ExternalPetRecord> findByPostAndPetIndex(ExternalSourcePost post, short petIndex);
+
+    /** {@link #findByPostAndPetIndex} ile aynı, sayfa içindeki tüm gönderiler için TEK sorguda (N+1'i önler). */
+    List<ExternalPetRecord> findByPostInAndPetIndex(List<ExternalSourcePost> posts, short petIndex);
 }

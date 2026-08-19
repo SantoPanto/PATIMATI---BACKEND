@@ -11,6 +11,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.List;
 
 /**
@@ -44,7 +46,16 @@ public class InternalServiceAuthFilter extends OncePerRequestFilter {
         }
 
         String provided = request.getHeader(HEADER);
-        if (expectedKey == null || expectedKey.isBlank() || provided == null || !provided.equals(expectedKey)) {
+        // MessageDigest.isEqual: sabit-zamanlı karşılaştırma -- düz .equals()
+        // ilk uyuşmayan karakterde erken çıkar, bu da yanıt süresinden anahtarı
+        // karakter karakter tahmin etmeye izin veren bir timing-attack yüzeyi
+        // açar. Paylaşılan sır bir X-Internal-Api-Key olduğu için (kullanıcı
+        // şifresi değil, ama yine de gizli bir kimlik bilgisi) aynı özenle
+        // karşılaştırılmalı.
+        if (expectedKey == null || expectedKey.isBlank() || provided == null
+                || !MessageDigest.isEqual(
+                        provided.getBytes(StandardCharsets.UTF_8),
+                        expectedKey.getBytes(StandardCharsets.UTF_8))) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }

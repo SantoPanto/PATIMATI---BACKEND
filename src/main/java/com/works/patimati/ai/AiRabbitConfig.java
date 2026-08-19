@@ -34,6 +34,7 @@ public class AiRabbitConfig {
     public static final String REQUEST_QUEUE = "ai.analysis.request";
     public static final String RESULT_QUEUE = "ai.analysis.result";
     public static final String DLQ = "ai.analysis.request.dlq";
+    public static final String RESULT_DLQ = "ai.analysis.result.dlq";
 
     public static final String REQUEST_ROUTING_KEY = "analysis.request";
     public static final String RESULT_ROUTING_KEY = "analysis.result";
@@ -64,14 +65,32 @@ public class AiRabbitConfig {
                 .build();
     }
 
+    /**
+     * AI'dan dönen sonuçlar. {@code onResult}'ta (AiAnalysisListener)
+     * beklenmeyen bir istisna -- ya da mesaj hiç ayrıştırılamıyorsa
+     * (Jackson2JsonMessageConverter dönüştürme hatası) -- bu kuyruğun DLX'i
+     * olmadan mesaj SONSUZA DEK aynı kuyruğa yeniden teslim edilirdi (zehirli
+     * mesaj): {@code aiListenerContainerFactory}'nin
+     * {@code defaultRequeueRejected}'ı false yapılmadıkça Spring AMQP
+     * varsayılanı `true`'dur, yani reddedilen mesaj DLX'e DEĞİL aynı kuyruğa
+     * geri gider -- bu yüzden ikisi birlikte gerekir, yalnızca
+     * {@code deadLetterExchange} yetmez.
+     */
     @Bean
     Queue aiResultQueue() {
-        return QueueBuilder.durable(RESULT_QUEUE).build();
+        return QueueBuilder.durable(RESULT_QUEUE)
+                .deadLetterExchange(DLX)
+                .build();
     }
 
     @Bean
     Queue aiDeadLetterQueue() {
         return QueueBuilder.durable(DLQ).build();
+    }
+
+    @Bean
+    Queue aiResultDeadLetterQueue() {
+        return QueueBuilder.durable(RESULT_DLQ).build();
     }
 
     @Bean
@@ -98,6 +117,21 @@ public class AiRabbitConfig {
         return BindingBuilder.bind(aiDeadLetterQueue())
                 .to(aiDeadLetterExchange())
                 .with(REQUEST_ROUTING_KEY);
+    }
+
+    /**
+     * Sonuç kuyruğunun ölü mektupları, {@code aiDeadLetterBinding} ile AYNI
+     * gerekçeyle -- orijinal yönlendirme anahtarıyla, {@code RESULT_QUEUE}'nun
+     * kendi anahtarı {@code analysis.result} -- kendi DLQ'suna bağlanır.
+     * İstek ve sonuç kuyruklarının ölü mektupları BİLEREK aynı DLQ'da
+     * TOPLANMAZ: aynı DLX'i (tek exchange, mevcut altyapı) paylaşırlar ama
+     * her birinin kendi kuyruğu vardır, tıpkı istek tarafındaki gibi.
+     */
+    @Bean
+    Binding aiResultDeadLetterBinding() {
+        return BindingBuilder.bind(aiResultDeadLetterQueue())
+                .to(aiDeadLetterExchange())
+                .with(RESULT_ROUTING_KEY);
     }
 
     /**
@@ -158,6 +192,16 @@ public class AiRabbitConfig {
      * kullanır ve snake_case alanları tanımaz: {@code ad_id} okunamaz,
      * sonuç sessizce boş nesneye dönüşür. Yayınlama tarafını ayarlayıp bu
      * tarafı unutmak, bulunması zor bir hata kaynağıdır.
+     *
+     * <p><b>{@code defaultRequeueRejected(false)} BİLEREK verildi.</b> Spring
+     * AMQP'nin kendi varsayılanı {@code true}'dur: dinleyici (ör. onResult)
+     * bir istisna fırlattığında ya da mesaj hiç dönüştürülemediğinde,
+     * container mesajı reddeder AMA {@code requeue=true} ile — yani mesaj
+     * DLX'e DEĞİL, aynı kuyruğa geri döner ve anında yeniden teslim edilir.
+     * Sonuç: zehirli mesaj sonsuz döngüye girer, kuyruk tıkanır, ardından
+     * gelen tüm analiz sonuçları da işlenemez hâle gelir — {@code aiResultQueue}
+     * üzerinde bir DLX tanımlamak TEK BAŞINA bunu önlemez, ikisi birlikte
+     * gerekir (bkz. {@code aiResultQueue} javadoc'u).
      */
     @Bean
     RabbitListenerContainerFactory<?> aiListenerContainerFactory(
@@ -166,6 +210,7 @@ public class AiRabbitConfig {
         SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
         factory.setConnectionFactory(connectionFactory);
         factory.setMessageConverter(aiJsonMessageConverter);
+        factory.setDefaultRequeueRejected(false);
         return factory;
     }
 }

@@ -7,6 +7,8 @@ import com.works.patimati.entity.PotentialMatchRecipient;
 import com.works.patimati.entity.User;
 import com.works.patimati.entity.enums.MatchStatus;
 import com.works.patimati.entity.enums.Species;
+import com.works.patimati.notification.PushNotificationService;
+import com.works.patimati.notification.PushResult;
 import com.works.patimati.repository.AdRepository;
 import com.works.patimati.repository.PotentialMatchRecipientRepository;
 import com.works.patimati.repository.UserRepository;
@@ -15,13 +17,18 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 
 /**
  * GET /api/me/potential-matches ve POST .../decision'ın servis katmanı —
@@ -45,6 +52,17 @@ class PotentialMatchQueryAndDecisionTest {
     @Autowired
     private UserRepository userRepository;
 
+    // Bu testin gerçek Firebase yapılandırmasına (ya da yokluğuna) bağlı
+    // olmaması için gerçek FirebasePushNotificationService yerine sahtesi
+    // kullanılır. AiMatchNotifier artık PushNotificationService üzerinden
+    // gönderiyor (main'in e203b28 "B5" düzeltmesinin bu ortama taşınmış
+    // hali) -- Firebase gerçekten yapılandırılmışsa/yapılandırılmamışsa
+    // PushResult farklı çıkar (PUSH_DISABLED vs SENT/NO_TOKEN), ve bu test
+    // bildirim TESLİMATINI değil, alıcı satırının durum geçişini (PENDING ->
+    // NOTIFIED) sınıyor -- o yüzden SENT sabitlenir.
+    @MockitoBean
+    private PushNotificationService pushNotificationService;
+
     private User ownerA;
     private User ownerB;
     private Ad adA;
@@ -52,6 +70,9 @@ class PotentialMatchQueryAndDecisionTest {
 
     @BeforeEach
     void setUp() {
+        when(pushNotificationService.send(any(), anyString(), anyString(), any(), any()))
+                .thenReturn(PushResult.SENT);
+
         ownerA = userRepository.save(User.builder()
                 .email("qd-a-" + System.nanoTime() + "@test.patimati")
                 .firstName("A").lastName("Test").role(User.Role.USER).build());
