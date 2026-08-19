@@ -9,6 +9,7 @@ import com.works.patimati.repository.MessageRepository;
 import com.works.patimati.repository.UserRepository;
 import com.works.patimati.service.MessageFraudFilterService;
 import com.works.patimati.service.MessageService;
+import com.works.patimati.service.NotificationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Page;
@@ -70,7 +71,8 @@ class MesajOdasiIliskiIstiyorTest {
                 userRepository,
                 adRepository,
                 mock(MessageFraudFilterService.class),
-                mock(SimpMessagingTemplate.class)
+                mock(SimpMessagingTemplate.class),
+                mock(NotificationService.class)
         );
 
         cagiran = User.builder().uid(CAGIRAN_UID).email(CAGIRAN_EPOSTA).build();
@@ -182,3 +184,4 @@ class MesajOdasiIliskiIstiyorTest {
         }
     }
 }
+
