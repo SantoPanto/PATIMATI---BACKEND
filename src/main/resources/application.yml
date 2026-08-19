@@ -1,13 +1,16 @@
-# Veritabanı ve Flyway Ayarları
+#server root seviyesinde olmalı
+server:
+  forward-headers-strategy: native
+
 spring:
-  server:
-    forward-headers-strategy: native
   # --- Dosya Yükleme Ayarları ---
   servlet:
     multipart:
       enabled: true
       max-file-size: 5MB
       max-request-size: 20MB
+
+
 
 
   datasource:
