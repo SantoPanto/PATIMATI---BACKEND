@@ -1,0 +1,34 @@
+# Canlı Ortam (Production) Profili
+# Bu dosya application.yml içindeki "localhost" ayarlarını canlı ortama göre ezer.
+
+app:
+  # Frontend adresi canlı domain ile değiştirilir (CORS için)
+  frontend:
+    url: https://patimati.me
+  # Cloudflare R2 Nesne Depolama Yapılandırması
+  storage:
+    r2:
+      public-domain: ${R2_PUBLIC_DOMAIN}
+  # WebSocket origin adresi canlı domain ile güncellenir
+  websocket:
+    allowed-origins: https://patimati.me
+
+aws:
+  s3:
+    endpoint: ${R2_ENDPOINT}
+    access-key: ${R2_ACCESS_KEY}
+    secret-key: ${R2_SECRET_KEY}
+    bucket-name: ${R2_BUCKET_NAME}
+    region: auto
+
+spring:
+  datasource:
+    # Docker ortamında localhost çalışmaz, servis adı (postgres) kullanılmalıdır
+    url: ${DB_URL:jdbc:postgresql://postgres:5432/patimati_db}
+  jpa:
+    hibernate:
+      # Flyway ile çakışmaması için prod ortamında kesinlikle validate kullanılır
+      ddl-auto: validate
+  rabbitmq:
+    # Docker ortamında servis adı (rabbitmq) kullanılmalıdır
+    host: ${RABBITMQ_HOST:rabbitmq}
