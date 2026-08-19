@@ -19,10 +19,15 @@ import java.util.Optional;
 /**
  * AI'dan dönen sonucu ilana yazar (entegrasyon sözleşmesi §4).
  *
- * <p><b>Tekrar teslime dayanıklıdır.</b> RabbitMQ "en az bir kez" teslim eder,
- * yani aynı mesaj iki kez gelebilir. Burada yapılan iş {@code ad_id} üzerinden
- * idempotenttir: aynı sonucu iki kez yazmak aynı satırı aynı değerlerle
- * günceller. Bu yüzden ek bir tekrar-koruması gerekmez (§8).
+ * <p><b>Satır yazımı tekrar teslime dayanıklıdır.</b> RabbitMQ "en az bir kez"
+ * teslim eder, yani aynı mesaj iki kez gelebilir. İlana yazma işi
+ * {@code ad_id} üzerinden idempotenttir: aynı sonucu iki kez yazmak aynı
+ * satırı aynı değerlerle günceller (§8).
+ *
+ * <p>⚠ <b>Bildirim ayrı bir olaydır</b> ve §8'in "ek bir tekrar-koruması
+ * gerekmez" cümlesi onun için geçerli değildir: tekrar teslimde yeniden
+ * gönderilirdi. Koruması artık {@link AiMatchNotifier} içinde, {@code ad_match}
+ * satırının {@code notification_sent_at} damgasıyla kuruluyor (B6).
  */
 @Component
 @RequiredArgsConstructor
@@ -72,12 +77,19 @@ public class AiAnalysisListener {
 
         logSkipped(result);
 
-        // Eşiği geçen eşleşmeler için bildirim. Bildirim gönderme kararı burada
-        // değil, notifier'da: "hangi çifte daha önce bildirim gitti" bilgisini
-        // o tutuyor (§7 kural 4 — bildirim tekrarı önlenmeli).
+        // Eşleşmelerin KAYDI ve eşiği geçenler için bildirim.
+        //
+        // ⚠ Burada eskiden "hangi çifte daha önce bildirim gitti bilgisini
+        // notifier tutuyor" yazıyordu. YANLIŞTI: notifier de hiçbir şey
+        // tutmuyordu (ölçüldü, 17.08). İki bileşen de ötekinin yaptığını
+        // sanıyordu. Artık kayıt gerçekten yazılıyor ve damga oradan okunuyor.
+        //
+        // Eşik AI'nın cevabından geçiyor: kaydın "o an eşik neydi" sorusuna
+        // doğru cevap verebilmesi için değerin KAYNAĞINDAN gelmesi gerekiyor.
+        // Backend yapılandırmasından okunsaydı iki kaynak sessizce kayardı.
         List<AiAnalysisResult.Match> matches = result.matches() == null
                 ? List.of() : result.matches();
-        matchNotifier.notifyMatches(ad, matches);
+        matchNotifier.recordAndNotify(ad, matches, result.matchThreshold());
 
         log.info("AI analizi tamamlandı: adId={} tür={} cins={} eşleşme={} model={}",
                 ad.getId(), ad.getAiSpecies(), ad.getAiBreed(), matches.size(),
