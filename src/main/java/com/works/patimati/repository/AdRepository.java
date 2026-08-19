@@ -39,6 +39,14 @@ public interface AdRepository extends JpaRepository<Ad, Long> {
 
     long countByActiveTrueAndSuspendedFalse();
 
+    // Bu kullanıcının HALKA AÇIK bir ilanı var mı?
+    // Sohbet odası açma yetkisi buna bakıyor (bkz. MessageService.createOrGetRoom):
+    // halka açık ilanı olan kullanıcının adı zaten AdResponse.ownerDisplayName ile
+    // herkese görünüyor, dolayısıyla onunla oda açmak yeni bir bilgi sızdırmaz.
+    // Aynı gerekçeyle filtre "aktif ve askıda değil" — askıya alınmış ya da
+    // kapatılmış ilan halka görünmediği için sahibinin adı da görünmüyor.
+    boolean existsByUser_UidAndActiveTrueAndSuspendedFalse(Long userId);
+
     long countByResolutionStatusIn(Collection<AdResolutionStatus> resolutionStatuses);
 
     // İlanları türüne ve aktiflik durumuna göre filtreler.

@@ -6,6 +6,7 @@ import com.works.patimati.dto.message.ChatRoomResponseDTO;
 import com.works.patimati.entity.Message;
 import com.works.patimati.entity.User;
 import com.works.patimati.exception.ResourceNotFoundException;
+import com.works.patimati.repository.AdRepository;
 import com.works.patimati.repository.MessageRepository;
 import com.works.patimati.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -28,8 +29,19 @@ import java.util.List;
 public class MessageService {
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
+    private final AdRepository adRepository;
     private final MessageFraudFilterService fraudFilterService;
     private final SimpMessagingTemplate messagingTemplate;
+
+    /**
+     * İlişkisiz kullanıcı ile VAR OLMAYAN kullanıcı için TEK TİP cevap.
+     * <p>
+     * Ayrı mesaj/kod kullanmak varlık kâhini üretir: 200 "var", 404 "yok" demek
+     * olur ve kimlikler ardışık olduğu için toplam kullanıcı sayısı bile
+     * öğrenilebilir. 403 de aynı sızıntıyı yapar — "yetkin yok" cümlesi o
+     * kişinin VAR olduğunu söyler. Bu yüzden iki durum da buradan geçiyor.
+     */
+    private static final String ODA_ACILAMAZ = "Kullanıcı bulunamadı.";
 
     @Transactional
     public MessageResponse sendMessage(String senderEmail, MessageSendRequest request) {
@@ -91,20 +103,52 @@ public class MessageService {
         }).toList();
     }
 
+    /**
+     * Sohbet odasını açar ya da mevcut odayı döndürür.
+     * <p>
+     * <b>YETKİ KURALI (19.08.2026'da eklendi):</b> çağıranın karşı tarafla
+     * GERÇEK bir ilişkisi olmalı — ya aralarında yazışma var, ya karşı tarafın
+     * halka açık bir ilanı var. Öncesinde hiçbir kontrol yoktu: giriş yapmış
+     * herhangi bir kullanıcı 1'den başlayıp kimlik numaralarını deneyerek
+     * sistemdeki HERKESİN adını soyadını dökebiliyordu — yöneticininki dâhil.
+     * Ölçüldü: {@code POST /api/messages/rooms/{1..5}} hepsi 200 ve gövdede
+     * {@code partnerName} dönüyordu; {@code uid 999} ise 404 veriyordu, yani uç
+     * aynı zamanda bir varlık kâhiniydi.
+     * <p>
+     * "Halka açık ilanı var" ölçütü bilerek seçildi: öyle bir kullanıcının adı
+     * {@code AdResponse.ownerDisplayName} ile zaten herkese görünüyor ve o alan
+     * da {@code firstName + " " + lastName} üretiyor — yani birebir aynı bilgi.
+     * Dolayısıyla bu izin yeni bir şey sızdırmıyor, sadece var olan akışı
+     * (ilan sahibine mesaj atmak) çalışır tutuyor.
+     */
     @Transactional
     public ChatRoomResponseDTO createOrGetRoom(String currentUserEmail, Long partnerId) {
         User currentUser = findUserByEmail(currentUserEmail);
-        User partner = userRepository.findById(partnerId)
-                .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı bulunamadı: " + partnerId));
 
-        if (currentUser.getUid().equals(partner.getUid())) {
+        // Kendi kendine oda: çağıran zaten var olduğunu biliyor, sızıntı yok.
+        // Bu yüzden tek tip cevaba karışmıyor, kendi hatasını vermeye devam ediyor.
+        if (currentUser.getUid().equals(partnerId)) {
             throw new IllegalArgumentException("Kullanıcı kendisi ile sohbet odası oluşturamaz.");
         }
 
-        String partnerName = partner.getFirstName() + " " + partner.getLastName();
+        User partner = userRepository.findById(partnerId).orElse(null);
 
         Pageable pageable = PageRequest.of(0, 1, Sort.by(Sort.Direction.DESC, "timestamp"));
-        Page<Message> history = messageRepository.findChatHistory(currentUser.getUid(), partner.getUid(), pageable);
+        Page<Message> history = partner == null
+                ? Page.<Message>empty(pageable)
+                : messageRepository.findChatHistory(currentUser.getUid(), partner.getUid(), pageable);
+
+        boolean iliskiVar = partner != null
+                && (history.hasContent()
+                    || adRepository.existsByUser_UidAndActiveTrueAndSuspendedFalse(partner.getUid()));
+
+        // Kullanıcı yoksa da, varsa ama ilişki yoksa da AYNI cevap. Ayırt
+        // edilebilir olsalardı uç yine varlık kâhini olurdu.
+        if (!iliskiVar) {
+            throw new ResourceNotFoundException(ODA_ACILAMAZ);
+        }
+
+        String partnerName = partner.getFirstName() + " " + partner.getLastName();
 
         if (history.hasContent()) {
             Message lastMessage = history.getContent().get(0);
