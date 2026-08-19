@@ -10,6 +10,7 @@ import com.works.patimati.entity.Ad;
 import com.works.patimati.entity.AdoptionComplaint;
 import com.works.patimati.entity.User;
 import com.works.patimati.entity.enums.AiStatus;
+import com.works.patimati.entity.enums.AdResolutionStatus;
 import com.works.patimati.entity.enums.CoatPattern;
 import com.works.patimati.entity.enums.ComplaintStatus;
 import com.works.patimati.entity.enums.EyeColor;
@@ -183,6 +184,7 @@ public class AdoptionServiceImpl implements AdoptionService {
         validateAdOwnerAndType(ad, ownerEmail);
 
         ad.setActive(false);
+        ad.setResolutionStatus(AdResolutionStatus.ADOPTED);
         adRepository.save(ad);
 
         Long ownerId = ad.getUser().getUid();

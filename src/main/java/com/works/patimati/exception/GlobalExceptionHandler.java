@@ -226,6 +226,27 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ProblemDetail> handleGenericException(
+            Exception exception,
+            HttpServletRequest request
+    ) {
+        if (exception instanceof org.springframework.web.ErrorResponse errorResponse) {
+            return problem(
+                    HttpStatus.valueOf(errorResponse.getStatusCode().value()),
+                    errorResponse.getBody().getTitle() != null ? errorResponse.getBody().getTitle() : "İstek Hatası",
+                    exception.getMessage() != null ? exception.getMessage() : "İstek işlenirken hata oluştu.",
+                    request
+            );
+        }
+        return problem(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "Sunucu Hatası",
+                exception.getMessage() != null ? exception.getMessage() : "Beklenmeyen bir sunucu hatası meydana geldi.",
+                request
+        );
+    }
+
     private ResponseEntity<ProblemDetail> problem(
             HttpStatus status,
             String title,

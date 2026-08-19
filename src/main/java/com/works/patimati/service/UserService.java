@@ -2,7 +2,6 @@ package com.works.patimati.service;
 
 import com.works.patimati.dto.AuthResponse;
 import com.works.patimati.dto.FcmTokenUpdateDTO;
-import com.works.patimati.dto.GoogleAuthRequest;
 import com.works.patimati.dto.LoginRequest;
 import com.works.patimati.dto.RegisterRequest;
 import com.works.patimati.dto.User.UpdateProfileRequest;
@@ -107,38 +106,6 @@ public class UserService {
                 "message", "Geçersiz e-posta adresi veya şifre."
         );
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
-    }
-
-    // --- GOOGLE GİRİŞİ ---
-    public ResponseEntity<?> googleLogin(GoogleAuthRequest request) {
-        Optional<User> optionalUser = userRepository.findByEmail(request.getEmail());
-        User user;
-
-        if (optionalUser.isPresent()) {
-            user = optionalUser.get();
-            user.setFcmToken(request.getFcmToken());
-            user.setFirstName(request.getFirstName());
-            user.setLastName(request.getLastName());
-
-            if (user.getGoogleId() == null) {
-                user.setGoogleId(request.getGoogleId());
-            }
-            userRepository.save(user);
-        } else {
-            user = User.builder()
-                    .email(request.getEmail())
-                    .googleId(request.getGoogleId())
-                    .firstName(request.getFirstName())
-                    .lastName(request.getLastName())
-                    .role(User.Role.USER)
-                    .fcmToken(request.getFcmToken())
-                    .enabled(true)
-                    .build();
-            userRepository.save(user);
-        }
-
-        String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
-        return ResponseEntity.ok().body(new AuthResponse(token, convertToUserResponseDTO(user)));
     }
 
     // --- GOOGLE OAUTH2 SUCCESS HANDLER KULLANICI İŞLEME ---

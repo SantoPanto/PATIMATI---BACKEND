@@ -13,8 +13,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "Message Management", description = "Mesajlaşma, sohbet geçmişi ve okundu bilgisi işlemleri")
@@ -36,11 +35,11 @@ public class MessageController {
     })
     @PostMapping
     public ResponseEntity<MessageResponse> sendMessage(
-            @AuthenticationPrincipal UserDetails currentUser,
+            Authentication authentication,
             @Valid @RequestBody MessageSendRequest request
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(messageService.sendMessage(currentUser.getUsername(), request));
+                .body(messageService.sendMessage(authentication.getName(), request));
     }
 
     @Operation(
@@ -53,11 +52,11 @@ public class MessageController {
     })
     @GetMapping("/history/{otherUserId}")
     public ResponseEntity<Page<MessageResponse>> getChatHistory(
-            @AuthenticationPrincipal UserDetails currentUser,
+            Authentication authentication,
             @PathVariable Long otherUserId,
             Pageable pageable
     ) {
-        return ResponseEntity.ok(messageService.getChatHistory(currentUser.getUsername(), otherUserId, pageable));
+        return ResponseEntity.ok(messageService.getChatHistory(authentication.getName(), otherUserId, pageable));
     }
 
     @Operation(
@@ -72,9 +71,9 @@ public class MessageController {
     @PutMapping("/{id}/read")
     public ResponseEntity<Void> markAsRead(
             @PathVariable Long id,
-            @AuthenticationPrincipal UserDetails currentUser
+            Authentication authentication
     ) {
-        messageService.markAsRead(currentUser.getUsername(), id);
+        messageService.markAsRead(authentication.getName(), id);
         return ResponseEntity.ok().build();
     }
 
@@ -86,7 +85,7 @@ public class MessageController {
             @ApiResponse(responseCode = "200", description = "Okunmamış mesaj sayısı başarıyla getirildi")
     })
     @GetMapping("/unread-count")
-    public ResponseEntity<Long> getUnreadMessageCount(@AuthenticationPrincipal UserDetails currentUser) {
-        return ResponseEntity.ok(messageService.getUnreadMessageCount(currentUser.getUsername()));
+    public ResponseEntity<Long> getUnreadMessageCount(Authentication authentication) {
+        return ResponseEntity.ok(messageService.getUnreadMessageCount(authentication.getName()));
     }
 }

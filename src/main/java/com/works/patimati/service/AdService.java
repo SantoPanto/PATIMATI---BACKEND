@@ -2,12 +2,14 @@ package com.works.patimati.service;
 
 import com.works.patimati.ai.AiAnalysisPublisher;
 import com.works.patimati.dto.ad.AdCreateRequest;
+import com.works.patimati.dto.ad.AdCountersResponse;
 import com.works.patimati.dto.ad.AdResponse;
 import com.works.patimati.dto.ad.AdUpdateRequest;
 import com.works.patimati.dto.ad.ResolveLostAdRequest;
 import com.works.patimati.entity.Ad;
 import com.works.patimati.entity.User;
 import com.works.patimati.entity.enums.AiStatus;
+import com.works.patimati.entity.enums.AdResolutionStatus;
 import com.works.patimati.exception.ResourceNotFoundException;
 import com.works.patimati.mapper.AdMapper;
 import com.works.patimati.repository.AdRepository;
@@ -35,12 +37,18 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 
+import static java.util.stream.Collectors.toList;
+
 @Service
 @RequiredArgsConstructor
 public class AdService {
 
     private static final Logger log = LoggerFactory.getLogger(AdService.class);
     private static final double DEFAULT_NOTIFICATION_RADIUS_METERS = 5_000.0;
+    private static final List<AdResolutionStatus> HAPPY_ENDING_STATUSES = List.of(
+            AdResolutionStatus.FOUND,
+            AdResolutionStatus.ADOPTED
+    );
 
     private final AdRepository adRepository;
     private final UserRepository userRepository;
@@ -279,11 +287,20 @@ public class AdService {
         }
 
         ad.setActive(false);
+        ad.setResolutionStatus(AdResolutionStatus.FOUND);
         adRepository.saveAndFlush(ad);
 
         Long finderId = (request != null) ? request.finderId() : null;
         rewardService.awardLostPoint(finderId);
         log.info("Kayıp ilanı bulundu olarak işaretlendi. adId={}, ownerId={}, finderId={}", adId, owner.getUid(), finderId);
+    }
+
+    @Transactional(readOnly = true)
+    public AdCountersResponse getAdCounters() {
+        long activeAds = adRepository.countByActiveTrueAndSuspendedFalse();
+        long happyEndings = adRepository.countByResolutionStatusIn(HAPPY_ENDING_STATUSES);
+
+        return new AdCountersResponse(activeAds, happyEndings);
     }
 
     @Transactional(readOnly = true)
@@ -404,4 +421,3 @@ public class AdService {
         }
     }
 
-}
