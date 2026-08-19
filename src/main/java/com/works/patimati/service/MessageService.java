@@ -22,6 +22,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +31,7 @@ public class MessageService {
     private final UserRepository userRepository;
     private final MessageFraudFilterService fraudFilterService;
     private final SimpMessagingTemplate messagingTemplate;
+    private final NotificationService notificationService;
 
     @Transactional
     public MessageResponse sendMessage(String senderEmail, MessageSendRequest request) {
@@ -54,6 +56,18 @@ public class MessageService {
         MessageResponse response = mapToResponse(savedMessage, sender);
 
         // Anlık İletim (Broadcast) - Hem alıcının hem de gönderenin özel WebSocket kuyruğuna iletiliyor
+        notificationService.createAndSend(
+                recipient,
+                "Yeni mesaj",
+                sender.getFirstName() + " size yeni bir mesaj gönderdi.",
+                "MESSAGE",
+                Map.of(
+                        "type", "MESSAGE",
+                        "messageId", String.valueOf(savedMessage.getId()),
+                        "senderId", String.valueOf(sender.getUid())
+                )
+        );
+
         messagingTemplate.convertAndSendToUser(
                 String.valueOf(response.recipientId()),
                 "/queue/messages",

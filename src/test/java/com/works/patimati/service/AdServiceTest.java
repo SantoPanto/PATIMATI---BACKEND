@@ -48,6 +48,7 @@ class AdServiceTest {
     private ImageStorageService imageStorageService;
     private AiAnalysisPublisher aiAnalysisPublisher;
     private RewardService rewardService;
+    private NotificationService notificationService;
     private AdService adService;
 
     @BeforeEach
@@ -62,6 +63,7 @@ class AdServiceTest {
         // tutuyor ve "yayınlandı mı" doğrulaması yapılabilmesini sağlıyor.)
         aiAnalysisPublisher = mock(AiAnalysisPublisher.class);
         rewardService = mock(RewardService.class);
+        notificationService = mock(NotificationService.class);
 
         adService = new AdService(
                 adRepository,
@@ -69,7 +71,8 @@ class AdServiceTest {
                 adMapper,
                 imageStorageService,
                 aiAnalysisPublisher,
-                rewardService
+                rewardService,
+                notificationService
         );
     }
 

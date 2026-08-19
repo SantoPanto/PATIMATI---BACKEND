@@ -1,8 +1,5 @@
 package com.works.patimati.service;
 
-import com.google.firebase.messaging.FirebaseMessaging;
-import com.google.firebase.messaging.Message;
-import com.google.firebase.messaging.Notification;
 import com.works.patimati.ai.AiAnalysisPublisher;
 import com.works.patimati.dto.ad.AdCreateRequest;
 import com.works.patimati.dto.ad.AdResponse;
@@ -51,6 +48,7 @@ public class AdService {
     private final ImageStorageService imageStorageService;
     private final AiAnalysisPublisher aiAnalysisPublisher;
     private final RewardService rewardService;
+    private final NotificationService notificationService;
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
     /**
@@ -348,13 +346,6 @@ public class AdService {
                     .toList();
         }
 
-        private User findUserByEmail(String email) {
-            return userRepository.findByEmail(email)
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Oturum sahibine ait kullanıcı kaydı bulunamadı"
-                    ));
-        }
-
     public AdResponse toResponseWithTemporaryPhotoUrls(Ad ad) {
         List<String> temporaryPhotoUrls = ad.getPhotoUrls() == null
                 ? List.of()
@@ -393,14 +384,16 @@ public class AdService {
                     continue;
                 }
 
-                String fcmToken = nearbyUser.getFcmToken();
-                if (fcmToken != null && !fcmToken.isBlank()) {
-                    sendPushNotification(
-                            fcmToken,
-                            notificationTitle,
-                            notificationBody
-                    );
-                }
+                notificationService.createAndSend(
+                        nearbyUser,
+                        notificationTitle,
+                        notificationBody,
+                        "NEARBY_AD",
+                        java.util.Map.of(
+                                "type", "NEARBY_AD",
+                                "adId", String.valueOf(ad.getId())
+                        )
+                );
             }
         } catch (RuntimeException exception) {
             log.warn(
@@ -411,18 +404,4 @@ public class AdService {
         }
     }
 
-    private void sendPushNotification(String token, String title, String body) {
-        try {
-            Message message = Message.builder()
-                    .setToken(token)
-                    .setNotification(Notification.builder()
-                            .setTitle(title)
-                            .setBody(body)
-                            .build())
-                    .build();
-            FirebaseMessaging.getInstance().send(message);
-        } catch (Exception e) {
-            log.error("Push notification gönderilemedi: {}", e.getMessage());
-        }
-    }
 }
