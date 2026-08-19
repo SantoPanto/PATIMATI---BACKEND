@@ -7,6 +7,27 @@ on:
     branches: [ "main", "master", "develop" ]
 
 jobs:
+  # Göç numarası çakışması, derlemeyi beklemeden ölçülür: veritabanı gerektirmiyor
+  # ve çakışma varsa geri kalan her şey zaten anlamsız (uygulama açılmıyor).
+  goc-numarasi:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repoyu Klonla
+        uses: actions/checkout@v4
+        with:
+          # Ortak dalla karşılaştırma yapılacağı için tüm geçmiş gerekiyor.
+          fetch-depth: 0
+
+      - name: Ortak Dalı Çek
+        run: git fetch --quiet origin develop:refs/remotes/origin/develop
+
+      - name: Göç Numarası Ortak Dalda Alınmış mı
+        # Bu adımın yakaladığı durum, GocNumarasiCakismasiTest'in GÖREMEDİĞİ
+        # durumdur: dalın kendi ağacında tek bir V13 vardır, ama ortak dalda
+        # aynı numara BAŞKA bir dosyaya verilmiştir. İsteğin hedefi ortak dal
+        # değilse birleşme anında da görünmez; ancak dağıtımda patlar.
+        run: python3 scripts/goc-numarasi-denetimi.py origin/develop
+
   build:
     runs-on: ubuntu-latest
 
