@@ -345,14 +345,6 @@ public class AdService {
                     .stream()
                     // Entity doğrudan açılmaz; ilan güvenli DTO yanıtına dönüştürülür.
                     .map(this::toResponseWithTemporaryPhotoUrls)
-                    .toList();
-        }
-
-        private User findUserByEmail(String email) {
-            return userRepository.findByEmail(email)
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Oturum sahibine ait kullanıcı kaydı bulunamadı"
-                    ));
         }
 
     public AdResponse toResponseWithTemporaryPhotoUrls(Ad ad) {
