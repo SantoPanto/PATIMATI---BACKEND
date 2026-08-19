@@ -270,6 +270,47 @@ public class AdService {
         return toResponseWithTemporaryPhotoUrls(updatedAd);
     }
 
+    /**
+     * Yayından kaldırılmış bir ilanı sahibi yeniden yayına alır.
+     * <p>
+     * <b>NEDEN AYRI BİR İŞLEM:</b> {@link #updateAd} bunu yapamaz, iki sebepten —
+     * {@code AdUpdateRequest} içinde {@code active} alanı YOK, ve zaten
+     * {@code findActiveOwnedAd} yalnız AKTİF ilanı buluyor, yani pasif ilana
+     * hiçbir şekilde dokunulamıyordu. İlan yaşam döngüsü tek yönlüydü:
+     * yayından kaldırılan ilan kalıcı olarak öyle kalıyordu.
+     * <p>
+     * <b>ASKIYA ALINMIŞ İLAN YENİDEN YAYINLANAMAZ.</b> {@code suspended} alanını
+     * yalnız yönetici değiştiriyor ({@code AdminServiceImpl}); sahibin bu işlemle
+     * yönetici kararını geçersiz kılabilmesi yetki aşımı olurdu.
+     * <p>
+     * İşlem <b>etkisiz-tekrarlanabilir</b> (idempotent): zaten yayında olan ilan
+     * için hata değil, aynı sonuç döner. Çift tıklama ya da tekrar gönderilen
+     * istek kullanıcıya hata göstermemeli.
+     */
+    @Transactional
+    public AdResponse republishAd(String ownerEmail, Long adId) {
+        User owner = findUserByEmail(ownerEmail);
+        // adNotFound() bilerek kullanılmadı: onun metni "Aktif ilan bulunamadı"
+        // diyor ve bu akışta aktiflik zaten aranmıyor — yanıltıcı olurdu.
+        Ad ad = adRepository.findByIdAndUser_Uid(adId, owner.getUid())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "İlan bulunamadı: " + adId
+                ));
+
+        if (ad.isSuspended()) {
+            throw new AccessDeniedException(
+                    "Askıya alınmış ilan yeniden yayınlanamaz."
+            );
+        }
+
+        if (!ad.isActive()) {
+            ad.setActive(true);
+            ad = adRepository.saveAndFlush(ad);
+        }
+
+        return toResponseWithTemporaryPhotoUrls(ad);
+    }
+
     @Transactional
     public void deactivateAd(String ownerEmail, Long adId) {
         User owner = findUserByEmail(ownerEmail);

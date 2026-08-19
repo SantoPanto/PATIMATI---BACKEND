@@ -141,6 +141,21 @@ public class AdController {
         );
     }
 
+    /**
+     * Yayından kaldırılmış ilanı sahibi yeniden yayına alır.
+     * DELETE /{adId} ilanı silmiyor, PASİFLEŞTİRİYOR; bu da onun karşılığı.
+     * Askıya alınmış (yönetici kararı) ilanlarda 403 döner.
+     */
+    @PutMapping("/{adId}/republish")
+    public ResponseEntity<AdResponse> republishAd(
+            Authentication authentication,
+            @PathVariable @Min(1) Long adId
+    ) {
+        return ResponseEntity.ok(
+                adService.republishAd(authentication.getName(), adId)
+        );
+    }
+
     @DeleteMapping("/{adId}")
     public ResponseEntity<Void> deactivateAd(
             Authentication authentication,
