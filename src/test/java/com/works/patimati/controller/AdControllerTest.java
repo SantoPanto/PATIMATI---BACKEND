@@ -162,6 +162,48 @@ class AdControllerTest {
     }
 
     @Test
+    void shouldRejectCreateRequestWithoutImageBeforeCallingService()
+            throws Exception {
+        String requestJson = """
+            {
+              "title": "Kayıp tekir kedi",
+              "adType": "LOST",
+              "species": "CAT",
+              "lostDate": "2026-07-20",
+              "latitude": 40.195,
+              "longitude": 29.060
+            }
+            """;
+
+        MockPart adPart = new MockPart(
+                "ad",
+                "ad",
+                requestJson.getBytes(StandardCharsets.UTF_8)
+        );
+        adPart.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+
+        /*
+         * B-8 Controller testi:
+         * İlan bilgileri geçerli olsa bile "images" alanı gönderilmediği
+         * için isteğin 400 Bad Request ile reddedilmesi gerekir.
+         */
+        mockMvc.perform(
+                        multipart("/api/ads")
+                                .part(adPart)
+                                .principal(authentication())
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.title")
+                        .value("Geçersiz istek"));
+
+        /*
+         * Eksik fotoğraf Controller seviyesinde tespit edildiği için
+         * Service katmanında hiçbir işlem başlamamalıdır.
+         */
+        verifyNoInteractions(adService);
+    }
+
+    @Test
     void shouldListActiveAdsWithPagination() throws Exception {
         AdResponse response = response();
 

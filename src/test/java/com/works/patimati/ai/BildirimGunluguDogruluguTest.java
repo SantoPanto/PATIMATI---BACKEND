@@ -10,6 +10,7 @@ import com.works.patimati.entity.User;
 import com.works.patimati.notification.PushNotificationService;
 import com.works.patimati.notification.PushResult;
 import com.works.patimati.repository.AdRepository;
+import com.works.patimati.service.AdMatchService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -54,6 +55,14 @@ class BildirimGunluguDogruluguTest {
     private static final long YENI_ILAN_ID = 100L;
     private static final long ESLESEN_ILAN_ID = 200L;
 
+    /**
+     * Bu testin fikstüründe kullanıcıların {@code uid}'i yok ⇒ eşleşme satırı
+     * yazılmaz ve {@link AdMatchService} hiç çağrılmaz. Bilerek öyle: buranın
+     * konusu <b>günlük doğruluğu</b>, kayıt değil. Kayıt ve tekrar koruması
+     * {@code EslesmeKaydiVeTekrarKorumasiTest} ile ölçülüyor.
+     */
+    private static final double ESIK = 0.80;
+
     private AdRepository adRepository;
     private SahtePushServisi push;
     private AiMatchNotifier notifier;
@@ -66,7 +75,7 @@ class BildirimGunluguDogruluguTest {
     void hazirla() {
         adRepository = mock(AdRepository.class);
         push = new SahtePushServisi();
-        notifier = new AiMatchNotifier(adRepository, push);
+        notifier = new AiMatchNotifier(adRepository, push, mock(AdMatchService.class));
 
         LoggerContext ctx = (LoggerContext) LoggerFactory.getILoggerFactory();
         logger = ctx.getLogger(AiMatchNotifier.class);
@@ -97,7 +106,7 @@ class BildirimGunluguDogruluguTest {
         eslesenIlanlariKur();
         push.sirayaKoy(PushResult.PUSH_DISABLED, PushResult.PUSH_DISABLED);
 
-        notifier.notifyMatches(yeniIlan(), List.of(gucluEslesme()));
+        notifier.recordAndNotify(yeniIlan(), List.of(gucluEslesme()), ESIK);
 
         // Ön koşul: gönderim GERÇEKTEN denendi. Denenmediyse aşağıdaki
         // "INFO yok" iddiası doğru çıkar ama yanlış sebeple.
@@ -128,7 +137,7 @@ class BildirimGunluguDogruluguTest {
         eslesenIlanlariKur();
         push.sirayaKoy(PushResult.SENT, PushResult.SENT);
 
-        notifier.notifyMatches(yeniIlan(), List.of(gucluEslesme()));
+        notifier.recordAndNotify(yeniIlan(), List.of(gucluEslesme()), ESIK);
 
         assertThat(seviyeSayisi(Level.INFO))
                 .withFailMessage("İki bildirim de gitti ama başarı satırı %d kez yazıldı: %s",
@@ -145,7 +154,7 @@ class BildirimGunluguDogruluguTest {
         eslesenIlanlariKur();
         push.sirayaKoy(PushResult.SENT, PushResult.NO_TOKEN);
 
-        notifier.notifyMatches(yeniIlan(), List.of(gucluEslesme()));
+        notifier.recordAndNotify(yeniIlan(), List.of(gucluEslesme()), ESIK);
 
         assertThat(seviyeSayisi(Level.INFO))
                 .withFailMessage("Kısmi teslimatta başarı satırı yazılmadı: %s", mesajlar())
@@ -166,7 +175,7 @@ class BildirimGunluguDogruluguTest {
     void zayifAdayBildirimTetiklemez() {
         eslesenIlanlariKur();
 
-        notifier.notifyMatches(yeniIlan(), List.of(zayifEslesme()));
+        notifier.recordAndNotify(yeniIlan(), List.of(zayifEslesme()), ESIK);
 
         assertThat(push.cagrilar)
                 .withFailMessage("""
@@ -187,7 +196,7 @@ class BildirimGunluguDogruluguTest {
         when(adRepository.findById(anyLong())).thenReturn(Optional.of(eslesen));
         push.sirayaKoy(PushResult.SENT);
 
-        notifier.notifyMatches(yeniIlan(), List.of(gucluEslesme()));
+        notifier.recordAndNotify(yeniIlan(), List.of(gucluEslesme()), ESIK);
 
         assertThat(push.cagrilar)
                 .withFailMessage("""
@@ -206,7 +215,7 @@ class BildirimGunluguDogruluguTest {
         eslesenIlanlariKur();
         push.sirayaKoy(PushResult.SENT, PushResult.SENT);
 
-        notifier.notifyMatches(yeniIlan(), List.of(gucluEslesme()));
+        notifier.recordAndNotify(yeniIlan(), List.of(gucluEslesme()), ESIK);
 
         assertThat(push.cagrilar).hasSize(2);
 

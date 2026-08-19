@@ -40,10 +40,10 @@ jobs:
       - name: Repoyu Klonla
         uses: actions/checkout@v4
 
-      - name: Java JDK 17 Kurulumu
+      - name: Java JDK 21 Kurulumu
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: 'temurin'
           cache: maven
 
