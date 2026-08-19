@@ -40,6 +40,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 
+import static java.util.stream.Collectors.toList;
+
 @Service
 @RequiredArgsConstructor
 public class AdService {
@@ -362,7 +364,6 @@ public class AdService {
                     .map(this::toResponseWithTemporaryPhotoUrls)
                     .toList();
         }
-
 
     public AdResponse toResponseWithTemporaryPhotoUrls(Ad ad) {
         List<String> temporaryPhotoUrls = ad.getPhotoUrls() == null
