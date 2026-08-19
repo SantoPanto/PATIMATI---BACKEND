@@ -1,5 +1,7 @@
 # Veritabanı ve Flyway Ayarları
 spring:
+  server:
+    forward-headers-strategy: native
   # --- Dosya Yükleme Ayarları ---
   servlet:
     multipart:
