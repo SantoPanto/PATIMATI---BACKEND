@@ -38,6 +38,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 
+import static java.util.stream.Collectors.toList;
+
 @Service
 @RequiredArgsConstructor
 public class AdService {
@@ -345,6 +347,7 @@ public class AdService {
                     .stream()
                     // Entity doğrudan açılmaz; ilan güvenli DTO yanıtına dönüştürülür.
                     .map(this::toResponseWithTemporaryPhotoUrls)
+                    .toList();
         }
 
     public AdResponse toResponseWithTemporaryPhotoUrls(Ad ad) {
