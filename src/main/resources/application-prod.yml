@@ -2,16 +2,18 @@
 # Bu dosya application.yml içindeki "localhost" ayarlarını canlı ortama göre ezer.
 
 app:
-  # Frontend adresi canlı domain ile değiştirilir (CORS için)
+  # Frontend adresi canlı domain ile değiştirilir (CORS ve OAuth2 yönlendirmesi için)
   frontend:
-    url: https://patimati.me
+    url: ${FRONTEND_URL:https://patimati.me}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:https://patimati.me,https://www.patimati.me}
   # Cloudflare R2 Nesne Depolama Yapılandırması
   storage:
     r2:
       public-domain: ${R2_PUBLIC_DOMAIN}
   # WebSocket origin adresi canlı domain ile güncellenir
   websocket:
-    allowed-origins: https://patimati.me
+    allowed-origins: ${WEBSOCKET_ALLOWED_ORIGINS:https://patimati.me,https://www.patimati.me}
 
 aws:
   s3:
