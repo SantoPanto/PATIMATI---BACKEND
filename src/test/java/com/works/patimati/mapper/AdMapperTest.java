@@ -51,7 +51,7 @@ class AdMapperTest {
                 null,
                 null,
                 "123 456 789",
-                LocalDate.now(),
+                "2026-08-20",
                 "  Notch on the left ear  ",
                 new BigDecimal("40.195000"),
                 new BigDecimal("29.060000")

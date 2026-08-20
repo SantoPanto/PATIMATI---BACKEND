@@ -1,6 +1,7 @@
 package com.works.patimati.service.impl;
 
 import com.works.patimati.dto.ad.AdResponse;
+import java.time.LocalDate;
 import com.works.patimati.dto.ad.AdoptionAdCreateRequest;
 import com.works.patimati.dto.ad.AdoptionAdUpdateRequest;
 import com.works.patimati.dto.ad.ResolveAdoptionAdRequest;
@@ -104,7 +105,7 @@ public class AdoptionServiceImpl implements AdoptionService {
                         ? request.eyeColor()
                         : EyeColor.UNKNOWN)
                 .microchipNumber(request.microchipNumber())
-                .lostDate(request.date())
+                .lostDate(parseDate(request.date()))
                 .location(location)
                 .photoUrls(photoReferences)
                 .user(owner)
@@ -297,5 +298,21 @@ public class AdoptionServiceImpl implements AdoptionService {
         if (ad.getUser() == null || !ad.getUser().getEmail().equalsIgnoreCase(ownerEmail)) {
             throw new IllegalStateException("Bu sahiplendirme ilanı üzerinde işlem yapma yetkiniz bulunmamaktadır.");
         }
+    }
+
+    private LocalDate parseDate(String dateStr) {
+        if (dateStr == null || dateStr.isBlank()) {
+            return null;
+        }
+        LocalDate date;
+        try {
+            date = LocalDate.parse(dateStr.trim());
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Tarih formatı yyyy-MM-dd olmalıdır");
+        }
+        if (date.isAfter(LocalDate.now())) {
+            throw new IllegalArgumentException("Tarih gelecekte bir tarih olamaz");
+        }
+        return date;
     }
 }

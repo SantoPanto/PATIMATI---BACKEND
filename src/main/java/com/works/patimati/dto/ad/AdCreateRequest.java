@@ -63,13 +63,10 @@ public record AdCreateRequest(
         @Size(max = 32, message = "Microchip number can contain at most 32 characters")
         String microchipNumber,
 
-        @NotNull(message = "Tarih alanı boş bırakılamaz")
-        @PastOrPresent(message = "Lost date cannot be in the future")
-        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
-        @JsonDeserialize(using = LocalDateDeserializer.class)
-        @JsonSerialize(using = LocalDateSerializer.class)
+        @NotBlank(message = "Tarih alanı boş bırakılamaz")
+        @jakarta.validation.constraints.Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}$", message = "Tarih formatı yyyy-MM-dd olmalıdır")
         @JsonAlias({"date", "eventDate", "incidentDate"})
-        LocalDate lostDate,
+        String lostDate,
 
         @Size(max = 1000, message = "Distinctive marks can contain at most 1000 characters")
         String distinctiveMarks,
