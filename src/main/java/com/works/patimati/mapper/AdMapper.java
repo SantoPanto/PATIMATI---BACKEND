@@ -137,7 +137,7 @@ public class AdMapper {
                 ad.getEarTagStatus(),
                 ad.getEarNotchStatus(),
                 ad.getMicrochipNumber() != null && !ad.getMicrochipNumber().isBlank(),
-                ad.getLostDate(),
+                ad.getLostDate() != null ? ad.getLostDate().toString() : null,
                 ad.getDistinctiveMarks(),
                 immutablePhotoUrls(photoUrls),
                 location == null ? null : location.getY(),
