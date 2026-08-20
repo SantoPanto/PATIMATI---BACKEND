@@ -52,6 +52,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         // 1. Authorization başlığını kontrol et
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("No Authorization Bearer header found for path: " + request.getRequestURI());
+            }
             filterChain.doFilter(request, response);
             return;
         }
@@ -67,33 +70,41 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
                 if (jwtService.validateToken(jwt)) {
                     var userOpt = userRepository.findByEmail(userEmail);
-                    if (userOpt.isPresent() && !userOpt.get().isEnabled()) {
+                    if (userOpt.isEmpty()) {
+                        logger.warn("JWT validation succeeded but user not found in database: email=" + userEmail + ", path=" + request.getRequestURI());
+                    } else if (!userOpt.get().isEnabled()) {
+                        logger.warn("Disabled user attempted access: email=" + userEmail + ", path=" + request.getRequestURI());
                         response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                         response.setContentType("application/json;charset=UTF-8");
                         response.getWriter().write("{\"title\":\"Hesap Engellendi\",\"status\":403,\"detail\":\"Hesabınız engellenmiştir.\"}");
                         return;
+                    } else {
+                        String role = jwtService.extractRole(jwt);
+
+                        // Rol bilgisiyle yetkilendirme objesini oluştur
+                        SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + role);
+
+                        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                                userEmail,
+                                null, // Parola yok çünkü JWT tabanlı
+                                Collections.singletonList(authority)
+                        );
+
+                        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+                        // 4. SecurityContext'e yerleştir
+                        SecurityContextHolder.getContext().setAuthentication(authToken);
+                        if (logger.isDebugEnabled()) {
+                            logger.debug("Successfully set SecurityContext for user email=" + userEmail + ", path=" + request.getRequestURI());
+                        }
                     }
-
-                    String role = jwtService.extractRole(jwt);
-
-                    // Rol bilgisiyle yetkilendirme objesini oluştur
-                    SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + role);
-
-                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                            userEmail,
-                            null, // Parola yok çünkü JWT tabanlı
-                            Collections.singletonList(authority)
-                    );
-
-                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
-                    // 4. SecurityContext'e yerleştir
-                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                } else {
+                    logger.warn("JWT token is expired or invalid for path: " + request.getRequestURI());
                 }
             }
         } catch (Exception ex) {
-            // Token süresi geçmiş veya geçersiz (İsteğe bağlı loglama yapılabilir)
-            logger.error("JWT Authentication failed: " + ex.getMessage());
+            // Token süresi geçmiş veya geçersiz
+            logger.error("JWT Authentication failed for path " + request.getRequestURI() + ": " + ex.getMessage());
         }
 
         filterChain.doFilter(request, response);

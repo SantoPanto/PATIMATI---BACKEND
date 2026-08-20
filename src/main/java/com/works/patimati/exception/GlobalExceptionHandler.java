@@ -113,12 +113,13 @@ public class GlobalExceptionHandler {
     ) {
         Map<String, String> fieldErrors = new LinkedHashMap<>();
 
-        exception.getBindingResult()
-                .getFieldErrors()
-                .forEach(error -> fieldErrors.putIfAbsent(
-                        error.getField(),
-                        error.getDefaultMessage()
-                ));
+        for (org.springframework.validation.FieldError error : exception.getBindingResult().getFieldErrors()) {
+            String field = error.getField();
+            String message = error.getDefaultMessage();
+            if (!fieldErrors.containsKey(field) || "NotBlank".equals(error.getCode()) || "NotNull".equals(error.getCode()) || "NotEmpty".equals(error.getCode())) {
+                fieldErrors.put(field, message);
+            }
+        }
 
         exception.getBindingResult()
                 .getGlobalErrors()
@@ -263,7 +264,9 @@ public class GlobalExceptionHandler {
             MethodArgumentTypeMismatchException.class,
             MissingServletRequestPartException.class,
             MissingServletRequestParameterException.class,
-            MultipartException.class
+            MultipartException.class,
+            com.fasterxml.jackson.core.JsonProcessingException.class,
+            com.fasterxml.jackson.databind.exc.InvalidDefinitionException.class
     })
     public ResponseEntity<ProblemDetail> handleInvalidRequest(
             Exception exception,

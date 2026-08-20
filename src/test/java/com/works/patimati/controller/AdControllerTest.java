@@ -119,6 +119,52 @@ class AdControllerTest {
     }
 
     @Test
+    void shouldCreateAdWithSingularColorStringAndPetColorDeserializer() throws Exception {
+        AdResponse response = response();
+
+        String requestJson = """
+                {
+                  "title": "Kayıp tekir kedi",
+                  "adType": "LOST",
+                  "species": "CAT",
+                  "color": "BLACK",
+                  "lostDate": "2026-07-20",
+                  "latitude": 40.195,
+                  "longitude": 29.060
+                }
+                """;
+
+        MockPart adPart = new MockPart(
+                "ad",
+                "ad",
+                requestJson.getBytes(StandardCharsets.UTF_8)
+        );
+        adPart.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+
+        MockMultipartFile image = new MockMultipartFile(
+                "images",
+                "cat.jpg",
+                MediaType.IMAGE_JPEG_VALUE,
+                new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF}
+        );
+
+        when(adService.createAd(
+                eq("owner@patimati.com"),
+                any(),
+                anyList()
+        )).thenReturn(response);
+
+        mockMvc.perform(
+                        multipart("/api/ads")
+                                .part(adPart)
+                                .file(image)
+                                .principal(authentication())
+                )
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(7));
+    }
+
+    @Test
     void shouldRejectInvalidCreateRequestBeforeCallingService()
             throws Exception {
         String requestJson = """
