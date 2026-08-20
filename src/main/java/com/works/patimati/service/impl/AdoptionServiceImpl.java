@@ -104,6 +104,7 @@ public class AdoptionServiceImpl implements AdoptionService {
                         ? request.eyeColor()
                         : EyeColor.UNKNOWN)
                 .microchipNumber(request.microchipNumber())
+                .lostDate(request.date())
                 .location(location)
                 .photoUrls(photoReferences)
                 .user(owner)

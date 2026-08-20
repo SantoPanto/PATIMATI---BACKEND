@@ -60,6 +60,7 @@ class AdoptionControllerTest {
                 {
                   "title": "Sahiplendirilecek Sevimli Kedi",
                   "species": "CAT",
+                  "date": "2026-08-20",
                   "latitude": 40.195,
                   "longitude": 29.060
                 }
@@ -103,6 +104,7 @@ class AdoptionControllerTest {
         String requestJson = """
                 {
                   "title": "",
+                  "date": "2026-08-20",
                   "latitude": 40.195,
                   "longitude": 29.060
                 }
@@ -143,7 +145,8 @@ class AdoptionControllerTest {
         String requestJson = """
                 {
                   "title": "Sahiplendirilecek Sevimli Kedi",
-                  "species": "CAT"
+                  "species": "CAT",
+                  "date": "2026-08-20"
                 }
                 """;
 
@@ -176,11 +179,90 @@ class AdoptionControllerTest {
     }
 
     @Test
+    void shouldReturn400BadRequestWhenDateIsMissing() throws Exception {
+        String requestJson = """
+                {
+                  "title": "Sahiplendirilecek Sevimli Kedi",
+                  "species": "CAT",
+                  "latitude": 40.195,
+                  "longitude": 29.060
+                }
+                """;
+
+        MockPart adPart = new MockPart(
+                "ad",
+                "ad",
+                requestJson.getBytes(StandardCharsets.UTF_8)
+        );
+        adPart.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+
+        MockMultipartFile image = new MockMultipartFile(
+                "images",
+                "cat.jpg",
+                MediaType.IMAGE_JPEG_VALUE,
+                new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF}
+        );
+
+        mockMvc.perform(
+                        multipart("/api/adoptions")
+                                .part(adPart)
+                                .file(image)
+                                .principal(authentication())
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.title").value("Doğrulama hatası"))
+                .andExpect(jsonPath("$.invalid_params.date").value("Tarih alanı boş bırakılamaz"))
+                .andExpect(jsonPath("$.validationErrors.date").exists());
+
+        verifyNoInteractions(adoptionService);
+    }
+
+    @Test
+    void shouldReturn400BadRequestWhenDateIsInFuture() throws Exception {
+        String requestJson = """
+                {
+                  "title": "Sahiplendirilecek Sevimli Kedi",
+                  "species": "CAT",
+                  "date": "2099-12-31",
+                  "latitude": 40.195,
+                  "longitude": 29.060
+                }
+                """;
+
+        MockPart adPart = new MockPart(
+                "ad",
+                "ad",
+                requestJson.getBytes(StandardCharsets.UTF_8)
+        );
+        adPart.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+
+        MockMultipartFile image = new MockMultipartFile(
+                "images",
+                "cat.jpg",
+                MediaType.IMAGE_JPEG_VALUE,
+                new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF}
+        );
+
+        mockMvc.perform(
+                        multipart("/api/adoptions")
+                                .part(adPart)
+                                .file(image)
+                                .principal(authentication())
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.title").value("Doğrulama hatası"))
+                .andExpect(jsonPath("$.invalid_params.date").value("Tarih gelecekte bir tarih olamaz"));
+
+        verifyNoInteractions(adoptionService);
+    }
+
+    @Test
     void shouldReturn400BadRequestWhenImagesPartIsMissing() throws Exception {
         String requestJson = """
                 {
                   "title": "Sahiplendirilecek Sevimli Kedi",
                   "species": "CAT",
+                  "date": "2026-08-20",
                   "latitude": 40.195,
                   "longitude": 29.060
                 }
