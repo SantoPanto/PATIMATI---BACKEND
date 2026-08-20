@@ -108,7 +108,7 @@ class AdoptionServiceImplTest {
                 null,
                 null,
                 null,
-                testDate,
+                "2026-08-20",
                 BigDecimal.valueOf(41.0),
                 BigDecimal.valueOf(29.0)
         );

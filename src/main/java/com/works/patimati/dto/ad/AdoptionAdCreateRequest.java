@@ -60,13 +60,10 @@ public record AdoptionAdCreateRequest(
         @Size(max = 32, message = "Mikroçip numarası en fazla 32 karakter olabilir")
         String microchipNumber,
 
-        @NotNull(message = "Tarih alanı boş bırakılamaz")
-        @PastOrPresent(message = "Tarih gelecekte bir tarih olamaz")
-        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
-        @JsonDeserialize(using = LocalDateDeserializer.class)
-        @JsonSerialize(using = LocalDateSerializer.class)
+        @NotBlank(message = "Tarih alanı boş bırakılamaz")
+        @jakarta.validation.constraints.Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}$", message = "Tarih formatı yyyy-MM-dd olmalıdır")
         @JsonAlias({"lostDate", "eventDate", "incidentDate"})
-        LocalDate date,
+        String date,
 
         @NotNull(message = "Enlem (Latitude) zorunludur")
         @DecimalMin(value = "-90.0", message = "Enlem en az -90 olabilir")

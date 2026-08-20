@@ -50,7 +50,7 @@ public class AdMapper {
                 .earTagStatus(defaultValue(request.earTagStatus(), PresenceStatus.UNKNOWN))
                 .earNotchStatus(defaultValue(request.earNotchStatus(), PresenceStatus.UNKNOWN))
                 .microchipNumber(normalizeMicrochipNumber(request.microchipNumber()))
-                .lostDate(request.lostDate())
+                .lostDate(parseDate(request.lostDate()))
                 .distinctiveMarks(normalizeNullable(request.distinctiveMarks()))
                 .location(toPoint(request.latitude(), request.longitude()))
                 .build();
@@ -99,7 +99,7 @@ public class AdMapper {
         if (yeniMikrocipNumarasi != null) {
             ad.setMicrochipNumber(yeniMikrocipNumarasi);
         }
-        ad.setLostDate(request.lostDate());
+        ad.setLostDate(parseDate(request.lostDate()));
         ad.setDistinctiveMarks(normalizeNullable(request.distinctiveMarks()));
         ad.setLocation(toPoint(request.latitude(), request.longitude()));
 
@@ -239,5 +239,21 @@ public class AdMapper {
                 .collect(Collectors.joining(" "));
 
         return displayName.isBlank() ? null : displayName;
+    }
+
+    private java.time.LocalDate parseDate(String dateStr) {
+        if (dateStr == null || dateStr.isBlank()) {
+            return null;
+        }
+        java.time.LocalDate date;
+        try {
+            date = java.time.LocalDate.parse(dateStr.trim());
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Tarih formatı yyyy-MM-dd olmalıdır");
+        }
+        if (date.isAfter(java.time.LocalDate.now())) {
+            throw new IllegalArgumentException("Tarih gelecekte bir tarih olamaz");
+        }
+        return date;
     }
 }

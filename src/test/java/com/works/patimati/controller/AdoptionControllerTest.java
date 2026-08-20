@@ -28,6 +28,7 @@ import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -243,6 +244,9 @@ class AdoptionControllerTest {
                 new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF}
         );
 
+        when(adoptionService.createAdoptionAd(anyString(), any(), anyList()))
+                .thenThrow(new IllegalArgumentException("Tarih gelecekte bir tarih olamaz"));
+
         mockMvc.perform(
                         multipart("/api/adoptions")
                                 .part(adPart)
@@ -250,10 +254,8 @@ class AdoptionControllerTest {
                                 .principal(authentication())
                 )
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.title").value("Doğrulama hatası"))
-                .andExpect(jsonPath("$.invalid_params.date").value("Tarih gelecekte bir tarih olamaz"));
-
-        verifyNoInteractions(adoptionService);
+                .andExpect(jsonPath("$.title").value("Geçersiz parametre"))
+                .andExpect(jsonPath("$.detail").value("Tarih gelecekte bir tarih olamaz"));
     }
 
     @Test
@@ -289,8 +291,8 @@ class AdoptionControllerTest {
                                 .principal(authentication())
                 )
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.title").value("Geçersiz JSON Verisi"))
-                .andExpect(jsonPath("$.detail").value("İstek gövdesi (JSON) okunamadı veya veri formatı hatalı. Lütfen tarih gibi alanların formatını (yyyy-MM-dd) kontrol edin."));
+                .andExpect(jsonPath("$.title").value("Doğrulama hatası"))
+                .andExpect(jsonPath("$.invalid_params.date").value("Tarih formatı yyyy-MM-dd olmalıdır"));
 
         verifyNoInteractions(adoptionService);
     }
