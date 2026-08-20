@@ -23,6 +23,26 @@ import java.util.Optional;
  * <b>eklenemez</b>: eklenirse kullanıcı hem kendi satırını hem de karşı tarafın
  * satırını görür ve <b>aynı çift listede iki kez çıkar</b>. Bu koşullar
  * {@code user_id} sütunu var olmadan önceki mimariden kalmıştı ve kusur buydu.
+ *
+ * <p>⚠ <b>BU ÇÖZÜMÜN BAĞLI OLDUĞU KOŞUL — kaldırmadan önce oku.</b> Satır
+ * sahipliği tek başına yetiyor, çünkü bir çift <b>tek yönde</b> yazılıyor:
+ * {@code AiMatchNotifier} kaydı hep <i>analiz edilen ilan → aday</i> yönüyle
+ * yazar ve bir ilan <b>bir kez</b> analiz edilir — {@code AdService} yalnız
+ * ilan <b>oluşturulurken</b> {@code aiStatus}'ü {@code PENDING} yapar,
+ * güncellerken yapmaz. Ayrıca aday sorgusu {@code ai_status = 'DONE'} istediği
+ * için sonradan gelen ilan daima {@code sourceAd} olur.
+ * <b>Ölçüldü: veritabanında ters yönde yazılmış çift sayısı 0.</b>
+ *
+ * <p>Bu koşul bozulursa — yani düzenleme, yeniden yayınlama ya da elle bir
+ * yeniden analiz {@code aiStatus}'ü tekrar {@code PENDING} yaparsa — aynı çift
+ * için <b>ters yönde ikinci bir satır</b> doğar. O satırın da {@code user_id}'si
+ * aynı kullanıcıdır, dolayısıyla bu sorgu ikisini birden döndürür ve
+ * {@code AdMatchService.mapToDTO} ikisini de aynı
+ * {@code (myAdId, partnerAdId)} çiftine yönlendirir ⇒ <b>mükerrerlik geri
+ * gelir</b>. Raporun önerdiği {@code LEAST/GREATEST} normalleştirmesi bugünkü
+ * veride etkisizdir ama <b>tam olarak bu durumu</b> kapatır. Yeniden analiz
+ * eklenecekse listeleme normalleştirilmiş çifte göre tekilleştirilmeli.
+ * (Madde 18'in "Düzenle" işi bu koşula doğrudan dokunuyor.)
  */
 @Repository
 public interface AdMatchRepository extends JpaRepository<AdMatch, Long> {
