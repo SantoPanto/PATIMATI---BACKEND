@@ -10,11 +10,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.security.core.Authentication;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping({"/api/auth", "/api/v1/users"})
 @RequiredArgsConstructor
 public class UserController {
 
@@ -69,6 +69,25 @@ public class UserController {
     @PostMapping("/reset-password")
     public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         return passwordResetService.processResetPassword(request);
+    }
+
+    /**
+     * Giriş yapmış kullanıcının şifresini değiştirir.
+     * PUT /api/auth/change-password
+     */
+    @PutMapping("/change-password")
+    public ResponseEntity<?> changePassword(
+            Authentication authentication,
+            @Valid @RequestBody ChangePasswordRequest request
+    ) {
+        if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getPrincipal())) {
+            authService.changePassword(
+                    authentication.getName(),
+                    request
+            );
+            return ResponseEntity.noContent().build();
+        }
+        return authService.changePassword(request);
     }
 
     @GetMapping("/userlist")

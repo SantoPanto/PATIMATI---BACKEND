@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -18,7 +19,7 @@ import java.net.URI;
  */
 @Validated
 @RestController
-@RequestMapping("/api/adoptions")
+@RequestMapping({"/api/adoptions", "/api/v1/adoption-complaints", "/api/adoptions/complaints"})
 @RequiredArgsConstructor
 public class AdoptionComplaintController {
 
@@ -43,5 +44,19 @@ public class AdoptionComplaintController {
         return ResponseEntity
                 .created(URI.create("/api/adoptions/complaints/" + response.id()))
                 .body(response);
+    }
+
+    /**
+     * Sahiplendirme ilanı şikayetini çözüldü olarak işaretleme uç noktası (Sadece Admin).
+     * PATCH /api/v1/adoption-complaints/{id}/resolve
+     * PATCH /api/adoptions/complaints/{id}/resolve
+     */
+    @PatchMapping({"/complaints/{id}/resolve", "/{id}/resolve"})
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ComplaintResponse> resolveAdoptionComplaint(
+            @PathVariable @Min(1) Long id
+    ) {
+        ComplaintResponse response = adoptionService.resolveAdoptionComplaint(id);
+        return ResponseEntity.ok(response);
     }
 }

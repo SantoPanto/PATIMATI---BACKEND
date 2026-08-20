@@ -58,4 +58,9 @@ public interface AdoptionService {
             Long adId,
             AdComplaintRequestDTO request
     );
+
+    /**
+     * Sahiplendirme ilanına yapılan şikayeti çözer (COZULDU yapar).
+     */
+    ComplaintResponse resolveAdoptionComplaint(Long complaintId);
 }

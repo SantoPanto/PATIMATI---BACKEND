@@ -104,6 +104,7 @@ public class AdoptionServiceImpl implements AdoptionService {
                         ? request.eyeColor()
                         : EyeColor.UNKNOWN)
                 .microchipNumber(request.microchipNumber())
+                .lostDate(request.date())
                 .location(location)
                 .photoUrls(photoReferences)
                 .user(owner)
@@ -254,6 +255,38 @@ public class AdoptionServiceImpl implements AdoptionService {
                 savedComplaint.getDescription(),
                 savedComplaint.getStatus(),
                 savedComplaint.getCreatedAt()
+        );
+    }
+
+    @Transactional
+    @Override
+    public ComplaintResponse resolveAdoptionComplaint(Long complaintId) {
+        AdoptionComplaint complaint = adoptionComplaintRepository.findById(complaintId)
+                .orElseThrow(() -> new ResourceNotFoundException("Sahiplendirme ilanı şikayeti bulunamadı ID: " + complaintId));
+
+        complaint.setStatus(ComplaintStatus.COZULDU);
+        AdoptionComplaint updatedComplaint = adoptionComplaintRepository.save(complaint);
+        log.info("Sahiplendirme ilanı şikayeti çözüldü. complaintId={}", complaintId);
+
+        String reporterEmail = userRepository.findById(updatedComplaint.getReporterId())
+                .map(User::getEmail)
+                .orElse(null);
+
+        Long adOwnerUid = adRepository.findById(updatedComplaint.getAdId())
+                .filter(ad -> ad.getUser() != null)
+                .map(ad -> ad.getUser().getUid())
+                .orElse(null);
+
+        return new ComplaintResponse(
+                updatedComplaint.getId(),
+                updatedComplaint.getReporterId(),
+                reporterEmail,
+                updatedComplaint.getAdId(),
+                adOwnerUid,
+                updatedComplaint.getReason(),
+                updatedComplaint.getDescription(),
+                updatedComplaint.getStatus(),
+                updatedComplaint.getCreatedAt()
         );
     }
 

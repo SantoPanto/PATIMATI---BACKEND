@@ -5,11 +5,13 @@ import com.works.patimati.dto.ad.AdCreateRequest;
 import com.works.patimati.dto.ad.AdCountersResponse;
 import com.works.patimati.dto.ad.AdResponse;
 import com.works.patimati.dto.ad.AdUpdateRequest;
+import com.works.patimati.dto.ad.PosterSettingsUpdateRequest;
 import com.works.patimati.dto.ad.ResolveLostAdRequest;
 import com.works.patimati.entity.Ad;
 import com.works.patimati.entity.User;
 import com.works.patimati.entity.enums.AiStatus;
 import com.works.patimati.entity.enums.AdResolutionStatus;
+import com.works.patimati.exception.BusinessException;
 import com.works.patimati.exception.ResourceNotFoundException;
 import com.works.patimati.mapper.AdMapper;
 import com.works.patimati.repository.AdRepository;
@@ -262,10 +264,87 @@ public class AdService {
         User owner = findUserByEmail(ownerEmail);
         Ad ad = findActiveOwnedAd(adId, owner.getUid());
 
+        if (ad.getAdType() == Ad.AdType.LOST || ad.getAdType() == Ad.AdType.FOUND) {
+            throw new BusinessException(
+                    "Kayıp ve Bulundu ilanlarında bilgi bütünlüğünü korumak amacıyla temel bilgilerin güncellenmesine izin verilmemektedir."
+            );
+        }
+
         adMapper.updateEntity(ad, request);
         Ad updatedAd = adRepository.saveAndFlush(ad);
 
         return toResponseWithTemporaryPhotoUrls(updatedAd);
+    }
+
+    @Transactional
+    public AdResponse updatePosterSettings(
+            Long adId,
+            PosterSettingsUpdateRequest request,
+            String currentUserEmail
+    ) {
+        User owner = findUserByEmail(currentUserEmail);
+        Ad ad = adRepository.findById(adId)
+                .orElseThrow(() -> adNotFound(adId));
+
+        if (ad.getUser() == null || !ad.getUser().getUid().equals(owner.getUid())) {
+            throw new AccessDeniedException("Bu ilanın afiş ayarlarını yalnızca ilan sahibi güncelleyebilir.");
+        }
+
+        if (request != null) {
+            if (request.getIsPosterAllowed() != null) {
+                ad.setIsPosterAllowed(request.getIsPosterAllowed());
+            }
+            if (request.getShowEmailOnPoster() != null) {
+                ad.setShowEmailOnPoster(request.getShowEmailOnPoster());
+            }
+            if (request.getShowPhoneOnPoster() != null) {
+                ad.setShowPhoneOnPoster(request.getShowPhoneOnPoster());
+            }
+        }
+
+        Ad updatedAd = adRepository.saveAndFlush(ad);
+        return toResponseWithTemporaryPhotoUrls(updatedAd);
+    }
+
+    /**
+     * Yayından kaldırılmış bir ilanı sahibi yeniden yayına alır.
+     * <p>
+     * <b>NEDEN AYRI BİR İŞLEM:</b> {@link #updateAd} bunu yapamaz, iki sebepten —
+     * {@code AdUpdateRequest} içinde {@code active} alanı YOK, ve zaten
+     * {@code findActiveOwnedAd} yalnız AKTİF ilanı buluyor, yani pasif ilana
+     * hiçbir şekilde dokunulamıyordu. İlan yaşam döngüsü tek yönlüydü:
+     * yayından kaldırılan ilan kalıcı olarak öyle kalıyordu.
+     * <p>
+     * <b>ASKIYA ALINMIŞ İLAN YENİDEN YAYINLANAMAZ.</b> {@code suspended} alanını
+     * yalnız yönetici değiştiriyor ({@code AdminServiceImpl}); sahibin bu işlemle
+     * yönetici kararını geçersiz kılabilmesi yetki aşımı olurdu.
+     * <p>
+     * İşlem <b>etkisiz-tekrarlanabilir</b> (idempotent): zaten yayında olan ilan
+     * için hata değil, aynı sonuç döner. Çift tıklama ya da tekrar gönderilen
+     * istek kullanıcıya hata göstermemeli.
+     */
+    @Transactional
+    public AdResponse republishAd(String ownerEmail, Long adId) {
+        User owner = findUserByEmail(ownerEmail);
+        // adNotFound() bilerek kullanılmadı: onun metni "Aktif ilan bulunamadı"
+        // diyor ve bu akışta aktiflik zaten aranmıyor — yanıltıcı olurdu.
+        Ad ad = adRepository.findByIdAndUser_Uid(adId, owner.getUid())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "İlan bulunamadı: " + adId
+                ));
+
+        if (ad.isSuspended()) {
+            throw new AccessDeniedException(
+                    "Askıya alınmış ilan yeniden yayınlanamaz."
+            );
+        }
+
+        if (!ad.isActive()) {
+            ad.setActive(true);
+            ad = adRepository.saveAndFlush(ad);
+        }
+
+        return toResponseWithTemporaryPhotoUrls(ad);
     }
 
     @Transactional
@@ -368,14 +447,7 @@ public class AdService {
                 ? List.of()
                 : ad.getPhotoUrls()
                 .stream()
-                .map(url -> {
-                    // TEST BYPASS EKLENTİSİ
-                    if (url != null && url.contains("dummyimage.com")) {
-                        return url; // Sahte URL ise direkt döndür
-                    }
-                    // Gerçek URL ise S3 servisine (createTemporaryReadUrl) yolla
-                    return imageStorageService.createTemporaryReadUrl(url);
-                })
+                .map(imageStorageService::createTemporaryReadUrl)
                 .toList();
 
         return adMapper.toResponse(ad, temporaryPhotoUrls);

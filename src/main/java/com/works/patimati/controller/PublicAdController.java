@@ -18,6 +18,10 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 
+import com.works.patimati.service.PosterService;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+
 import java.util.List;
 
 @Validated
@@ -28,6 +32,7 @@ public class PublicAdController {
 
     private static final int MAX_PAGE_SIZE = 100;
     private final AdService adService;
+    private final PosterService posterService;
 
     @GetMapping("/counters")
     public ResponseEntity<AdCountersResponse> getAdCounters() {
@@ -89,5 +94,30 @@ public class PublicAdController {
         return ResponseEntity.ok(
                 adService.getPublicActiveAd(adId)
         );
+    }
+
+    /**
+     * Herkese açık ilan afişi indirme ucu.
+     * GET /api/public/ads/{adId}/poster
+     */
+    @GetMapping(value = "/{adId}/poster", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> getPublicAdPoster(
+            @PathVariable @Min(1) Long adId,
+            org.springframework.security.core.Authentication authentication
+    ) {
+        String requestingUserEmail = (authentication != null && authentication.isAuthenticated()
+                && !"anonymousUser".equals(authentication.getPrincipal()))
+                ? authentication.getName()
+                : null;
+
+        byte[] pdfBytes = posterService.generateAdPosterPdf(adId, requestingUserEmail);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"poster_" + adId + ".pdf\"");
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(pdfBytes);
     }
 }

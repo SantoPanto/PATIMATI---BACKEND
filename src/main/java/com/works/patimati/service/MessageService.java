@@ -134,6 +134,20 @@ public class MessageService {
      * da {@code firstName + " " + lastName} üretiyor — yani birebir aynı bilgi.
      * Dolayısıyla bu izin yeni bir şey sızdırmıyor, sadece var olan akışı
      * (ilan sahibine mesaj atmak) çalışır tutuyor.
+     * <p>
+     * <b>YÖNETİCİ MUAFİYETİ:</b> çağıran {@code ADMIN} ise ilişki şartı
+     * aranmaz. Yöneticinin işi tam olarak <i>kendisiyle hiçbir ilişkisi
+     * olmayan</i> kullanıcıya ulaşmaktır: şikayet ekranındaki "Kullanıcıyla
+     * Sohbet Et" düğmesi şikayet edilen kişiye gider ve o kişinin halka açık
+     * ilanı olmayabilir (şikayet üzerine askıya alınmış olabilir — ki
+     * {@code askidaki_ilan_yetki_vermiyor} bunu bilerek reddediyor). Muafiyet
+     * olmadan düğme 404'ten kurtulamaz, yalnızca 404'ün kaynağı değişirdi.
+     * <p>
+     * Muafiyet yeni bir sızıntı açmıyor: yönetici {@code /api/auth/userlist}
+     * ile zaten tüm kullanıcıları görebiliyor (B-3 kapsamında bilerek
+     * yöneticiye kilitlendi). Varlık kâhini kaygısı sıradan kullanıcı içindi.
+     * <b>Var olmayan</b> kimlik yöneticiye de aynı tek tip cevabı verir —
+     * muafiyet ilişki şartını kaldırır, kullanıcının var olma şartını değil.
      */
     @Transactional
     public ChatRoomResponseDTO createOrGetRoom(String currentUserEmail, Long partnerId) {
@@ -152,8 +166,11 @@ public class MessageService {
                 ? Page.<Message>empty(pageable)
                 : messageRepository.findChatHistory(currentUser.getUid(), partner.getUid(), pageable);
 
+        boolean cagiranYonetici = currentUser.getRole() == User.Role.ADMIN;
+
         boolean iliskiVar = partner != null
-                && (history.hasContent()
+                && (cagiranYonetici
+                    || history.hasContent()
                     || adRepository.existsByUser_UidAndActiveTrueAndSuspendedFalse(partner.getUid()));
 
         // Kullanıcı yoksa da, varsa ama ilişki yoksa da AYNI cevap. Ayırt

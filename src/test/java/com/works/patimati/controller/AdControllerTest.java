@@ -49,15 +49,17 @@ class AdControllerTest {
 
     private AdService adService;
     private UserRepository userRepository;
+    private com.works.patimati.service.PosterService posterService;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         adService = mock(AdService.class);
         userRepository = mock(UserRepository.class);
+        posterService = mock(com.works.patimati.service.PosterService.class);
 
         mockMvc = MockMvcBuilders
-                .standaloneSetup(new AdController(adService, userRepository))
+                .standaloneSetup(new AdController(adService, userRepository, posterService))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
@@ -124,6 +126,7 @@ class AdControllerTest {
                   "title": "",
                   "adType": "LOST",
                   "species": "CAT",
+                  "lostDate": "2026-07-20",
                   "latitude": 40.195,
                   "longitude": 29.060
                 }
@@ -159,6 +162,51 @@ class AdControllerTest {
                 .andExpect(jsonPath(
                         "$.validationErrors.title"
                 ).exists());
+    }
+
+    @Test
+    void shouldRejectCreateRequestWithoutLostDateBeforeCallingService()
+            throws Exception {
+        String requestJson = """
+                {
+                  "title": "Kayıp kedi",
+                  "adType": "LOST",
+                  "species": "CAT",
+                  "latitude": 40.195,
+                  "longitude": 29.060
+                }
+                """;
+
+        MockPart adPart = new MockPart(
+                "ad",
+                "ad",
+                requestJson.getBytes(StandardCharsets.UTF_8)
+        );
+        adPart.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+
+        MockMultipartFile image = new MockMultipartFile(
+                "images",
+                "cat.jpg",
+                MediaType.IMAGE_JPEG_VALUE,
+                new byte[]{
+                        (byte) 0xFF,
+                        (byte) 0xD8,
+                        (byte) 0xFF
+                }
+        );
+
+        mockMvc.perform(
+                        multipart("/api/ads")
+                                .part(adPart)
+                                .file(image)
+                                .principal(authentication())
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.title").value("Doğrulama hatası"))
+                .andExpect(jsonPath("$.invalid_params.lostDate").value("Tarih alanı boş bırakılamaz"))
+                .andExpect(jsonPath("$.validationErrors.lostDate").exists());
+
+        verifyNoInteractions(adService);
     }
 
     @Test
@@ -289,10 +337,14 @@ class AdControllerTest {
                 42L,
                 "Test User",
                 true,
+                false,
                 Instant.parse("2026-07-27T12:00:00Z"),
                 Instant.parse("2026-07-27T12:00:00Z"),
                 AiStatus.DONE,
-                true
+                true,
+                false,
+                false,
+                false
         );
     }
 
