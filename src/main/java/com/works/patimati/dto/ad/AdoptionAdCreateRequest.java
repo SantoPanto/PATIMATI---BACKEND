@@ -21,7 +21,7 @@ import java.util.Set;
  * Sahiplendirme ilanı oluşturma isteği DTO'su.
  */
 public record AdoptionAdCreateRequest(
-        @NotBlank(message = "Başlık zorunludur")
+        @NotBlank(message = "İlan başlığı boş bırakılamaz")
         @Size(max = 150, message = "Başlık en fazla 150 karakter olabilir")
         String title,
 
@@ -64,6 +64,6 @@ public record AdoptionAdCreateRequest(
     @JsonIgnore
     @AssertTrue(message = "Tür kedi (CAT) veya köpek (DOG) olmalıdır")
     public boolean isSupportedSpecies() {
-        return species == Species.CAT || species == Species.DOG;
+        return species == null || species == Species.CAT || species == Species.DOG;
     }
 }
