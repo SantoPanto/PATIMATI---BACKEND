@@ -229,6 +229,18 @@ public class PosterServiceImpl implements PosterService {
     }
 
     private PdfFont loadTurkishFont(boolean bold) {
+        String fontResourceName = bold ? "fonts/Roboto-Bold.ttf" : "fonts/Roboto-Regular.ttf";
+        try {
+            org.springframework.core.io.ClassPathResource resource =
+                    new org.springframework.core.io.ClassPathResource(fontResourceName);
+            if (resource.exists()) {
+                byte[] fontBytes = resource.getInputStream().readAllBytes();
+                return PdfFontFactory.createFont(fontBytes, PdfEncodings.IDENTITY_H);
+            }
+        } catch (Exception e) {
+            log.warn("ClassPathResource font okunamadı: {}", fontResourceName, e);
+        }
+
         String[] possibleFontPaths = bold ? new String[]{
                 "C:/Windows/Fonts/arialbd.ttf",
                 "C:/Windows/Fonts/calibrib.ttf",

@@ -296,6 +296,44 @@ class AdoptionControllerTest {
     }
 
     @Test
+    void shouldReturn400BadRequestWhenDateIsEmptyString() throws Exception {
+        String requestJson = """
+                {
+                  "title": "Sahiplendirilecek Sevimli Kedi",
+                  "species": "CAT",
+                  "date": "",
+                  "latitude": 40.195,
+                  "longitude": 29.060
+                }
+                """;
+
+        MockPart adPart = new MockPart(
+                "ad",
+                "ad",
+                requestJson.getBytes(StandardCharsets.UTF_8)
+        );
+        adPart.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+
+        MockMultipartFile image = new MockMultipartFile(
+                "images",
+                "cat.jpg",
+                MediaType.IMAGE_JPEG_VALUE,
+                new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF}
+        );
+
+        mockMvc.perform(
+                        multipart("/api/adoptions")
+                                .part(adPart)
+                                .file(image)
+                                .principal(authentication())
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.invalid_params.date").value("Tarih alanı boş bırakılamaz"));
+
+        verifyNoInteractions(adoptionService);
+    }
+
+    @Test
     void shouldReturn400BadRequestWhenImagesPartIsMissing() throws Exception {
         String requestJson = """
                 {
