@@ -20,6 +20,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class PublicAdControllerTest {
 
     private AdService adService;
+    private com.works.patimati.service.PosterService posterService;
     private MockMvc mockMvc;
 
     @BeforeEach
@@ -29,9 +30,10 @@ class PublicAdControllerTest {
          * AdService bunun yerine Mockito ile taklit edilir.
          */
         adService = mock(AdService.class);
+        posterService = mock(com.works.patimati.service.PosterService.class);
 
         mockMvc = MockMvcBuilders
-                .standaloneSetup(new PublicAdController(adService))
+                .standaloneSetup(new PublicAdController(adService, posterService))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }

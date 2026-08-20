@@ -1,6 +1,7 @@
 package com.works.patimati.service;
 
 import com.works.patimati.dto.AuthResponse;
+import com.works.patimati.dto.ChangePasswordRequest;
 import com.works.patimati.dto.FcmTokenUpdateDTO;
 import com.works.patimati.dto.LoginRequest;
 import com.works.patimati.dto.RegisterRequest;
@@ -302,5 +303,46 @@ public class UserService {
                 "message", "Kullanıcı kaydı bulunamadı."
         );
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(notFoundResponse);
+    }
+
+    @Transactional
+    public ResponseEntity<?> changePassword(ChangePasswordRequest request) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
+            Map<String, Object> errorResponse = Map.of(
+                    "success", false,
+                    "message", "Oturum süreniz dolmuş veya yetkisiz erişim."
+            );
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+        }
+
+        String email = authentication.getName();
+        User user = userRepository.findByEmail(email).orElse(null);
+
+        if (user == null) {
+            Map<String, Object> notFoundResponse = Map.of(
+                    "success", false,
+                    "message", "Kullanıcı kaydı bulunamadı."
+            );
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(notFoundResponse);
+        }
+
+        if (user.getPassword() == null || !passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
+            Map<String, Object> errorResponse = Map.of(
+                    "success", false,
+                    "message", "Mevcut şifreniz hatalı."
+            );
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+
+        Map<String, Object> successResponse = Map.of(
+                "success", true,
+                "message", "Şifreniz başarıyla değiştirildi."
+        );
+        return ResponseEntity.ok().body(successResponse);
     }
 }

@@ -37,9 +37,14 @@ import org.springframework.web.bind.annotation.RestController;
 import java.net.URI;
 import java.util.List;
 
+import com.works.patimati.service.PosterService;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+
 @Validated
 @RestController
-@RequestMapping("/api/ads")
+@RequestMapping({"/api/ads", "/api/v1/ads"})
 @RequiredArgsConstructor
 public class AdController {
 
@@ -47,6 +52,7 @@ public class AdController {
 
     private final AdService adService;
     private final UserRepository userRepository;
+    private final PosterService posterService;
 
     /**
      * İlanı fotoğraflarıyla birlikte oluşturur.
@@ -195,5 +201,25 @@ public class AdController {
         return ResponseEntity.ok(
                 adService.findNearbyAds(latitude, longitude, radius)
         );
+    }
+
+    /**
+     * İlan afişini PDF olarak üretip döndürür.
+     * GET /api/ads/{adId}/poster
+     * GET /api/v1/ads/{adId}/poster
+     */
+    @GetMapping(value = "/{adId}/poster", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> getAdPoster(
+            @PathVariable @Min(1) Long adId
+    ) {
+        byte[] pdfBytes = posterService.generateAdPosterPdf(adId);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"poster_" + adId + ".pdf\"");
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(pdfBytes);
     }
 }

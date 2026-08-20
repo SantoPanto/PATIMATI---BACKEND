@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping({"/api/auth", "/api/v1/users"})
 @RequiredArgsConstructor
 public class UserController {
 
@@ -85,5 +85,10 @@ public class UserController {
     @PutMapping("/fcm-token")
     public ResponseEntity<?> updateFcmToken(@Valid @RequestBody FcmTokenUpdateDTO request) {
         return authService.updateFcmToken(request);
+    }
+
+    @PutMapping("/change-password")
+    public ResponseEntity<?> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+        return authService.changePassword(request);
     }
 }
