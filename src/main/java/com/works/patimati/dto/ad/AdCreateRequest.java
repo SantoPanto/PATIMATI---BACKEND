@@ -57,7 +57,9 @@ public record AdCreateRequest(
         @Size(max = 32, message = "Microchip number can contain at most 32 characters")
         String microchipNumber,
 
+        @NotNull(message = "Tarih alanı boş bırakılamaz")
         @PastOrPresent(message = "Lost date cannot be in the future")
+        @com.fasterxml.jackson.annotation.JsonAlias({"date", "eventDate", "incidentDate"})
         LocalDate lostDate,
 
         @Size(max = 1000, message = "Distinctive marks can contain at most 1000 characters")

@@ -14,7 +14,10 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
+import jakarta.validation.constraints.PastOrPresent;
+
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Set;
 
 /**
@@ -50,6 +53,11 @@ public record AdoptionAdCreateRequest(
 
         @Size(max = 32, message = "Mikroçip numarası en fazla 32 karakter olabilir")
         String microchipNumber,
+
+        @NotNull(message = "Tarih alanı boş bırakılamaz")
+        @PastOrPresent(message = "Tarih gelecekte bir tarih olamaz")
+        @com.fasterxml.jackson.annotation.JsonAlias({"lostDate", "eventDate", "incidentDate"})
+        LocalDate date,
 
         @NotNull(message = "Enlem (Latitude) zorunludur")
         @DecimalMin(value = "-90.0", message = "Enlem en az -90 olabilir")
