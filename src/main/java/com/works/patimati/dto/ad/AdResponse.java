@@ -62,6 +62,9 @@ public record AdResponse(
          * ve ilan başına 768 float × fotoğraf sayısı taşımak listeyi şişirir.
          */
         AiStatus aiStatus,
-        Boolean aiIsPet
+        Boolean aiIsPet,
+        Boolean isPosterAllowed,
+        Boolean showEmailOnPoster,
+        Boolean showPhoneOnPoster
 ) {
 }

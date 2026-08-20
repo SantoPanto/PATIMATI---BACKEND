@@ -102,9 +102,15 @@ public class PublicAdController {
      */
     @GetMapping(value = "/{adId}/poster", produces = MediaType.APPLICATION_PDF_VALUE)
     public ResponseEntity<byte[]> getPublicAdPoster(
-            @PathVariable @Min(1) Long adId
+            @PathVariable @Min(1) Long adId,
+            org.springframework.security.core.Authentication authentication
     ) {
-        byte[] pdfBytes = posterService.generateAdPosterPdf(adId);
+        String requestingUserEmail = (authentication != null && authentication.isAuthenticated()
+                && !"anonymousUser".equals(authentication.getPrincipal()))
+                ? authentication.getName()
+                : null;
+
+        byte[] pdfBytes = posterService.generateAdPosterPdf(adId, requestingUserEmail);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);

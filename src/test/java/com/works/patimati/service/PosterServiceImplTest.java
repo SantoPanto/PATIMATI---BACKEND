@@ -52,18 +52,41 @@ class PosterServiceImplTest {
                 .ageGroup(AgeGroup.ADULT)
                 .user(user)
                 .active(true)
+                .isPosterAllowed(true)
+                .showEmailOnPoster(true)
+                .showPhoneOnPoster(true)
                 .build();
     }
 
     @Test
-    void generateAdPosterPdf_ShouldReturnNonEmptyByteArray_WhenAdExists() {
+    void generateAdPosterPdf_ShouldReturnNonEmptyByteArray_WhenAdExistsAndPosterAllowed() {
         when(adRepository.findById(100L)).thenReturn(Optional.of(testAd));
 
-        byte[] pdfBytes = posterService.generateAdPosterPdf(100L);
+        byte[] pdfBytes = posterService.generateAdPosterPdf(100L, "ali@example.com");
 
         assertNotNull(pdfBytes);
         assertTrue(pdfBytes.length > 0);
         verify(adRepository, times(1)).findById(100L);
+    }
+
+    @Test
+    void generateAdPosterPdf_ShouldThrowAccessDeniedException_WhenNotOwnerAndPosterNotAllowed() {
+        testAd.setIsPosterAllowed(false);
+        when(adRepository.findById(100L)).thenReturn(Optional.of(testAd));
+
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,
+                () -> posterService.generateAdPosterPdf(100L, "baskasi@example.com"));
+    }
+
+    @Test
+    void generateAdPosterPdf_ShouldAllowOwner_EvenIfPosterNotAllowed() {
+        testAd.setIsPosterAllowed(false);
+        when(adRepository.findById(100L)).thenReturn(Optional.of(testAd));
+
+        byte[] pdfBytes = posterService.generateAdPosterPdf(100L, "ali@example.com");
+
+        assertNotNull(pdfBytes);
+        assertTrue(pdfBytes.length > 0);
     }
 
     @Test

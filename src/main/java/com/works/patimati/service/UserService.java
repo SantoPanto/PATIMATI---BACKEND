@@ -376,32 +376,23 @@ public class UserService {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
         }
 
-        String email = authentication.getName();
-        User user = userRepository.findByEmail(email).orElse(null);
-
-        if (user == null) {
-            Map<String, Object> notFoundResponse = Map.of(
-                    "success", false,
-                    "message", "Kullanıcı kaydı bulunamadı."
+        try {
+            changePassword(authentication.getName(), request);
+            Map<String, Object> successResponse = Map.of(
+                    "success", true,
+                    "message", "Şifreniz başarıyla değiştirildi."
             );
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(notFoundResponse);
-        }
-
-        if (user.getPassword() == null || !passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
-            Map<String, Object> errorResponse = Map.of(
+            return ResponseEntity.ok().body(successResponse);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
-                    "message", "Mevcut şifreniz hatalı."
-            );
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+                    "message", e.getMessage()
+            ));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            ));
         }
-
-        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
-        userRepository.save(user);
-
-        Map<String, Object> successResponse = Map.of(
-                "success", true,
-                "message", "Şifreniz başarıyla değiştirildi."
-        );
-        return ResponseEntity.ok().body(successResponse);
     }
 }

@@ -3,6 +3,7 @@ package com.works.patimati.controller;
 import com.works.patimati.dto.ad.AdCreateRequest;
 import com.works.patimati.dto.ad.AdResponse;
 import com.works.patimati.dto.ad.AdUpdateRequest;
+import com.works.patimati.dto.ad.PosterSettingsUpdateRequest;
 import com.works.patimati.dto.ad.ResolveLostAdRequest;
 import com.works.patimati.entity.Ad;
 import com.works.patimati.entity.User;
@@ -26,7 +27,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -204,15 +207,40 @@ public class AdController {
     }
 
     /**
+     * İlan afiş gizlilik ve KVKK ayarlarını günceller. Sadece ilan sahibi erişebilir.
+     * PATCH /api/ads/{adId}/poster-settings
+     * PATCH /api/v1/ads/{adId}/poster-settings
+     */
+    @PatchMapping("/{adId}/poster-settings")
+    public ResponseEntity<AdResponse> updatePosterSettings(
+            @PathVariable @Min(1) Long adId,
+            @RequestBody PosterSettingsUpdateRequest request,
+            Authentication authentication
+    ) {
+        AdResponse response = adService.updatePosterSettings(
+                adId,
+                request,
+                authentication.getName()
+        );
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * İlan afişini PDF olarak üretip döndürür.
      * GET /api/ads/{adId}/poster
      * GET /api/v1/ads/{adId}/poster
      */
     @GetMapping(value = "/{adId}/poster", produces = MediaType.APPLICATION_PDF_VALUE)
     public ResponseEntity<byte[]> getAdPoster(
-            @PathVariable @Min(1) Long adId
+            @PathVariable @Min(1) Long adId,
+            Authentication authentication
     ) {
-        byte[] pdfBytes = posterService.generateAdPosterPdf(adId);
+        String requestingUserEmail = (authentication != null && authentication.isAuthenticated()
+                && !"anonymousUser".equals(authentication.getPrincipal()))
+                ? authentication.getName()
+                : null;
+
+        byte[] pdfBytes = posterService.generateAdPosterPdf(adId, requestingUserEmail);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);

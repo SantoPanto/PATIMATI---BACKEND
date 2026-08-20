@@ -8,6 +8,7 @@ import com.works.patimati.dto.ad.AdCreateRequest;
 import com.works.patimati.dto.ad.AdCountersResponse;
 import com.works.patimati.dto.ad.AdResponse;
 import com.works.patimati.dto.ad.AdUpdateRequest;
+import com.works.patimati.dto.ad.PosterSettingsUpdateRequest;
 import com.works.patimati.dto.ad.ResolveLostAdRequest;
 import com.works.patimati.entity.Ad;
 import com.works.patimati.entity.User;
@@ -267,6 +268,36 @@ public class AdService {
         adMapper.updateEntity(ad, request);
         Ad updatedAd = adRepository.saveAndFlush(ad);
 
+        return toResponseWithTemporaryPhotoUrls(updatedAd);
+    }
+
+    @Transactional
+    public AdResponse updatePosterSettings(
+            Long adId,
+            PosterSettingsUpdateRequest request,
+            String currentUserEmail
+    ) {
+        User owner = findUserByEmail(currentUserEmail);
+        Ad ad = adRepository.findById(adId)
+                .orElseThrow(() -> adNotFound(adId));
+
+        if (ad.getUser() == null || !ad.getUser().getUid().equals(owner.getUid())) {
+            throw new AccessDeniedException("Bu ilanın afiş ayarlarını yalnızca ilan sahibi güncelleyebilir.");
+        }
+
+        if (request != null) {
+            if (request.getIsPosterAllowed() != null) {
+                ad.setIsPosterAllowed(request.getIsPosterAllowed());
+            }
+            if (request.getShowEmailOnPoster() != null) {
+                ad.setShowEmailOnPoster(request.getShowEmailOnPoster());
+            }
+            if (request.getShowPhoneOnPoster() != null) {
+                ad.setShowPhoneOnPoster(request.getShowPhoneOnPoster());
+            }
+        }
+
+        Ad updatedAd = adRepository.saveAndFlush(ad);
         return toResponseWithTemporaryPhotoUrls(updatedAd);
     }
 

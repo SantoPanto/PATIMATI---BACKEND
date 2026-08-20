@@ -234,6 +234,9 @@ class AdoptionControllerTest {
                 Instant.parse("2026-08-20T10:00:00Z"),
                 Instant.parse("2026-08-20T10:00:00Z"),
                 AiStatus.NOT_APPLICABLE,
+                false,
+                false,
+                false,
                 false
         );
     }

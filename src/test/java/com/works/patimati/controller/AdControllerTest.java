@@ -294,7 +294,10 @@ class AdControllerTest {
                 Instant.parse("2026-07-27T12:00:00Z"),
                 Instant.parse("2026-07-27T12:00:00Z"),
                 AiStatus.DONE,
-                true
+                true,
+                false,
+                false,
+                false
         );
     }
 
