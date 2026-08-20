@@ -73,7 +73,12 @@ class MesajOdasiIliskiIstiyorTest {
                 mock(SimpMessagingTemplate.class)
         );
 
-        cagiran = User.builder().uid(CAGIRAN_UID).email(CAGIRAN_EPOSTA).build();
+        // Rol AÇIKÇA yazılıyor: builder boş bıraksaydı null olurdu ve aşağıdaki
+        // "sıradan kullanıcı açamıyor" testleri aslında ROLSÜZ bir kullanıcıyı
+        // ölçerdi. O hâlde yönetici muafiyeti yanlışlıkla "USER değilse geç"
+        // diye yazılsa bile testler yeşil kalırdı.
+        cagiran = User.builder().uid(CAGIRAN_UID).email(CAGIRAN_EPOSTA)
+                .role(User.Role.USER).build();
         hedef = User.builder()
                 .uid(HEDEF_UID)
                 .email("hedef@patimati.local")
@@ -161,6 +166,45 @@ class MesajOdasiIliskiIstiyorTest {
         // ilişki kurulmamalı: askıya alınmış/kapatılmış ilan halka görünmüyor,
         // dolayısıyla sahibinin adı da görünmüyor.
         assertThatThrownBy(() -> messageService.createOrGetRoom(CAGIRAN_EPOSTA, HEDEF_UID))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void yonetici_iliskisiz_kullaniciyla_oda_acabiliyor() {
+        // Şikayet ekranındaki "Kullanıcıyla Sohbet Et" düğmesinin işi TAM OLARAK
+        // budur: yöneticinin şikayet edilen kişiyle hiçbir ilişkisi yoktur ve
+        // o kişinin ilanı şikayet üzerine askıya alınmış olabilir. Muafiyet
+        // olmazsa düğme 404'ten kurtulmaz, yalnızca 404'ün kaynağı değişir.
+        cagiran.setRole(User.Role.ADMIN);
+
+        ChatRoomResponseDTO oda = messageService.createOrGetRoom(CAGIRAN_EPOSTA, HEDEF_UID);
+
+        assertThat(oda.partnerId()).isEqualTo(HEDEF_UID);
+        assertThat(oda.partnerName()).isEqualTo("Admin Local");
+    }
+
+    @Test
+    void siradan_kullanici_yonetici_muafiyetinden_yararlanamiyor() {
+        // Yukarıdaki muafiyetin İKİZİ. Muafiyet yanlışlıkla herkese açılırsa
+        // (ör. koşul "== ADMIN" yerine "!= GUEST" yazılırsa) bu test kırmızı
+        // yanar. Tek başına "yönetici açabiliyor" testi bunu göremezdi:
+        // koşulu tamamen kaldırmak da o testi yeşil bırakırdı.
+        assertThat(cagiran.getRole())
+                .as("ön koşul: çağıran sıradan kullanıcı olmalı")
+                .isEqualTo(User.Role.USER);
+
+        assertThatThrownBy(() -> messageService.createOrGetRoom(CAGIRAN_EPOSTA, HEDEF_UID))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void yonetici_var_olmayan_kullaniciyla_oda_acamiyor() {
+        // Muafiyet İLİŞKİ şartını kaldırır, kullanıcının VAR OLMA şartını değil.
+        // Aksi hâlde yöneticinin gördüğü cevap ile sıradan kullanıcının gördüğü
+        // cevap ayrışır ve kural iki yerde iki türlü anlatılmış olurdu.
+        cagiran.setRole(User.Role.ADMIN);
+
+        assertThatThrownBy(() -> messageService.createOrGetRoom(CAGIRAN_EPOSTA, OLMAYAN_UID))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
