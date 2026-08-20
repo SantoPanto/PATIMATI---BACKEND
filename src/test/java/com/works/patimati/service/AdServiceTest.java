@@ -447,4 +447,26 @@ class AdServiceTest {
 
         assertThat(result).containsExactly(expectedResponse);
     }
+
+    @Test
+    void shouldAlwaysGenerateSignedUrlForEveryPhotoWithoutBypass() {
+        String testReference = "s3://patimati-bucket/ads/test-dummyimage.com/dog.jpg";
+        String mockSignedUrl = "mock_signed_url";
+        Ad ad = Ad.builder()
+                .id(101L)
+                .photoUrls(List.of(testReference))
+                .build();
+
+        AdResponse expectedResponse = mock(AdResponse.class);
+
+        when(imageStorageService.createTemporaryReadUrl(testReference))
+                .thenReturn(mockSignedUrl);
+        when(adMapper.toResponse(ad, List.of(mockSignedUrl)))
+                .thenReturn(expectedResponse);
+
+        AdResponse response = adService.toResponseWithTemporaryPhotoUrls(ad);
+
+        assertThat(response).isSameAs(expectedResponse);
+        verify(imageStorageService).createTemporaryReadUrl(testReference);
+    }
 }

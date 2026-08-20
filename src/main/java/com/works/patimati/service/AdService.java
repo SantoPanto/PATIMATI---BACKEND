@@ -411,14 +411,7 @@ public class AdService {
                 ? List.of()
                 : ad.getPhotoUrls()
                 .stream()
-                .map(url -> {
-                    // TEST BYPASS EKLENTİSİ
-                    if (url != null && url.contains("dummyimage.com")) {
-                        return url; // Sahte URL ise direkt döndür
-                    }
-                    // Gerçek URL ise S3 servisine (createTemporaryReadUrl) yolla
-                    return imageStorageService.createTemporaryReadUrl(url);
-                })
+                .map(imageStorageService::createTemporaryReadUrl)
                 .toList();
 
         return adMapper.toResponse(ad, temporaryPhotoUrls);
