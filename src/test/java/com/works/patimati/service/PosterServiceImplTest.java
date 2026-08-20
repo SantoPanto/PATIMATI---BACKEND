@@ -90,6 +90,42 @@ class PosterServiceImplTest {
     }
 
     @Test
+    void generateAdPosterPdf_ShouldSupportTurkishCharacters_WhenAdContainsTurkishText() {
+        User turkishUser = User.builder()
+                .uid(2L)
+                .firstName("Çağrı")
+                .lastName("Öztürk")
+                .email("cagri@example.com")
+                .phone("05559998877")
+                .build();
+
+        Ad turkishAd = Ad.builder()
+                .id(101L)
+                .title("Kayıp Şirin Köpek - Çoşkun")
+                .description("Kayıp olduğu tarih: 2026. Görenlerin ulaşması rica olunur. Çağrı / Öztürk ailesi.")
+                .distinctiveMarks("Sol kulağında çentik, sırtında kahverengi benek var.")
+                .adType(Ad.AdType.LOST)
+                .species(Species.DOG)
+                .breed("Kangal Mix")
+                .gender(PetGender.FEMALE)
+                .ageGroup(AgeGroup.ADULT)
+                .user(turkishUser)
+                .active(true)
+                .isPosterAllowed(true)
+                .showEmailOnPoster(true)
+                .showPhoneOnPoster(true)
+                .build();
+
+        when(adRepository.findById(101L)).thenReturn(Optional.of(turkishAd));
+
+        byte[] pdfBytes = posterService.generateAdPosterPdf(101L, "cagri@example.com");
+
+        assertNotNull(pdfBytes);
+        assertTrue(pdfBytes.length > 0);
+        verify(adRepository, times(1)).findById(101L);
+    }
+
+    @Test
     void generateAdPosterPdf_ShouldThrowResourceNotFoundException_WhenAdDoesNotExist() {
         when(adRepository.findById(999L)).thenReturn(Optional.empty());
 

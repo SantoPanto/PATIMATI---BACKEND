@@ -3,9 +3,13 @@ package com.works.patimati.service.impl;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.qrcode.QRCodeWriter;
 import com.google.zxing.common.BitMatrix;
+import com.itextpdf.io.font.PdfEncodings;
+import com.itextpdf.io.font.constants.StandardFonts;
 import com.itextpdf.io.image.ImageDataFactory;
 import com.itextpdf.kernel.colors.ColorConstants;
 import com.itextpdf.kernel.colors.DeviceRgb;
+import com.itextpdf.kernel.font.PdfFont;
+import com.itextpdf.kernel.font.PdfFontFactory;
 import com.itextpdf.kernel.geom.PageSize;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
@@ -30,6 +34,8 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.InputStream;
 import java.util.stream.Collectors;
 
 @Service
@@ -70,16 +76,21 @@ public class PosterServiceImpl implements PosterService {
             Document doc = new Document(pdfDoc, PageSize.A4);
             doc.setMargins(36, 36, 36, 36);
 
+            PdfFont turkishFont = loadTurkishFont();
+            if (turkishFont != null) {
+                doc.setFont(turkishFont);
+            }
+
             // Başlık Alanı
             DeviceRgb headerColor = (ad.getAdType() == Ad.AdType.LOST)
                     ? new DeviceRgb(220, 53, 69) // Kırmızı (Kayıp)
                     : new DeviceRgb(40, 167, 69); // Yeşil (Sahiplendirme)
 
             String bannerText = (ad.getAdType() == Ad.AdType.LOST)
-                    ? "KAYIP EVCIL HAYVAN AFISI"
-                    : (ad.getAdType() == Ad.AdType.ADOPTION ? "SAHIPLENDIRME AFISI" : "EVCIL HAYVAN ILANI");
+                    ? "KAYIP EVCİL HAYVAN AFİŞİ"
+                    : (ad.getAdType() == Ad.AdType.ADOPTION ? "SAHİPLENDİRME AFİŞİ" : "EVCİL HAYVAN İLANI");
 
-            Paragraph header = new Paragraph("PATIMATI")
+            Paragraph header = new Paragraph("PATİMATİ")
                     .setFontSize(28)
                     .setBold()
                     .setFontColor(headerColor)
@@ -110,11 +121,11 @@ public class PosterServiceImpl implements PosterService {
             Table table = new Table(UnitValue.createPercentArray(new float[]{30, 70}));
             table.setWidth(UnitValue.createPercentValue(100));
 
-            addTableRow(table, "Ilan Tipi:", ad.getAdType() != null ? ad.getAdType().name() : "-");
-            addTableRow(table, "Tur:", ad.getSpecies() != null ? ad.getSpecies().name() : "-");
+            addTableRow(table, "İlan Tipi:", ad.getAdType() != null ? ad.getAdType().name() : "-");
+            addTableRow(table, "Tür:", ad.getSpecies() != null ? ad.getSpecies().name() : "-");
             addTableRow(table, "Irk:", ad.getBreed() != null ? ad.getBreed() : "-");
             addTableRow(table, "Cinsiyet:", ad.getGender() != null ? ad.getGender().name() : "-");
-            addTableRow(table, "Yas Grubu:", ad.getAgeGroup() != null ? ad.getAgeGroup().name() : "-");
+            addTableRow(table, "Yaş Grubu:", ad.getAgeGroup() != null ? ad.getAgeGroup().name() : "-");
 
             if (ad.getColors() != null && !ad.getColors().isEmpty()) {
                 String colorStr = ad.getColors().stream().map(Enum::name).collect(Collectors.joining(", "));
@@ -122,15 +133,15 @@ public class PosterServiceImpl implements PosterService {
             }
 
             if (ad.getMicrochipNumber() != null && !ad.getMicrochipNumber().isBlank()) {
-                addTableRow(table, "Mikrocip No:", ad.getMicrochipNumber());
+                addTableRow(table, "Mikroçip No:", ad.getMicrochipNumber());
             }
 
             if (ad.getDistinctiveMarks() != null && !ad.getDistinctiveMarks().isBlank()) {
-                addTableRow(table, "Belirgin Izler:", ad.getDistinctiveMarks());
+                addTableRow(table, "Belirgin İzler:", ad.getDistinctiveMarks());
             }
 
             if (ad.getDescription() != null && !ad.getDescription().isBlank()) {
-                addTableRow(table, "Aciklama:", ad.getDescription());
+                addTableRow(table, "Açıklama:", ad.getDescription());
             }
 
             // İletişim Bilgileri (İlan Sahibinin İzinlerine Bağlı)
@@ -138,7 +149,7 @@ public class PosterServiceImpl implements PosterService {
             if (owner != null) {
                 String contactName = (owner.getFirstName() + " " + owner.getLastName()).trim();
                 if (!contactName.isBlank()) {
-                    addTableRow(table, "Iletisim Kisisi:", contactName);
+                    addTableRow(table, "İletişim Kişisi:", contactName);
                 }
 
                 // Telefon sadece showPhoneOnPoster == true ise eklenir
@@ -162,7 +173,7 @@ public class PosterServiceImpl implements PosterService {
                 Image qrImage = new Image(ImageDataFactory.create(qrCodeBytes));
                 qrImage.setHorizontalAlignment(com.itextpdf.layout.properties.HorizontalAlignment.CENTER);
 
-                Paragraph qrLabel = new Paragraph("Ilan detaylarini goruntulemek icin QR kodu okutun:")
+                Paragraph qrLabel = new Paragraph("İlan detaylarını görüntülemek için QR kodu okutun:")
                         .setFontSize(10)
                         .setItalic()
                         .setTextAlignment(TextAlignment.CENTER);
@@ -170,7 +181,7 @@ public class PosterServiceImpl implements PosterService {
                 doc.add(qrLabel);
                 doc.add(qrImage);
             } catch (Exception e) {
-                log.warn("QR kod uretilemedi: {}", e.getMessage());
+                log.warn("QR kod üretilemedi: {}", e.getMessage());
             }
 
             // Alt Bilgi (Footer)
@@ -188,6 +199,47 @@ public class PosterServiceImpl implements PosterService {
         } catch (Exception e) {
             log.error("İlan afişi PDF üretilirken hata oluştu. adId={}", adId, e);
             throw new RuntimeException("Afiş PDF üretilemedi: " + e.getMessage(), e);
+        }
+    }
+
+    private PdfFont loadTurkishFont() {
+        String[] possibleFontPaths = new String[]{
+                "C:/Windows/Fonts/arial.ttf",
+                "C:/Windows/Fonts/calibri.ttf",
+                "C:/Windows/Fonts/segoeui.ttf",
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+                "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
+                "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+                "/System/Library/Fonts/Supplemental/Arial.ttf"
+        };
+
+        for (String fontPath : possibleFontPaths) {
+            if (new File(fontPath).exists()) {
+                try {
+                    return PdfFontFactory.createFont(fontPath, PdfEncodings.IDENTITY_H);
+                } catch (Exception e) {
+                    log.warn("Font yüklenemedi: {}", fontPath, e);
+                }
+            }
+        }
+
+        try (InputStream is = getClass().getResourceAsStream("/fonts/FreeSans.ttf")) {
+            if (is != null) {
+                byte[] fontBytes = is.readAllBytes();
+                return PdfFontFactory.createFont(fontBytes, PdfEncodings.IDENTITY_H);
+            }
+        } catch (Exception e) {
+            log.warn("Classpath font yüklenemedi", e);
+        }
+
+        try {
+            return PdfFontFactory.createFont(StandardFonts.HELVETICA, PdfEncodings.IDENTITY_H);
+        } catch (Exception e) {
+            try {
+                return PdfFontFactory.createFont(StandardFonts.HELVETICA);
+            } catch (Exception ex) {
+                throw new RuntimeException("PdfFont oluşturulamadı", ex);
+            }
         }
     }
 
