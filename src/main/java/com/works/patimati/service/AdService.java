@@ -367,13 +367,36 @@ public class AdService {
             throw new IllegalArgumentException("İlan bir kayıp ilanı değildir.");
         }
 
+        Long finderId = (request != null) ? request.finderId() : null;
+        Long foundAdId = (request != null) ? request.foundAdId() : null;
+
+        // Eşleşen ilan bildirildiyse GERÇEKTEN var mı diye bakılır. Yoksa
+        // sessizce null bırakmak, ölçüm sorgusunda "bağ kurulmamış" ile
+        // "yanlış id gönderilmiş" durumlarını ayırt edilemez yapardı.
+        if (foundAdId != null) {
+            if (foundAdId.equals(adId)) {
+                throw new IllegalArgumentException(
+                        "Bir ilan kendisiyle eşleştirilemez.");
+            }
+            Ad eslesen = adRepository.findById(foundAdId)
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Eşleşen ilan bulunamadı: " + foundAdId));
+            if (eslesen.getAdType() != Ad.AdType.FOUND) {
+                throw new IllegalArgumentException(
+                        "Eşleşen ilan bir 'bulundu' ilanı olmalı.");
+            }
+            ad.setResolvedByAdId(foundAdId);
+        }
+
+        ad.setFinderUserId(finderId);
         ad.setActive(false);
         ad.setResolutionStatus(AdResolutionStatus.FOUND);
         adRepository.saveAndFlush(ad);
 
-        Long finderId = (request != null) ? request.finderId() : null;
         rewardService.awardLostPoint(finderId);
-        log.info("Kayıp ilanı bulundu olarak işaretlendi. adId={}, ownerId={}, finderId={}", adId, owner.getUid(), finderId);
+        log.info("Kayıp ilanı bulundu olarak işaretlendi. adId={}, ownerId={}, "
+                        + "finderId={}, eslesenIlanId={}",
+                adId, owner.getUid(), finderId, foundAdId);
     }
 
     @Transactional(readOnly = true)
