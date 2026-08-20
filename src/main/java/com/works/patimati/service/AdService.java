@@ -14,6 +14,7 @@ import com.works.patimati.entity.Ad;
 import com.works.patimati.entity.User;
 import com.works.patimati.entity.enums.AiStatus;
 import com.works.patimati.entity.enums.AdResolutionStatus;
+import com.works.patimati.exception.BusinessException;
 import com.works.patimati.exception.ResourceNotFoundException;
 import com.works.patimati.mapper.AdMapper;
 import com.works.patimati.repository.AdRepository;
@@ -264,6 +265,12 @@ public class AdService {
     ) {
         User owner = findUserByEmail(ownerEmail);
         Ad ad = findActiveOwnedAd(adId, owner.getUid());
+
+        if (ad.getAdType() == Ad.AdType.LOST || ad.getAdType() == Ad.AdType.FOUND) {
+            throw new BusinessException(
+                    "Kayıp ve Bulundu ilanlarında bilgi bütünlüğünü korumak amacıyla temel bilgilerin güncellenmesine izin verilmemektedir."
+            );
+        }
 
         adMapper.updateEntity(ad, request);
         Ad updatedAd = adRepository.saveAndFlush(ad);

@@ -25,6 +25,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.multipart.MultipartFile;
+import com.works.patimati.exception.BusinessException;
 import com.works.patimati.storage.InvalidImageException;
 
 import java.util.List;
@@ -202,13 +203,14 @@ class AdServiceTest {
     }
 
     @Test
-    void shouldUpdateOnlyAnActiveAdOwnedByAuthenticatedUser() {
+    void shouldUpdateOnlyAnActiveAdoptionAdOwnedByAuthenticatedUser() {
         User owner = User.builder()
                 .uid(42L)
                 .email("owner@patimati.com")
                 .build();
         Ad ad = Ad.builder()
                 .id(7L)
+                .adType(Ad.AdType.ADOPTION)
                 .user(owner)
                 .active(true)
                 .build();
@@ -233,6 +235,58 @@ class AdServiceTest {
 
         verify(adMapper).updateEntity(ad, request);
         assertThat(response).isSameAs(expectedResponse);
+    }
+
+    @Test
+    void shouldThrowBusinessExceptionWhenUpdatingLostAd() {
+        User owner = User.builder()
+                .uid(42L)
+                .email("owner@patimati.com")
+                .build();
+        Ad lostAd = Ad.builder()
+                .id(7L)
+                .adType(Ad.AdType.LOST)
+                .user(owner)
+                .active(true)
+                .build();
+        AdUpdateRequest request = mock(AdUpdateRequest.class);
+
+        when(userRepository.findByEmail(owner.getEmail()))
+                .thenReturn(Optional.of(owner));
+        when(adRepository.findByIdAndUser_UidAndActiveTrue(
+                lostAd.getId(),
+                owner.getUid()
+        )).thenReturn(Optional.of(lostAd));
+
+        assertThatThrownBy(() -> adService.updateAd(owner.getEmail(), lostAd.getId(), request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Kayıp ve Bulundu ilanlarında bilgi bütünlüğünü korumak amacıyla temel bilgilerin güncellenmesine izin verilmemektedir.");
+    }
+
+    @Test
+    void shouldThrowBusinessExceptionWhenUpdatingFoundAd() {
+        User owner = User.builder()
+                .uid(42L)
+                .email("owner@patimati.com")
+                .build();
+        Ad foundAd = Ad.builder()
+                .id(8L)
+                .adType(Ad.AdType.FOUND)
+                .user(owner)
+                .active(true)
+                .build();
+        AdUpdateRequest request = mock(AdUpdateRequest.class);
+
+        when(userRepository.findByEmail(owner.getEmail()))
+                .thenReturn(Optional.of(owner));
+        when(adRepository.findByIdAndUser_UidAndActiveTrue(
+                foundAd.getId(),
+                owner.getUid()
+        )).thenReturn(Optional.of(foundAd));
+
+        assertThatThrownBy(() -> adService.updateAd(owner.getEmail(), foundAd.getId(), request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Kayıp ve Bulundu ilanlarında bilgi bütünlüğünü korumak amacıyla temel bilgilerin güncellenmesine izin verilmemektedir.");
     }
 
     @Test
