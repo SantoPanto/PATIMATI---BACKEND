@@ -329,7 +329,7 @@ class AdControllerTest {
                 PresenceStatus.UNKNOWN,
                 PresenceStatus.UNKNOWN,
                 false,
-                LocalDate.of(2026, 7, 20),
+                "2026-07-20",
                 null,
                 List.of("https://example.com/cat.jpg"),
                 40.195,
