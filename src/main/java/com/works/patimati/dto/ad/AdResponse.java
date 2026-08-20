@@ -33,6 +33,9 @@ public record AdResponse(
         PresenceStatus earTagStatus,
         PresenceStatus earNotchStatus,
         boolean microchipped,
+        @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
+        @com.fasterxml.jackson.databind.annotation.JsonDeserialize(using = com.fasterxml.jackson.datatype.jsr310.deser.LocalDateDeserializer.class)
+        @com.fasterxml.jackson.databind.annotation.JsonSerialize(using = com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer.class)
         LocalDate lostDate,
         String distinctiveMarks,
         List<String> photoUrls,
