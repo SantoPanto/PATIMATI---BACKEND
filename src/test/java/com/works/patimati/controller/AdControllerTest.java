@@ -49,15 +49,17 @@ class AdControllerTest {
 
     private AdService adService;
     private UserRepository userRepository;
+    private com.works.patimati.service.PosterService posterService;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         adService = mock(AdService.class);
         userRepository = mock(UserRepository.class);
+        posterService = mock(com.works.patimati.service.PosterService.class);
 
         mockMvc = MockMvcBuilders
-                .standaloneSetup(new AdController(adService, userRepository))
+                .standaloneSetup(new AdController(adService, userRepository, posterService))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
