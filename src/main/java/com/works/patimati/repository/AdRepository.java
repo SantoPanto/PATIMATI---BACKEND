@@ -28,6 +28,13 @@ public interface AdRepository extends JpaRepository<Ad, Long> {
     // İlanın hem aktif olduğunu hem de belirtilen kullanıcıya ait olduğunu kontrol eder.
     Optional<Ad> findByIdAndUser_UidAndActiveTrue(Long adId, Long userId);
 
+    // Sahiplik kontrolü YAPAR ama aktiflik ŞARTI ARAMAZ.
+    // Yalnızca "yeniden yayınla" akışı için var: yayından kaldırılmış (active=false)
+    // bir ilan, tanımı gereği yukarıdaki sorguyla BULUNAMAZ — o yüzden onunla
+    // pasif ilana dokunmak imkânsızdı. Başka yerlerde bunu kullanmayın; aktif
+    // ilan bekleyen akışlar aktifliği sorgunun kendisinde şart koşmalı.
+    Optional<Ad> findByIdAndUser_Uid(Long adId, Long userId);
+
     // İlanları aktiflik durumuna göre sayfalı biçimde listeler.
     Page<Ad> findAllByActive(
             boolean active,
