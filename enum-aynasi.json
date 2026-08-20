@@ -33,8 +33,6 @@
         "PENDING",
         "DONE",
         "FAILED",
-        "APPROVED",
-        "REJECTED",
         "NOT_APPLICABLE"
       ]
     },
