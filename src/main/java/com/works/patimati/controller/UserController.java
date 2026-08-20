@@ -10,7 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.security.core.Authentication;
 import java.util.List;
 
 @RestController
@@ -69,6 +69,28 @@ public class UserController {
     @PostMapping("/reset-password")
     public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         return passwordResetService.processResetPassword(request);
+    }
+
+    /**
+     * Giriş yapmış kullanıcının şifresini değiştirir.
+     * PUT /api/auth/change-password
+     */
+    @PutMapping("/change-password")
+    public ResponseEntity<Void> changePassword(
+            Authentication authentication,
+            @Valid @RequestBody ChangePasswordRequest request
+    ) {
+        /*
+         * Kullanıcının e-posta adresi request body'den alınmaz.
+         * JWT doğrulamasından geçen Authentication nesnesi kullanılır.
+         */
+        authService.changePassword(
+                authentication.getName(),
+                request
+        );
+
+        // Frontend Promise<void> beklediği için başarılı işlemde gövdesiz 204 dönülür.
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/userlist")

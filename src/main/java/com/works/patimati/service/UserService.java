@@ -23,6 +23,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.works.patimati.dto.ChangePasswordRequest;
+import com.works.patimati.exception.ResourceNotFoundException;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -107,6 +110,62 @@ public class UserService {
                 "message", "Geçersiz e-posta adresi veya şifre."
         );
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+    }
+
+    /**
+     * Giriş yapmış kullanıcının şifresini güvenli şekilde değiştirme
+     *
+     * @param email   JWT doğrulamasından geçen kullanıcının e-posta adresi
+     * @param request mevcut ve yeni şifre bilgileri
+     */
+    @Transactional
+    public void changePassword(
+            String email,
+            ChangePasswordRequest request
+    ) {
+        // Yeni şifrenin iki alanda da aynı girildiğini sunucu tarafında doğrula
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new IllegalArgumentException(
+                    "Yeni şifre ve şifre tekrarı birbiriyle eşleşmiyor."
+            );
+        }
+
+        // Kullanıcı bilgisi istemciden değil, doğrulanmış JWT kimliğinden bulunur.
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Kullanıcı kaydı bulunamadı."
+                ));
+
+        if (user.getPassword() == null) {
+            throw new IllegalStateException(
+                    "Google ile oluşturulan hesaplarda mevcut şifre değiştirilemez."
+            );
+        }
+
+        // Mevcut şifre, veritabanındaki BCrypt hash'i ile karşılaştırılır.
+        if (!passwordEncoder.matches(
+                request.getCurrentPassword(),
+                user.getPassword()
+        )) {
+            throw new IllegalArgumentException("Mevcut şifre hatalı.");
+        }
+
+        // Kullanıcının aynı şifreyi tekrar belirlemesini engelle.
+        if (passwordEncoder.matches(
+                request.getNewPassword(),
+                user.getPassword()
+        )) {
+            throw new IllegalArgumentException(
+                    "Yeni şifre mevcut şifreden farklı olmalıdır."
+            );
+        }
+
+        // Veritabanına hiçbir zaman düz metin şifre yazılmaz.
+        user.setPassword(
+                passwordEncoder.encode(request.getNewPassword())
+        );
+
+        userRepository.save(user);
     }
 
     // --- GOOGLE OAUTH2 SUCCESS HANDLER KULLANICI İŞLEME ---
