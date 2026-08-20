@@ -125,6 +125,7 @@ public class AdMapper {
                 owner == null ? null : owner.getUid(),
                 ownerDisplayName(owner),
                 ad.isActive(),
+                ad.isSuspended(),
                 ad.getCreatedAt(),
                 ad.getUpdatedAt(),
                 ad.getAiStatus(),
