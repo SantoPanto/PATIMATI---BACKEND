@@ -8,6 +8,11 @@ spring:
     problemdetails:
       enabled: true
 
+  # --- Jackson Ayarları ---
+  jackson:
+    deserialization:
+      ACCEPT_EMPTY_STRING_AS_NULL_OBJECT: true
+
   # --- Dosya Yükleme Ayarları ---
   servlet:
     multipart:
