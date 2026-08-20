@@ -59,6 +59,7 @@ public record AdCreateRequest(
 
         @NotNull(message = "Tarih alanı boş bırakılamaz")
         @PastOrPresent(message = "Lost date cannot be in the future")
+        @com.fasterxml.jackson.annotation.JsonFormat(pattern = "yyyy-MM-dd")
         @com.fasterxml.jackson.annotation.JsonAlias({"date", "eventDate", "incidentDate"})
         LocalDate lostDate,
 

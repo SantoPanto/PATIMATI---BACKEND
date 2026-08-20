@@ -145,7 +145,7 @@ public class GlobalExceptionHandler {
             HttpServletRequest request
     ) {
         Map<String, String> fieldErrors = new LinkedHashMap<>();
-        String detailMessage = "Gönderilen JSON verisi korrupt veya okunabilir biçimde değil.";
+        String detailMessage = "İstek gövdesi (JSON) okunamadı veya veri formatı hatalı. Lütfen tarih gibi alanların formatını (yyyy-MM-dd) kontrol edin.";
 
         Throwable mostSpecificCause = exception.getMostSpecificCause();
         if (mostSpecificCause instanceof InvalidFormatException invalidFormatException) {
@@ -155,11 +155,12 @@ public class GlobalExceptionHandler {
             String errorMessage = "Geçersiz değer: '" + invalidFormatException.getValue() + "'";
             if (invalidFormatException.getTargetType() != null && invalidFormatException.getTargetType().isEnum()) {
                 errorMessage = "'" + invalidFormatException.getValue() + "' geçerli bir enum değeri değil.";
+            } else if (invalidFormatException.getTargetType() != null && java.time.temporal.Temporal.class.isAssignableFrom(invalidFormatException.getTargetType())) {
+                errorMessage = "Tarih formatı geçersiz (yyyy-MM-dd bekleniyor): '" + invalidFormatException.getValue() + "'";
             }
             if (!fieldName.isEmpty()) {
                 fieldErrors.put(fieldName, errorMessage);
             }
-            detailMessage = "JSON veri tipi veya alan formatı geçersiz: " + (fieldName.isEmpty() ? errorMessage : fieldName + " -> " + errorMessage);
         } else {
             Throwable current = exception;
             com.fasterxml.jackson.databind.JsonMappingException jsonMappingException = null;
@@ -187,10 +188,6 @@ public class GlobalExceptionHandler {
 
             if (!fieldName.isEmpty() && mostSpecificCause != null && mostSpecificCause.getMessage() != null) {
                 fieldErrors.put(fieldName, mostSpecificCause.getMessage());
-            }
-
-            if (mostSpecificCause != null && mostSpecificCause.getMessage() != null) {
-                detailMessage = mostSpecificCause.getMessage();
             }
         }
 
