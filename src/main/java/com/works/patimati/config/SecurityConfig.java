@@ -65,6 +65,8 @@ public class SecurityConfig {
                                 "/v3/api-docs",
                                 "/api/auth/forgot-password",
                                 "/api/auth/reset-password",
+                                "/api/ads/*/poster",
+                                "/api/v1/ads/*/poster",
                                 "/error",
                                 "/oauth2/**",
                                 "/login/oauth2/**",

@@ -95,4 +95,34 @@ public class AdComplaintService {
                 savedComplaint.getCreatedAt()
         );
     }
+
+    @Transactional
+    public ComplaintResponse resolveAdComplaint(Long complaintId) {
+        AdComplaint complaint = adComplaintRepository.findById(complaintId)
+                .orElseThrow(() -> new ResourceNotFoundException("İlan şikayeti bulunamadı ID: " + complaintId));
+
+        complaint.setStatus(ComplaintStatus.COZULDU);
+        AdComplaint updatedComplaint = adComplaintRepository.save(complaint);
+
+        String reporterEmail = userRepository.findById(updatedComplaint.getReporterId())
+                .map(User::getEmail)
+                .orElse(null);
+
+        Long adOwnerUid = adRepository.findById(updatedComplaint.getAdId())
+                .filter(ad -> ad.getUser() != null)
+                .map(ad -> ad.getUser().getUid())
+                .orElse(null);
+
+        return new ComplaintResponse(
+                updatedComplaint.getId(),
+                updatedComplaint.getReporterId(),
+                reporterEmail,
+                updatedComplaint.getAdId(),
+                adOwnerUid,
+                updatedComplaint.getReason(),
+                updatedComplaint.getDescription(),
+                updatedComplaint.getStatus(),
+                updatedComplaint.getCreatedAt()
+        );
+    }
 }
