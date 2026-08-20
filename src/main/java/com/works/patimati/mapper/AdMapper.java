@@ -148,7 +148,10 @@ public class AdMapper {
                 ad.getCreatedAt(),
                 ad.getUpdatedAt(),
                 ad.getAiStatus(),
-                ad.getAiIsPet()
+                ad.getAiIsPet(),
+                ad.getIsPosterAllowed(),
+                ad.getShowEmailOnPoster(),
+                ad.getShowPhoneOnPoster()
         );
     }
 

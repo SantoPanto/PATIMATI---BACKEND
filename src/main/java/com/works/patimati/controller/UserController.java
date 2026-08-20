@@ -76,21 +76,18 @@ public class UserController {
      * PUT /api/auth/change-password
      */
     @PutMapping("/change-password")
-    public ResponseEntity<Void> changePassword(
+    public ResponseEntity<?> changePassword(
             Authentication authentication,
             @Valid @RequestBody ChangePasswordRequest request
     ) {
-        /*
-         * Kullanıcının e-posta adresi request body'den alınmaz.
-         * JWT doğrulamasından geçen Authentication nesnesi kullanılır.
-         */
-        authService.changePassword(
-                authentication.getName(),
-                request
-        );
-
-        // Frontend Promise<void> beklediği için başarılı işlemde gövdesiz 204 dönülür.
-        return ResponseEntity.noContent().build();
+        if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getPrincipal())) {
+            authService.changePassword(
+                    authentication.getName(),
+                    request
+            );
+            return ResponseEntity.noContent().build();
+        }
+        return authService.changePassword(request);
     }
 
     @GetMapping("/userlist")
@@ -107,10 +104,5 @@ public class UserController {
     @PutMapping("/fcm-token")
     public ResponseEntity<?> updateFcmToken(@Valid @RequestBody FcmTokenUpdateDTO request) {
         return authService.updateFcmToken(request);
-    }
-
-    @PutMapping("/change-password")
-    public ResponseEntity<?> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
-        return authService.changePassword(request);
     }
 }

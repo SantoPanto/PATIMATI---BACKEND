@@ -176,6 +176,25 @@ class UserServicePasswordChangeTest {
         verify(userRepository, never()).save(any(User.class));
     }
 
+    @Test
+    void shouldAllowWeakCurrentPasswordForOldUsers() {
+        User user = userWithPassword();
+        ChangePasswordRequest request = new ChangePasswordRequest();
+        request.setOldPassword("123"); // 3 karakterlik zayıf eski şifre
+        request.setNewPassword(NEW_PASSWORD);
+        request.setConfirmPassword(NEW_PASSWORD);
+
+        when(userRepository.findByEmail(USER_EMAIL)).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("123", ENCODED_CURRENT_PASSWORD)).thenReturn(true);
+        when(passwordEncoder.matches(NEW_PASSWORD, ENCODED_CURRENT_PASSWORD)).thenReturn(false);
+        when(passwordEncoder.encode(NEW_PASSWORD)).thenReturn(ENCODED_NEW_PASSWORD);
+
+        userService.changePassword(USER_EMAIL, request);
+
+        assertThat(user.getPassword()).isEqualTo(ENCODED_NEW_PASSWORD);
+        verify(userRepository).save(user);
+    }
+
     private User userWithPassword() {
         return User.builder()
                 .email(USER_EMAIL)

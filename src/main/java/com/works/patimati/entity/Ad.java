@@ -154,6 +154,18 @@ public class Ad {
     @Builder.Default
     private boolean suspended = false;
 
+    @Column(name = "is_poster_allowed", nullable = false)
+    @Builder.Default
+    private Boolean isPosterAllowed = false;
+
+    @Column(name = "show_email_on_poster", nullable = false)
+    @Builder.Default
+    private Boolean showEmailOnPoster = false;
+
+    @Column(name = "show_phone_on_poster", nullable = false)
+    @Builder.Default
+    private Boolean showPhoneOnPoster = false;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

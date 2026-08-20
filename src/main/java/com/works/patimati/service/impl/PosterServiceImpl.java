@@ -42,8 +42,27 @@ public class PosterServiceImpl implements PosterService {
     @Transactional(readOnly = true)
     @Override
     public byte[] generateAdPosterPdf(Long adId) {
+        String requestingUserEmail = null;
+        org.springframework.security.core.Authentication auth =
+                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getPrincipal())) {
+            requestingUserEmail = auth.getName();
+        }
+        return generateAdPosterPdf(adId, requestingUserEmail);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public byte[] generateAdPosterPdf(Long adId, String requestingUserEmail) {
         Ad ad = adRepository.findById(adId)
                 .orElseThrow(() -> new ResourceNotFoundException("İlan bulunamadı ID: " + adId));
+
+        boolean isOwner = (requestingUserEmail != null && ad.getUser() != null
+                && requestingUserEmail.equalsIgnoreCase(ad.getUser().getEmail()));
+
+        if (!isOwner && !Boolean.TRUE.equals(ad.getIsPosterAllowed())) {
+            throw new org.springframework.security.access.AccessDeniedException("Afiş oluşturma kapalıdır");
+        }
 
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             PdfWriter writer = new PdfWriter(baos);
@@ -114,15 +133,23 @@ public class PosterServiceImpl implements PosterService {
                 addTableRow(table, "Aciklama:", ad.getDescription());
             }
 
-            // İletişim Bilgileri
+            // İletişim Bilgileri (İlan Sahibinin İzinlerine Bağlı)
             User owner = ad.getUser();
             if (owner != null) {
                 String contactName = (owner.getFirstName() + " " + owner.getLastName()).trim();
-                addTableRow(table, "Iletisim Kisisi:", contactName);
-                if (owner.getPhone() != null && !owner.getPhone().isBlank()) {
+                if (!contactName.isBlank()) {
+                    addTableRow(table, "Iletisim Kisisi:", contactName);
+                }
+
+                // Telefon sadece showPhoneOnPoster == true ise eklenir
+                if (Boolean.TRUE.equals(ad.getShowPhoneOnPoster()) && owner.getPhone() != null && !owner.getPhone().isBlank()) {
                     addTableRow(table, "Telefon:", owner.getPhone());
                 }
-                addTableRow(table, "E-posta:", owner.getEmail());
+
+                // E-posta sadece showEmailOnPoster == true ise eklenir
+                if (Boolean.TRUE.equals(ad.getShowEmailOnPoster()) && owner.getEmail() != null && !owner.getEmail().isBlank()) {
+                    addTableRow(table, "E-posta:", owner.getEmail());
+                }
             }
 
             doc.add(table);
@@ -156,6 +183,8 @@ public class PosterServiceImpl implements PosterService {
             doc.close();
             log.info("İlan afişi PDF başarıyla üretildi. adId={}", adId);
             return baos.toByteArray();
+        } catch (org.springframework.security.access.AccessDeniedException e) {
+            throw e;
         } catch (Exception e) {
             log.error("İlan afişi PDF üretilirken hata oluştu. adId={}", adId, e);
             throw new RuntimeException("Afiş PDF üretilemedi: " + e.getMessage(), e);
