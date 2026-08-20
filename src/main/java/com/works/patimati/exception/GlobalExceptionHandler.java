@@ -120,6 +120,7 @@ public class GlobalExceptionHandler {
                 "Gönderilen istek verileri doğrulamadan geçemedi",
                 request
         );
+        detail.setProperty("invalid_params", fieldErrors);
         detail.setProperty("validationErrors", fieldErrors);
 
         return ResponseEntity.badRequest().body(detail);
@@ -187,15 +188,68 @@ public class GlobalExceptionHandler {
                 request
         );
         if (!fieldErrors.isEmpty()) {
+            detail.setProperty("invalid_params", fieldErrors);
             detail.setProperty("validationErrors", fieldErrors);
         }
 
         return ResponseEntity.badRequest().body(detail);
     }
 
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ProblemDetail> handleConstraintViolation(
+            ConstraintViolationException exception,
+            HttpServletRequest request
+    ) {
+        Map<String, String> fieldErrors = new LinkedHashMap<>();
+        exception.getConstraintViolations().forEach(violation -> {
+            String propertyPath = violation.getPropertyPath().toString();
+            String field = propertyPath.contains(".")
+                    ? propertyPath.substring(propertyPath.lastIndexOf('.') + 1)
+                    : propertyPath;
+            fieldErrors.putIfAbsent(field, violation.getMessage());
+        });
+
+        ProblemDetail detail = createProblem(
+                HttpStatus.BAD_REQUEST,
+                "Doğrulama hatası",
+                "Gönderilen istek verileri doğrulamadan geçemedi",
+                request
+        );
+        detail.setProperty("invalid_params", fieldErrors);
+        detail.setProperty("validationErrors", fieldErrors);
+
+        return ResponseEntity.badRequest().body(detail);
+    }
+
+    @ExceptionHandler(HandlerMethodValidationException.class)
+    public ResponseEntity<ProblemDetail> handleHandlerMethodValidation(
+            HandlerMethodValidationException exception,
+            HttpServletRequest request
+    ) {
+        Map<String, String> fieldErrors = new LinkedHashMap<>();
+        exception.getAllValidationResults().forEach(result -> {
+            String paramName = result.getMethodParameter().getParameterName();
+            result.getResolvableErrors().forEach(error -> {
+                String key = (error instanceof org.springframework.validation.FieldError fe)
+                        ? fe.getField()
+                        : (paramName != null ? paramName : "parameter");
+                fieldErrors.putIfAbsent(key, error.getDefaultMessage());
+            });
+        });
+
+        ProblemDetail detail = createProblem(
+                HttpStatus.BAD_REQUEST,
+                "Doğrulama hatası",
+                "Gönderilen istek verileri doğrulamadan geçemedi",
+                request
+        );
+        detail.setProperty("invalid_params", fieldErrors);
+        detail.setProperty("validationErrors", fieldErrors);
+
+        return ResponseEntity.badRequest().body(detail);
+    }
+
     @ExceptionHandler({
-            ConstraintViolationException.class,
-            HandlerMethodValidationException.class,
             MethodArgumentTypeMismatchException.class,
             MissingServletRequestPartException.class,
             MissingServletRequestParameterException.class,
