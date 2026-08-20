@@ -28,6 +28,32 @@ jobs:
         # değilse birleşme anında da görünmez; ancak dağıtımda patlar.
         run: python3 scripts/goc-numarasi-denetimi.py origin/develop
 
+  # Enum aynasi: backend enum'lari degisti mi ve taahhut edilen dosya
+  # guncel mi? Veritabani gerektirmiyor, derlemeyi de beklemiyor.
+  #
+  # NEDEN VAR: on yuz ile arka yuz ayni kavramlar icin ayri deger listeleri
+  # tutuyor ve 19.08 taramasinda 13 enum'un 6'sinda ayrisma olculdu. Uc depo
+  # da private oldugu icin on yuz CI'i backend enum'larini jetonsuz okuyamaz;
+  # jeton yerine TAAHHUT EDILEN ANLIK GORUNTU secildi. Bu is, enum'a deger
+  # eklendiginde/silindiginde/yeniden adlandirildiginda tek dosyanin diff'ini
+  # istegin icinde GORUNUR kilar. On yuz ayni dosyanin kopyasini kendi
+  # tarafinda sinar.
+  enum-aynasi:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repoyu Klonla
+        uses: actions/checkout@v4
+
+      # Once cozumleyicinin KENDISI sinaniyor: sinanmamis bekci teslim
+      # edilmez. `PushResult` gibi yapici argumanli sabitleri gormeyen bir
+      # desen, ayrismayi da goremeden yesil yanar (gecmiste tam bu oldu:
+      # bir olcum betigi PushResult'i 1 deger gosterdi, gercek 5).
+      - name: Cozumleyiciyi Sina
+        run: python3 scripts/enum-aynasi.py --kendini-sina
+
+      - name: Enum Aynasi Guncel mi
+        run: python3 scripts/enum-aynasi.py
+
   build:
     runs-on: ubuntu-latest
 
