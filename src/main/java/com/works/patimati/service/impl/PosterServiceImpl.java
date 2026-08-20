@@ -76,7 +76,8 @@ public class PosterServiceImpl implements PosterService {
             Document doc = new Document(pdfDoc, PageSize.A4);
             doc.setMargins(36, 36, 36, 36);
 
-            PdfFont turkishFont = loadTurkishFont();
+            PdfFont turkishFont = loadTurkishFont(false);
+            PdfFont turkishBoldFont = loadTurkishFont(true);
             if (turkishFont != null) {
                 doc.setFont(turkishFont);
             }
@@ -92,18 +93,26 @@ public class PosterServiceImpl implements PosterService {
 
             Paragraph header = new Paragraph("PATİMATİ")
                     .setFontSize(28)
-                    .setBold()
                     .setFontColor(headerColor)
                     .setTextAlignment(TextAlignment.CENTER);
+            if (turkishBoldFont != null) {
+                header.setFont(turkishBoldFont);
+            } else if (turkishFont != null) {
+                header.setFont(turkishFont);
+            }
             doc.add(header);
 
             Paragraph banner = new Paragraph(bannerText)
                     .setFontSize(20)
-                    .setBold()
                     .setFontColor(ColorConstants.WHITE)
                     .setBackgroundColor(headerColor)
                     .setTextAlignment(TextAlignment.CENTER)
                     .setPadding(8);
+            if (turkishBoldFont != null) {
+                banner.setFont(turkishBoldFont);
+            } else if (turkishFont != null) {
+                banner.setFont(turkishFont);
+            }
             doc.add(banner);
 
             doc.add(new Paragraph("\n"));
@@ -111,8 +120,12 @@ public class PosterServiceImpl implements PosterService {
             // İlan Başlığı
             Paragraph title = new Paragraph(ad.getTitle() != null ? ad.getTitle() : "Detaylar")
                     .setFontSize(18)
-                    .setBold()
                     .setTextAlignment(TextAlignment.CENTER);
+            if (turkishBoldFont != null) {
+                title.setFont(turkishBoldFont);
+            } else if (turkishFont != null) {
+                title.setFont(turkishFont);
+            }
             doc.add(title);
 
             doc.add(new Paragraph("\n"));
@@ -120,28 +133,31 @@ public class PosterServiceImpl implements PosterService {
             // İlan Detay Tablosu
             Table table = new Table(UnitValue.createPercentArray(new float[]{30, 70}));
             table.setWidth(UnitValue.createPercentValue(100));
+            if (turkishFont != null) {
+                table.setFont(turkishFont);
+            }
 
-            addTableRow(table, "İlan Tipi:", ad.getAdType() != null ? ad.getAdType().name() : "-");
-            addTableRow(table, "Tür:", ad.getSpecies() != null ? ad.getSpecies().name() : "-");
-            addTableRow(table, "Irk:", ad.getBreed() != null ? ad.getBreed() : "-");
-            addTableRow(table, "Cinsiyet:", ad.getGender() != null ? ad.getGender().name() : "-");
-            addTableRow(table, "Yaş Grubu:", ad.getAgeGroup() != null ? ad.getAgeGroup().name() : "-");
+            addTableRow(table, "İlan Tipi:", ad.getAdType() != null ? ad.getAdType().name() : "-", turkishFont, turkishBoldFont);
+            addTableRow(table, "Tür:", ad.getSpecies() != null ? ad.getSpecies().name() : "-", turkishFont, turkishBoldFont);
+            addTableRow(table, "Irk:", ad.getBreed() != null ? ad.getBreed() : "-", turkishFont, turkishBoldFont);
+            addTableRow(table, "Cinsiyet:", ad.getGender() != null ? ad.getGender().name() : "-", turkishFont, turkishBoldFont);
+            addTableRow(table, "Yaş Grubu:", ad.getAgeGroup() != null ? ad.getAgeGroup().name() : "-", turkishFont, turkishBoldFont);
 
             if (ad.getColors() != null && !ad.getColors().isEmpty()) {
                 String colorStr = ad.getColors().stream().map(Enum::name).collect(Collectors.joining(", "));
-                addTableRow(table, "Renkler:", colorStr);
+                addTableRow(table, "Renkler:", colorStr, turkishFont, turkishBoldFont);
             }
 
             if (ad.getMicrochipNumber() != null && !ad.getMicrochipNumber().isBlank()) {
-                addTableRow(table, "Mikroçip No:", ad.getMicrochipNumber());
+                addTableRow(table, "Mikroçip No:", ad.getMicrochipNumber(), turkishFont, turkishBoldFont);
             }
 
             if (ad.getDistinctiveMarks() != null && !ad.getDistinctiveMarks().isBlank()) {
-                addTableRow(table, "Belirgin İzler:", ad.getDistinctiveMarks());
+                addTableRow(table, "Belirgin İzler:", ad.getDistinctiveMarks(), turkishFont, turkishBoldFont);
             }
 
             if (ad.getDescription() != null && !ad.getDescription().isBlank()) {
-                addTableRow(table, "Açıklama:", ad.getDescription());
+                addTableRow(table, "Açıklama:", ad.getDescription(), turkishFont, turkishBoldFont);
             }
 
             // İletişim Bilgileri (İlan Sahibinin İzinlerine Bağlı)
@@ -149,17 +165,17 @@ public class PosterServiceImpl implements PosterService {
             if (owner != null) {
                 String contactName = (owner.getFirstName() + " " + owner.getLastName()).trim();
                 if (!contactName.isBlank()) {
-                    addTableRow(table, "İletişim Kişisi:", contactName);
+                    addTableRow(table, "İletişim Kişisi:", contactName, turkishFont, turkishBoldFont);
                 }
 
                 // Telefon sadece showPhoneOnPoster == true ise eklenir
                 if (Boolean.TRUE.equals(ad.getShowPhoneOnPoster()) && owner.getPhone() != null && !owner.getPhone().isBlank()) {
-                    addTableRow(table, "Telefon:", owner.getPhone());
+                    addTableRow(table, "Telefon:", owner.getPhone(), turkishFont, turkishBoldFont);
                 }
 
                 // E-posta sadece showEmailOnPoster == true ise eklenir
                 if (Boolean.TRUE.equals(ad.getShowEmailOnPoster()) && owner.getEmail() != null && !owner.getEmail().isBlank()) {
-                    addTableRow(table, "E-posta:", owner.getEmail());
+                    addTableRow(table, "E-posta:", owner.getEmail(), turkishFont, turkishBoldFont);
                 }
             }
 
@@ -177,6 +193,9 @@ public class PosterServiceImpl implements PosterService {
                         .setFontSize(10)
                         .setItalic()
                         .setTextAlignment(TextAlignment.CENTER);
+                if (turkishFont != null) {
+                    qrLabel.setFont(turkishFont);
+                }
 
                 doc.add(qrLabel);
                 doc.add(qrImage);
@@ -189,6 +208,9 @@ public class PosterServiceImpl implements PosterService {
                     .setFontSize(9)
                     .setFontColor(ColorConstants.GRAY)
                     .setTextAlignment(TextAlignment.CENTER);
+            if (turkishFont != null) {
+                footer.setFont(turkishFont);
+            }
             doc.add(footer);
 
             doc.close();
@@ -203,7 +225,19 @@ public class PosterServiceImpl implements PosterService {
     }
 
     private PdfFont loadTurkishFont() {
-        String[] possibleFontPaths = new String[]{
+        return loadTurkishFont(false);
+    }
+
+    private PdfFont loadTurkishFont(boolean bold) {
+        String[] possibleFontPaths = bold ? new String[]{
+                "C:/Windows/Fonts/arialbd.ttf",
+                "C:/Windows/Fonts/calibrib.ttf",
+                "C:/Windows/Fonts/segoeuib.ttf",
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
+                "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+                "/System/Library/Fonts/Supplemental/Arial Bold.ttf"
+        } : new String[]{
                 "C:/Windows/Fonts/arial.ttf",
                 "C:/Windows/Fonts/calibri.ttf",
                 "C:/Windows/Fonts/segoeui.ttf",
@@ -223,13 +257,18 @@ public class PosterServiceImpl implements PosterService {
             }
         }
 
-        try (InputStream is = getClass().getResourceAsStream("/fonts/FreeSans.ttf")) {
+        String classpathFont = bold ? "/fonts/FreeSansBold.ttf" : "/fonts/FreeSans.ttf";
+        try (InputStream is = getClass().getResourceAsStream(classpathFont)) {
             if (is != null) {
                 byte[] fontBytes = is.readAllBytes();
                 return PdfFontFactory.createFont(fontBytes, PdfEncodings.IDENTITY_H);
             }
         } catch (Exception e) {
-            log.warn("Classpath font yüklenemedi", e);
+            log.warn("Classpath font yüklenemedi: {}", classpathFont, e);
+        }
+
+        if (bold) {
+            return loadTurkishFont(false);
         }
 
         try {
@@ -243,9 +282,31 @@ public class PosterServiceImpl implements PosterService {
         }
     }
 
-    private void addTableRow(Table table, String key, String value) {
-        Cell cellKey = new Cell().add(new Paragraph(key).setBold()).setPadding(5);
-        Cell cellVal = new Cell().add(new Paragraph(value != null ? value : "-")).setPadding(5);
+    private void addTableRow(Table table, String key, String value, PdfFont regularFont, PdfFont boldFont) {
+        Paragraph pKey = new Paragraph(key);
+        if (boldFont != null) {
+            pKey.setFont(boldFont);
+        } else if (regularFont != null) {
+            pKey.setFont(regularFont);
+        }
+
+        Paragraph pVal = new Paragraph(value != null ? value : "-");
+        if (regularFont != null) {
+            pVal.setFont(regularFont);
+        }
+
+        Cell cellKey = new Cell().add(pKey).setPadding(5);
+        Cell cellVal = new Cell().add(pVal).setPadding(5);
+
+        if (boldFont != null) {
+            cellKey.setFont(boldFont);
+        } else if (regularFont != null) {
+            cellKey.setFont(regularFont);
+        }
+        if (regularFont != null) {
+            cellVal.setFont(regularFont);
+        }
+
         table.addCell(cellKey);
         table.addCell(cellVal);
     }

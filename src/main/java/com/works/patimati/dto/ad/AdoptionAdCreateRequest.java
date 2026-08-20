@@ -56,6 +56,7 @@ public record AdoptionAdCreateRequest(
 
         @NotNull(message = "Tarih alanı boş bırakılamaz")
         @PastOrPresent(message = "Tarih gelecekte bir tarih olamaz")
+        @com.fasterxml.jackson.annotation.JsonFormat(pattern = "yyyy-MM-dd")
         @com.fasterxml.jackson.annotation.JsonAlias({"lostDate", "eventDate", "incidentDate"})
         LocalDate date,
 
