@@ -3,6 +3,7 @@ package com.works.patimati.controller;
 import com.works.patimati.dto.ad.AdResponse;
 import com.works.patimati.entity.Ad;
 import com.works.patimati.entity.enums.AgeGroup;
+import com.works.patimati.entity.enums.AdResolutionStatus;
 import com.works.patimati.entity.enums.AiStatus;
 import com.works.patimati.entity.enums.CoatPattern;
 import com.works.patimati.entity.enums.EyeColor;
@@ -399,7 +400,8 @@ class AdoptionControllerTest {
                 false,
                 false,
                 false,
-                false
+                false,
+                AdResolutionStatus.NONE
         );
     }
 

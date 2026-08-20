@@ -242,19 +242,28 @@ public class AdService {
     }
 
     @Transactional(readOnly = true)
+    /**
+     * Kullanıcının kendi ilanları.
+     *
+     * <p>{@code active} <b>null olabilir</b> ve null "hepsi" demektir. Eskiden
+     * parametre {@code boolean}du ve ucun varsayılanı {@code true}ydu; ön yüz
+     * "Tümü" sekmesinde alanı hiç göndermediği için sunucu sessizce
+     * <i>yalnız yayındakileri</i> döndürüyordu. Sonuç: bulundu olarak kapanan
+     * ilan "Tümü"de kayboluyordu (ölçüldü, 21.08 canlı).
+     */
     public Page<AdResponse> getUserAds(
             String ownerEmail,
-            boolean active,
+            Boolean active,
             Pageable pageable
     ) {
         User owner = findUserByEmail(ownerEmail);
 
-        return adRepository.findAllByUser_UidAndActive(
-                        owner.getUid(),
-                        active,
-                        pageable
-                )
-                .map(this::toResponseWithTemporaryPhotoUrls);
+        Page<Ad> sayfa = (active == null)
+                ? adRepository.findAllByUser_Uid(owner.getUid(), pageable)
+                : adRepository.findAllByUser_UidAndActive(
+                        owner.getUid(), active, pageable);
+
+        return sayfa.map(this::toResponseWithTemporaryPhotoUrls);
     }
 
     @Transactional

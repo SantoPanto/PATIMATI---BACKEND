@@ -1,6 +1,7 @@
 package com.works.patimati.dto.ad;
 
 import com.works.patimati.entity.Ad;
+import com.works.patimati.entity.enums.AdResolutionStatus;
 import com.works.patimati.entity.enums.AgeGroup;
 import com.works.patimati.entity.enums.AiStatus;
 import com.works.patimati.entity.enums.CoatPattern;
@@ -82,6 +83,18 @@ public record AdResponse(
         Boolean aiIsPet,
         Boolean isPosterAllowed,
         Boolean showEmailOnPoster,
-        Boolean showPhoneOnPoster
+        Boolean showPhoneOnPoster,
+
+        /**
+         * İlanın nasıl kapandığı: NONE (kapanmadı) · FOUND (bulundu) ·
+         * ADOPTED (sahiplendirildi).
+         *
+         * <p><b>Neden gerekiyor:</b> {@code active=false} tek başına
+         * "sahibi yayından kaldırdı" ile "hayvan bulundu" arasını ayırmıyor.
+         * Bu alan olmadan arayüz mutlu sonla kapanmış bir ilanı
+         * <i>"Yayından kaldırıldı"</i> diye gösteriyor ve yanına
+         * <i>"Yeniden yayınla"</i> düğmesi koyuyor — ölçüldü (21.08, canlı).
+         */
+        AdResolutionStatus resolutionStatus
 ) {
 }
