@@ -41,6 +41,23 @@ public record AdResponse(
         Long ownerId,
         String ownerDisplayName,
         boolean active,
+
+        /*
+         * Yonetici moderasyonu. `active` ile KARISTIRILMAMALI:
+         *   active=false  + suspended=false -> SAHIP kendi ilanini yayindan kaldirdi
+         *   active=false  + suspended=true  -> YONETICI inceleme icin askiya aldi
+         *
+         * Ikisi de `active=false` uretiyor (AdminServiceImpl askiya alirken her
+         * ikisini de yaziyor). Bu alan donmedigi surece arayuz iki durumu
+         * AYIRT EDEMIYOR ve olculdu: askiya alinan ilan sahibin "Yayindan
+         * Kaldirilan" sekmesine dusuyor, yanina "Yeniden Yayinla" dugmesi
+         * ciziliyor, kullanici basiyor ve uc hakli olarak reddediyor. Sahip
+         * ilaninin INCELEMEDE oldugunu hicbir yerden ogrenemiyordu.
+         *
+         * Mahremiyet: yeni bir yuzey acmiyor — bu uc zaten yalniz ilanin
+         * SAHIBINE ve yoneticiye kendi ilanini donduruyor.
+         */
+        boolean suspended,
         Instant createdAt,
         Instant updatedAt,
 
