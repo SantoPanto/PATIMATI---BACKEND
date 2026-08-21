@@ -9,7 +9,8 @@ import com.works.patimati.notification.PushNotificationService;
 import com.works.patimati.notification.PushResult;
 import com.works.patimati.repository.AdRepository;
 import com.works.patimati.service.AdMatchService;
-import lombok.RequiredArgsConstructor;
+import com.works.patimati.service.NotificationService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -70,7 +71,6 @@ import java.util.stream.Collectors;
  * madde yeniden açılmalı.
  */
 @Service
-@RequiredArgsConstructor
 public class AiMatchNotifier {
 
     private static final Logger log = LoggerFactory.getLogger(AiMatchNotifier.class);
@@ -78,8 +78,36 @@ public class AiMatchNotifier {
     private static final String BILDIRIM_BASLIGI = "Olası eşleşme bulundu";
 
     private final AdRepository adRepository;
-    private final PushNotificationService pushNotificationService;
     private final AdMatchService adMatchService;
+    private final NotificationService notificationService;
+    private final PushNotificationService legacyPushNotificationService;
+
+    @Autowired
+    public AiMatchNotifier(
+            AdRepository adRepository,
+            NotificationService notificationService,
+            AdMatchService adMatchService
+    ) {
+        this.adRepository = adRepository;
+        this.adMatchService = adMatchService;
+        this.notificationService = notificationService;
+        this.legacyPushNotificationService = null;
+    }
+
+    /**
+     * Kept for existing push-only unit tests. Production wiring uses the
+     * database-backed constructor above.
+     */
+    public AiMatchNotifier(
+            AdRepository adRepository,
+            PushNotificationService pushNotificationService,
+            AdMatchService adMatchService
+    ) {
+        this.adRepository = adRepository;
+        this.adMatchService = adMatchService;
+        this.notificationService = null;
+        this.legacyPushNotificationService = pushNotificationService;
+    }
 
     /**
      * Eşleşmeleri kaydeder, eşiği geçenler için bildirim gönderir.
@@ -200,7 +228,12 @@ public class AiMatchNotifier {
                 continue;
             }
 
-            PushResult sonuc = gonder(alici.kullanici(), alici.karsiIlan(), match.score());
+            PushResult sonuc = gonder(
+                    alici.kullanici(),
+                    alici.karsiIlan(),
+                    match.score(),
+                    kayit.yazildi() ? kayit.id() : null
+            );
             sonuclar.add(sonuc);
 
             // ÖNCE gönder, SONRA damgala — ve yalnız gerçekten gideni damgala.
@@ -229,18 +262,36 @@ public class AiMatchNotifier {
         return "{\"source\":" + match.photoA() + ",\"matched\":" + match.photoB() + "}";
     }
 
-    private PushResult gonder(User recipient, Ad otherAd, double score) {
+    private PushResult gonder(User recipient, Ad otherAd, double score, Long matchId) {
         if (recipient == null) {
             return PushResult.NO_RECIPIENT;
         }
-        return pushNotificationService.send(
+        Map<String, String> data = Map.of(
+                "type", "AI_MATCH",
+                "adId", String.valueOf(otherAd.getId()),
+                "score", String.valueOf(score)
+        );
+        String body = "İlanınıza benzeyen bir ilan var: " + otherAd.getTitle()
+                + ". Siz de bakar mısınız?";
+        String dedupeKey = matchId == null ? null : "AI_MATCH:" + matchId;
+
+        if (notificationService != null) {
+            return notificationService.createAndSend(
+                    recipient,
+                    BILDIRIM_BASLIGI,
+                    body,
+                    "AI_MATCH",
+                    data,
+                    dedupeKey
+            );
+        }
+
+        return legacyPushNotificationService.send(
                 recipient.getFcmToken(),
                 BILDIRIM_BASLIGI,
-                "İlanınıza benzeyen bir ilan var: " + otherAd.getTitle()
-                        + ". Siz de bakar mısınız?",
-                Map.of("type", "AI_MATCH",
-                        "adId", String.valueOf(otherAd.getId()),
-                        "score", String.valueOf(score)));
+                body,
+                data
+        );
     }
 
     /**

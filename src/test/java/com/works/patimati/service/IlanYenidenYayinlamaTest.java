@@ -12,7 +12,7 @@ import com.works.patimati.storage.ImageStorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.access.AccessDeniedException;
-
+import com.works.patimati.service.NotificationService;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -64,7 +64,8 @@ class IlanYenidenYayinlamaTest {
                 adMapper,
                 mock(ImageStorageService.class),
                 mock(AiAnalysisPublisher.class),
-                mock(RewardService.class)
+                mock(RewardService.class),
+                 mock(NotificationService.class)
         );
 
         sahip = User.builder().uid(SAHIP_UID).email(SAHIP_EPOSTA).build();
