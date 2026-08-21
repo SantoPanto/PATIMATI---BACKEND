@@ -6,6 +6,7 @@ import com.works.patimati.entity.Ad;
 import com.works.patimati.service.AdService;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -41,10 +42,14 @@ public class PublicAdController {
 
     /**
      * Herkese açık aktif ve askıda olmayan ilanları sayfalı biçimde listeler.
+     *
+     * <p>{@code search} verilirse başlık, ırk ve açıklamada büyük/küçük harf
+     * duyarsız metin araması yapılır (İlanlar sayfasındaki arama kutusu).</p>
      */
     @GetMapping
     public ResponseEntity<Page<AdResponse>> getPublicAds(
             @RequestParam(required = false) Ad.AdType adType,
+            @RequestParam(required = false) @Size(max = 100) String search,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "20") @Min(1) @Max(MAX_PAGE_SIZE) int size
     ) {
@@ -55,7 +60,7 @@ public class PublicAdController {
         );
 
         return ResponseEntity.ok(
-                adService.getPublicActiveAds(adType, pageable)
+                adService.getPublicActiveAds(adType, search, pageable)
         );
     }
 

@@ -448,6 +448,73 @@ class AdServiceTest {
         verify(adRepository).findAllByActiveTrueAndSuspendedFalse(pageable);
     }
 
+    /*
+     * B5: public listede arama. Buradaki dört test yalnız DALLANMAYI ölçer
+     * (hangi repo metodu, hangi temizlenmiş terimle) — JPQL'in kendisi gerçek
+     * veritabanında repository/IlanAramaTest ile ölçülür; mock bu katmanı
+     * göremez.
+     */
+
+    @Test
+    void shouldUsePlainPublicQueryWhenSearchIsBlank() {
+        Pageable pageable = PageRequest.of(0, 10);
+        when(adRepository.findAllByActiveTrueAndSuspendedFalse(pageable))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        Page<AdResponse> result = adService.getPublicActiveAds(null, "   ", pageable);
+
+        assertThat(result).isNotNull();
+        verify(adRepository).findAllByActiveTrueAndSuspendedFalse(pageable);
+        verify(adRepository, never()).searchPublicActiveAds(any(), any());
+    }
+
+    @Test
+    void shouldSearchPublicAdsWithSanitizedTerm() {
+        Pageable pageable = PageRequest.of(0, 10);
+        when(adRepository.searchPublicActiveAds("bursa", pageable))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        // Joker karakterler (% _) düz metin aramasına sızmamalı, uçlardaki
+        // boşluk da terime dahil olmamalı.
+        Page<AdResponse> result =
+                adService.getPublicActiveAds(null, " bur%sa_ ", pageable);
+
+        assertThat(result).isNotNull();
+        verify(adRepository).searchPublicActiveAds("bursa", pageable);
+        verify(adRepository, never()).findAllByActiveTrueAndSuspendedFalse(any());
+    }
+
+    @Test
+    void shouldCombineAdTypeFilterWithSearch() {
+        Pageable pageable = PageRequest.of(0, 10);
+        when(adRepository.searchPublicActiveAdsByAdType(Ad.AdType.LOST, "tekir", pageable))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        Page<AdResponse> result =
+                adService.getPublicActiveAds(Ad.AdType.LOST, "tekir", pageable);
+
+        assertThat(result).isNotNull();
+        verify(adRepository).searchPublicActiveAdsByAdType(Ad.AdType.LOST, "tekir", pageable);
+        verify(adRepository, never())
+                .findAllByAdTypeAndActiveTrueAndSuspendedFalse(any(), any());
+    }
+
+    @Test
+    void shouldTreatWildcardOnlySearchAsNoSearch() {
+        Pageable pageable = PageRequest.of(0, 10);
+        when(adRepository.findAllByActiveTrueAndSuspendedFalse(pageable))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        // Temizlik sonrası boş kalan arama ("%%__") daraltma yapmamalı:
+        // boş desenle arama, "hiç ilan yok" gibi yanlış bir sonuç üretirdi.
+        Page<AdResponse> result =
+                adService.getPublicActiveAds(null, "%%__", pageable);
+
+        assertThat(result).isNotNull();
+        verify(adRepository).findAllByActiveTrueAndSuspendedFalse(pageable);
+        verify(adRepository, never()).searchPublicActiveAds(any(), any());
+    }
+
     @Test
     void shouldUsePublicNearbyQueryAndMapCoordinatesCorrectly() {
         /*

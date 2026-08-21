@@ -69,6 +69,41 @@ public interface AdRepository extends JpaRepository<Ad, Long> {
             Pageable pageable
     );
 
+    // Halka açık listede metin araması: başlık + ırk + açıklama.
+    // Açıklama bilerek dahil — şehir/semt bilgisi ayrı bir sütunda YOK;
+    // bulundu ve sahiplendirme formları Nominatim adresini açıklamaya kattığı
+    // için "Bursa" gibi bir yer araması ancak açıklama üzerinden tutabiliyor.
+    // LOWER iki tarafta da veritabanının kendi katlamasıyla çalışır: ASCII
+    // güvenli, Türkçe İ/ı kenarında (ör. "izmir" ↔ "İzmir") kaçırma olabilir.
+    @Query("""
+            SELECT a FROM Ad a
+            WHERE a.active = TRUE AND a.suspended = FALSE
+              AND (LOWER(a.title) LIKE LOWER(CONCAT('%', :search, '%'))
+                   OR LOWER(a.breed) LIKE LOWER(CONCAT('%', :search, '%'))
+                   OR LOWER(a.description) LIKE LOWER(CONCAT('%', :search, '%')))
+            """)
+    Page<Ad> searchPublicActiveAds(
+            @Param("search") String search,
+            Pageable pageable
+    );
+
+    // Aynı arama, ilan türü süzgeciyle. Tür null olamaz; null tür için üstteki
+    // kullanılır (null parametreli tek sorgu, enum bağlamada tip belirsizliğine
+    // düşebildiği için bilerek iki ayrı metot — mevcut listeleme çifti gibi).
+    @Query("""
+            SELECT a FROM Ad a
+            WHERE a.active = TRUE AND a.suspended = FALSE
+              AND a.adType = :adType
+              AND (LOWER(a.title) LIKE LOWER(CONCAT('%', :search, '%'))
+                   OR LOWER(a.breed) LIKE LOWER(CONCAT('%', :search, '%'))
+                   OR LOWER(a.description) LIKE LOWER(CONCAT('%', :search, '%')))
+            """)
+    Page<Ad> searchPublicActiveAdsByAdType(
+            @Param("adType") Ad.AdType adType,
+            @Param("search") String search,
+            Pageable pageable
+    );
+
     // Bir kullanıcıya ait ilanları aktiflik durumuna göre listeler.
     Page<Ad> findAllByUser_UidAndActive(
             Long userId,

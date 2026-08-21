@@ -139,16 +139,44 @@ public class AdService {
     @Transactional(readOnly = true)
     public Page<AdResponse> getPublicActiveAds(
             Ad.AdType adType,
+            String search,
             Pageable pageable
     ) {
-        Page<Ad> ads = adType == null
-                ? adRepository.findAllByActiveTrueAndSuspendedFalse(pageable)
-                : adRepository.findAllByAdTypeAndActiveTrueAndSuspendedFalse(
-                adType,
-                pageable
-        );
+        String aramaMetni = temizleAramaMetni(search);
+
+        Page<Ad> ads;
+        if (aramaMetni == null) {
+            ads = adType == null
+                    ? adRepository.findAllByActiveTrueAndSuspendedFalse(pageable)
+                    : adRepository.findAllByAdTypeAndActiveTrueAndSuspendedFalse(
+                    adType,
+                    pageable
+            );
+        } else {
+            ads = adType == null
+                    ? adRepository.searchPublicActiveAds(aramaMetni, pageable)
+                    : adRepository.searchPublicActiveAdsByAdType(
+                    adType,
+                    aramaMetni,
+                    pageable
+            );
+        }
 
         return ads.map(this::toResponseWithTemporaryPhotoUrls);
+    }
+
+    /**
+     * LIKE joker karakterleri (%, _, \) kullanıcı girdisinden atılır — desen
+     * olarak değil düz metin olarak aransınlar diye; kaçış zinciri (ESCAPE)
+     * kurmaktan bilerek kaçınıldı. Temizlik sonrası boş kalan arama, hiç arama
+     * yokmuş gibi davranır ki liste boş desenle daralmasın.
+     */
+    private static String temizleAramaMetni(String search) {
+        if (search == null) {
+            return null;
+        }
+        String temiz = search.replaceAll("[%_\\\\]", "").trim();
+        return temiz.isEmpty() ? null : temiz;
     }
 
     @Transactional(readOnly = true)
