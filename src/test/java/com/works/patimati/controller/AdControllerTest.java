@@ -383,6 +383,7 @@ class AdControllerTest {
                 42L,
                 "Test User",
                 true,
+                false,
                 Instant.parse("2026-07-27T12:00:00Z"),
                 Instant.parse("2026-07-27T12:00:00Z"),
                 AiStatus.DONE,
