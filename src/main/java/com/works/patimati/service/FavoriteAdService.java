@@ -7,7 +7,6 @@ import com.works.patimati.entity.User;
 import com.works.patimati.repository.AdRepository;
 import com.works.patimati.repository.FavoriteAdRepository;
 import com.works.patimati.repository.UserRepository;
-import com.works.patimati.mapper.AdMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -21,7 +20,7 @@ public class FavoriteAdService {
     private final FavoriteAdRepository favoriteAdRepository;
     private final UserRepository userRepository;
     private final AdRepository adRepository;
-    private final AdMapper adMapper;
+    private final AdService adService;
 
     @Transactional
     public void addFavorite(String email, Long adId) {
@@ -51,6 +50,6 @@ public class FavoriteAdService {
     @Transactional(readOnly = true)
     public Page<AdResponse> getMyFavorites(String email, Pageable pageable) {
         return favoriteAdRepository.findByUserEmail(email, pageable)
-                .map(favoriteAd -> adMapper.toResponse(favoriteAd.getAd()));
+                .map(favoriteAd -> adService.toResponseWithTemporaryPhotoUrls(favoriteAd.getAd()));
     }
 }
