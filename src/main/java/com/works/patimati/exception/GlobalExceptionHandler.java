@@ -6,6 +6,8 @@ import com.works.patimati.storage.ImageStorageException;
 import com.works.patimati.storage.InvalidImageException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +27,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -293,6 +296,29 @@ public class GlobalExceptionHandler {
         );
     }
 
+    /**
+     * Veritabanı bütünlük ihlalleri (uzunluk aşımı, tekillik, yabancı anahtar).
+     *
+     * <p>Bu istisnanın {@code getMessage()}'ı ham SQL cümlesini ve sütun listesini
+     * içerir; kullanıcıya aynen gösterilirse hem anlaşılmaz hem de şema sızdırır
+     * (B1 bulgusu: bulundu formunda 255 karakteri aşan açıklama, ekrana
+     * {@code insert into ads (...)} metnini bastırıyordu). Gerçek sebep sunucu
+     * günlüğüne yazılır, istemciye yalnız güvenli bir özet döner.
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ProblemDetail> handleDataIntegrityViolation(
+            DataIntegrityViolationException exception,
+            HttpServletRequest request
+    ) {
+        log.warn("Veri bütünlüğü ihlali: {} {}", request.getMethod(), request.getRequestURI(), exception);
+        return problem(
+                HttpStatus.BAD_REQUEST,
+                "Geçersiz istek",
+                "Gönderilen verilerden biri kaydedilemedi: bir alan izin verilen sınırı aşıyor ya da beklenen biçimde değil.",
+                request
+        );
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ProblemDetail> handleGenericException(
             Exception exception,
@@ -306,10 +332,13 @@ public class GlobalExceptionHandler {
                     request
             );
         }
+        // Beklenmeyen istisnanın mesajı istemciye AKTARILMAZ: içinde SQL, dosya
+        // yolu gibi iç ayrıntılar olabilir. Gerçek sebep günlükte.
+        log.error("Beklenmeyen sunucu hatası: {} {}", request.getMethod(), request.getRequestURI(), exception);
         return problem(
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 "Sunucu Hatası",
-                exception.getMessage() != null ? exception.getMessage() : "Beklenmeyen bir sunucu hatası meydana geldi.",
+                "Beklenmeyen bir sunucu hatası meydana geldi.",
                 request
         );
     }
