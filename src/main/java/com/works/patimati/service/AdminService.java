@@ -49,6 +49,12 @@ public interface AdminService {
     void deleteAdAsAdmin(Long adId);
 
     /**
+     * FAILED durumundaki tüm aktif ilanları yeniden analize gönderir;
+     * kuyruğa yazılan ilan sayısını döner.
+     */
+    int reanalyzeFailedAds();
+
+    /**
      * İlan şikayetlerini bağlam bilgileriyle (ilan başlığı, sahibi, şikayet eden) sayfalı listeler.
      */
     Page<AdComplaintAdminResponse> getAdComplaints(Pageable pageable);

@@ -109,6 +109,14 @@ public class AdminServiceImpl implements AdminService {
         adRepository.delete(ad);
     }
 
+    @Transactional
+    @Override
+    public int reanalyzeFailedAds() {
+        // Kural ve kuyruk erişimi AdService'te; burada yalnız yetki sınırı var
+        // (uç /api/admin altında). Kurallar iki yerde yaşamasın.
+        return adService.reanalyzeAllFailed();
+    }
+
     @Transactional(readOnly = true)
     @Override
     public Page<AdComplaintAdminResponse> getAdComplaints(Pageable pageable) {

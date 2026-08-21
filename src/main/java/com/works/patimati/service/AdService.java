@@ -365,6 +365,97 @@ public class AdService {
         adRepository.saveAndFlush(ad);
     }
 
+    /**
+     * FAILED (ya da takılı PENDING) kalmış bir ilanı sahibi yeniden analize gönderir.
+     * <p>
+     * <b>NEDEN VAR:</b> {@link AiAnalysisPublisher#publish} yalnız ilan
+     * <b>oluşturulurken</b> çağrılıyor ve LOST/FOUND ilanlarında düzenleme
+     * bilerek kapalı ({@link #updateAd}). AI servisi arızalıyken açılan bir
+     * ilan bu yüzden <b>kalıcı olarak</b> FAILED kalıyordu: aday sorgusu
+     * {@code ai_status='DONE'} istediği için ilan hiçbir eşleştirmeye
+     * giremiyor ve sahibi bunu düzeltemiyordu (21.08'de canlıda 7 ilan bu
+     * durumdaydı).
+     * <p>
+     * <b>DONE ilan yeniden analize sokulmaz.</b> Sebep yük değil, bildirim:
+     * yeniden analiz aynı çift için ters yönde ikinci bir eşleşme satırı ve
+     * yeni bildirim üretebilir (bkz. {@code AdMatchRepository} sınıf notu).
+     * FAILED/PENDING ilanın eşleşme satırı zaten yoktur, risk de yoktur.
+     * PENDING'in kabul sebebi: kuyruk mesajı kaybolursa (broker kesintisi,
+     * 15 dakikalık fotoğraf adresinin ölmesi) ilan PENDING'te takılı kalıyor —
+     * bu işlem o durumu da kurtarır ve tekrarlanabilir (idempotent-benzeri):
+     * başarısız olursa ilan yine PENDING/FAILED kalır, tekrar denenebilir.
+     */
+    @Transactional
+    public AdResponse reanalyzeAd(String ownerEmail, Long adId) {
+        User owner = findUserByEmail(ownerEmail);
+        Ad ad = findActiveOwnedAd(adId, owner.getUid());
+
+        yenidenAnalizeGonder(ad);
+
+        return toResponseWithTemporaryPhotoUrls(ad);
+    }
+
+    /**
+     * Analize uygunluğu denetler, durumu PENDING'e çeker ve kuyruğa yazar.
+     * Tekil ({@link #reanalyzeAd}) ve toplu ({@link #reanalyzeAllFailed})
+     * yolun ikisi de buradan geçer ki kurallar tek yerde yaşasın.
+     */
+    private void yenidenAnalizeGonder(Ad ad) {
+        if (ad.getAdType() == Ad.AdType.ADOPTION) {
+            throw new BusinessException(
+                    "Sahiplendirme ilanları AI eşleştirmesine girmez.");
+        }
+        if (ad.getAiStatus() == AiStatus.DONE) {
+            throw new BusinessException(
+                    "İlan zaten analiz edilmiş; yeniden analiz yalnız "
+                            + "başarısız ya da takılı kalmış ilanlar içindir.");
+        }
+        if (ad.getPhotoUrls() == null || ad.getPhotoUrls().isEmpty()) {
+            // Publisher fotoğrafsız ilanı sessizce atlar; burada sessiz
+            // kalınsaydı ilan PENDING'e çekilip kuyruğa hiç yazılmaz ve
+            // "takılı PENDING" elle üretilmiş olurdu.
+            throw new BusinessException(
+                    "Fotoğrafsız ilan analiz edilemez.");
+        }
+
+        ad.setAiStatus(AiStatus.PENDING);
+        adRepository.saveAndFlush(ad);
+        aiAnalysisPublisher.publish(ad);
+    }
+
+    /**
+     * FAILED durumundaki tüm aktif ilanları yeniden analize gönderir (yönetici).
+     * <p>
+     * Toplu yol tek tek {@link #yenidenAnalizeGonder} çağırmaz çünkü oradaki
+     * kural ihlalleri burada hata değil <b>atlama</b> sebebidir: arızalı tek
+     * bir kayıt (örn. fotoğrafsız FAILED ilan) tüm kurtarmayı durdurmamalı.
+     *
+     * @return kuyruğa yazılan ilan sayısı
+     */
+    @Transactional
+    public int reanalyzeAllFailed() {
+        List<Ad> basarisizlar = adRepository.findAllByAiStatusAndActiveTrue(AiStatus.FAILED);
+
+        int kuyruklanan = 0;
+        for (Ad ad : basarisizlar) {
+            if (ad.getAdType() == Ad.AdType.ADOPTION
+                    || ad.getPhotoUrls() == null || ad.getPhotoUrls().isEmpty()) {
+                log.warn("Yeniden analiz atlandı (uygun değil): adId={} tip={} fotoğraf={}",
+                        ad.getId(), ad.getAdType(),
+                        ad.getPhotoUrls() == null ? 0 : ad.getPhotoUrls().size());
+                continue;
+            }
+            ad.setAiStatus(AiStatus.PENDING);
+            adRepository.saveAndFlush(ad);
+            aiAnalysisPublisher.publish(ad);
+            kuyruklanan++;
+        }
+
+        log.info("Toplu yeniden analiz: {} ilan bulundu, {} kuyruğa yazıldı",
+                basarisizlar.size(), kuyruklanan);
+        return kuyruklanan;
+    }
+
     @Transactional
     public void resolveLostAd(String ownerEmail, Long adId, ResolveLostAdRequest request) {
         User owner = findUserByEmail(ownerEmail);
