@@ -6,7 +6,6 @@ import com.works.patimati.entity.Ad;
 import com.works.patimati.entity.User;
 import com.works.patimati.entity.enums.AdResolutionStatus;
 import com.works.patimati.mapper.AdMapper;
-import com.works.patimati.notification.NotificationService;
 import com.works.patimati.repository.AdRepository;
 import com.works.patimati.repository.UserRepository;
 import com.works.patimati.storage.ImageStorageService;
@@ -80,7 +79,7 @@ class KayipIlanCozumBagiTest {
         when(userRepository.findByEmail(OWNER_EMAIL)).thenReturn(Optional.of(owner));
         when(adRepository.findByIdAndUser_UidAndActiveTrue(AD_ID, OWNER_UID)).thenReturn(Optional.of(ad));
 
-        ResolveLostAdRequest request = new ResolveLostAdRequest(FINDER_ID);
+        ResolveLostAdRequest request = new ResolveLostAdRequest(FINDER_ID, null);
         adService.resolveLostAd(OWNER_EMAIL, AD_ID, request);
 
         assertThat(ad.isActive()).isFalse();
@@ -101,7 +100,7 @@ class KayipIlanCozumBagiTest {
         when(userRepository.findByEmail(OWNER_EMAIL)).thenReturn(Optional.of(owner));
         when(adRepository.findByIdAndUser_UidAndActiveTrue(AD_ID, OWNER_UID)).thenReturn(Optional.of(ad));
 
-        ResolveLostAdRequest request = new ResolveLostAdRequest(FINDER_ID);
+        ResolveLostAdRequest request = new ResolveLostAdRequest(FINDER_ID, null);
         assertThatThrownBy(() -> adService.resolveLostAd(OWNER_EMAIL, AD_ID, request))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("İlan bir kayıp ilanı değildir.");
