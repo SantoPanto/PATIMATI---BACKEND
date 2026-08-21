@@ -75,7 +75,7 @@ class AdServiceTest {
                 imageStorageService,
                 aiAnalysisPublisher,
                 rewardService,
-                mock(com.works.patimati.notification.NotificationService.class)
+                mock(NotificationService.class)
         );
     }
 
