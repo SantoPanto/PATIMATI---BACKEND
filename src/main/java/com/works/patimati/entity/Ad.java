@@ -150,6 +150,37 @@ public class Ad {
     @Builder.Default
     private AdResolutionStatus resolutionStatus = AdResolutionStatus.NONE;
 
+    /**
+     * Bu kayıp ilan hangi <b>bulundu ilanıyla</b> eşleşerek kapandı.
+     *
+     * <p>Bilerek {@code null} olabilir: geçmiş kayıtlarda bu bilgi yok ve
+     * kullanıcı eşleşen ilanı seçmeden de kapatabilir. Bağ kurulmadığında
+     * {@code resolutionStatus} yine {@code FOUND} olur — yalnız hangi ilanla
+     * olduğu bilinmez.
+     *
+     * <p><b>Neden saklıyoruz:</b> eşleşme skorundaki konum kanalının ağırlığı
+     * ölçümle tartışılamıyordu, çünkü <i>gerçekte eşleşen bir çiftin arası
+     * kaç km</i> sorusunun cevabı sistemde hiç yoktu. Bu alan dolmaya
+     * başlayınca eşleşen çiftlerin mesafe dağılımı rastgele çiftlerinkiyle
+     * karşılaştırılabilir.
+     *
+     * <p>İlişki {@code @ManyToOne} DEĞİL, düz kimlik: bu bağ yalnız ölçüm
+     * için okunuyor, nesne grafiğine bağlamak her ilan yüklemesinde
+     * gereksiz bir sorgu riski getirirdi.
+     */
+    @Column(name = "resolved_by_ad_id")
+    private Long resolvedByAdId;
+
+    /**
+     * İlanı kapatırken bildirilen <b>bulan kullanıcı</b>.
+     *
+     * <p>Bu değer isteğe zaten geliyordu ({@code ResolveLostAdRequest}) ama
+     * yalnız ödül puanı verilip <b>atılıyordu</b>. Saklanmadığı için "kim
+     * buldu" sorusu sonradan cevaplanamıyordu.
+     */
+    @Column(name = "finder_user_id")
+    private Long finderUserId;
+
     @Column(name = "suspended", nullable = false)
     @Builder.Default
     private boolean suspended = false;
