@@ -34,7 +34,7 @@ import java.util.Map;
  * bu iki metodun <b>kendi gövdesindeki</b> tek satırdır.
  */
 @Service
-public class FirebasePushNotificationService implements NotificationService {
+public class FirebasePushNotificationService implements PushNotificationService {
 
     private static final Logger log = LoggerFactory.getLogger(FirebasePushNotificationService.class);
 

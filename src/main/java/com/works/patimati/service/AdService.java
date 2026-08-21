@@ -14,7 +14,6 @@ import com.works.patimati.entity.enums.AdResolutionStatus;
 import com.works.patimati.exception.BusinessException;
 import com.works.patimati.exception.ResourceNotFoundException;
 import com.works.patimati.mapper.AdMapper;
-import com.works.patimati.notification.NotificationService;
 import com.works.patimati.repository.AdRepository;
 import com.works.patimati.repository.UserRepository;
 import com.works.patimati.storage.ImageStorageService;
