@@ -2,9 +2,9 @@ package com.works.patimati.service;
 
 import com.works.patimati.ai.dto.AiCandidate;
 import com.works.patimati.ai.AiCandidateRow;
+import com.works.patimati.dto.match.MatchedAdResponseDTO;
 import com.works.patimati.entity.Ad;
 import com.works.patimati.repository.AdRepository;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
@@ -28,12 +28,12 @@ import java.util.*;
 public class AiMatchService {
 
     private final AdRepository adRepository;
-    private final com.works.patimati.storage.ImageStorageService imageStorageService;
+    private final AdService adService;
     private final RestTemplate restTemplate;
 
-    public AiMatchService(AdRepository adRepository, com.works.patimati.storage.ImageStorageService imageStorageService, org.springframework.boot.web.client.RestTemplateBuilder restTemplateBuilder) {
+    public AiMatchService(AdRepository adRepository, AdService adService, org.springframework.boot.web.client.RestTemplateBuilder restTemplateBuilder) {
         this.adRepository = adRepository;
-        this.imageStorageService = imageStorageService;
+        this.adService = adService;
         this.restTemplate = restTemplateBuilder
                 .setConnectTimeout(java.time.Duration.ofSeconds(10))
                 .setReadTimeout(java.time.Duration.ofSeconds(30))
@@ -119,7 +119,7 @@ public class AiMatchService {
         return headers;
     }
 
-    public List<Map<String, Object>> matchImages(List<MultipartFile> images, String listingType) throws Exception {
+    public List<MatchedAdResponseDTO> matchImages(List<MultipartFile> images, String listingType) throws Exception {
         List<List<Float>> allEmbeddings = new ArrayList<>();
         Set<String> allLabels = new HashSet<>();
         String majoritySpecies = "unknown";
@@ -219,21 +219,25 @@ public class AiMatchService {
             
             Object skipped = matchResponse.getBody().get("skipped_candidates");
             if (skipped != null && skipped instanceof Integer && (Integer) skipped > 0) {
-                log.info("Yapay zeka e\u00E7le\u00E7tirmede {} adet aday\u0131 (t\u00FCr vb. uyu\u00E7mazl\u0131\u011F\u0131ndan) sessizce eledi.", skipped);
+                log.info("Yapay zeka eşleştirmede {} adet adayı (tür vb. uyuşmazlığından) sessizce eledi.", skipped);
             }
             
             if (matches == null) return List.of();
             
-            // Map the matched Ad info along with score
-            List<Map<String, Object>> result = new ArrayList<>();
+            // Map the matched Ad info along with score into MatchedAdResponseDTO
+            List<MatchedAdResponseDTO> result = new ArrayList<>();
             for (Map<String, Object> match : matches) {
                 Integer adId = (Integer) match.get("ad_id");
+                Object rawScore = match.get("score");
+                Double score = rawScore instanceof Number ? ((Number) rawScore).doubleValue() : null;
+
                 Ad ad = adRepository.findById(adId.longValue()).orElse(null);
                 if (ad != null) {
-                    Map<String, Object> item = new HashMap<>();
-                    item.put("score", match.get("score"));
-                    item.put("ad", mapToDTO(ad));
-                    result.add(item);
+                    MatchedAdResponseDTO dto = MatchedAdResponseDTO.builder()
+                            .score(score)
+                            .ad(adService.toResponseWithTemporaryPhotoUrls(ad))
+                            .build();
+                    result.add(dto);
                 }
             }
             return result;
@@ -249,29 +253,5 @@ public class AiMatchService {
             case DOG -> "dog";
             default -> null;
         };
-    }
-    
-    private Map<String, Object> mapToDTO(Ad ad) {
-        Map<String, Object> dto = new HashMap<>();
-        dto.put("id", ad.getId());
-        dto.put("title", ad.getTitle());
-        dto.put("description", ad.getDescription());
-        
-        List<String> mappedUrls = new ArrayList<>();
-        if (ad.getPhotoUrls() != null) {
-            for (String url : ad.getPhotoUrls()) {
-                if (url != null && url.startsWith("s3://")) {
-                    mappedUrls.add(imageStorageService.createTemporaryReadUrl(url));
-                } else {
-                    mappedUrls.add(url);
-                }
-            }
-        }
-        dto.put("photoUrls", mappedUrls);
-        
-        dto.put("createdAt", ad.getCreatedAt());
-        String ownerName = ad.getUser() != null ? ad.getUser().getFirstName() + " " + ad.getUser().getLastName() : null;
-        dto.put("ownerDisplayName", ownerName);
-        return dto;
     }
 }

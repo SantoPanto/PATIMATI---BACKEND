@@ -1,9 +1,9 @@
 package com.works.patimati.service;
 
 import com.works.patimati.ai.AiCandidateRow;
+import com.works.patimati.dto.match.MatchedAdResponseDTO;
 import com.works.patimati.entity.Ad;
 import com.works.patimati.repository.AdRepository;
-import com.works.patimati.storage.ImageStorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,7 +34,7 @@ class AiMatchServiceTest {
     private AdRepository adRepository;
 
     @Mock
-    private ImageStorageService imageStorageService;
+    private AdService adService;
 
     @Mock
     private RestTemplateBuilder restTemplateBuilder;
@@ -50,12 +50,10 @@ class AiMatchServiceTest {
         when(restTemplateBuilder.setReadTimeout(any(Duration.class))).thenReturn(restTemplateBuilder);
         when(restTemplateBuilder.build()).thenReturn(restTemplate);
 
-        aiMatchService = new AiMatchService(adRepository, imageStorageService, restTemplateBuilder);
+        aiMatchService = new AiMatchService(adRepository, adService, restTemplateBuilder);
         ReflectionTestUtils.setField(aiMatchService, "aiServiceUrl", "http://localhost:8000");
     }
 
-
-    
     @Test
     void matchImages_EmptyCandidates_ReturnsEmptyList() throws Exception {
         // Arrange
@@ -71,7 +69,7 @@ class AiMatchServiceTest {
                 .thenReturn(List.of());
 
         // Act
-        List<Map<String, Object>> results = aiMatchService.matchImages(images, "FOUND");
+        List<MatchedAdResponseDTO> results = aiMatchService.matchImages(images, "FOUND");
 
         // Assert
         assertTrue(results.isEmpty());
