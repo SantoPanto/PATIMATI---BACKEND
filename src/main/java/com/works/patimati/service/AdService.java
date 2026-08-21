@@ -17,6 +17,7 @@ import com.works.patimati.entity.enums.AdResolutionStatus;
 import com.works.patimati.exception.BusinessException;
 import com.works.patimati.exception.ResourceNotFoundException;
 import com.works.patimati.mapper.AdMapper;
+import com.works.patimati.notification.NotificationService;
 import com.works.patimati.repository.AdRepository;
 import com.works.patimati.repository.UserRepository;
 import com.works.patimati.storage.ImageStorageService;
@@ -61,6 +62,7 @@ public class AdService {
     private final ImageStorageService imageStorageService;
     private final AiAnalysisPublisher aiAnalysisPublisher;
     private final RewardService rewardService;
+    private final NotificationService notificationService;
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
     /**
