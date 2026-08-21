@@ -97,6 +97,11 @@ public class S3ImageStorageServiceImpl implements ImageStorageService {
         String cleanDomain = publicDomain.endsWith("/")
                 ? publicDomain.substring(0, publicDomain.length() - 1)
                 : publicDomain;
+
+        if (!cleanDomain.startsWith("http://") && !cleanDomain.startsWith("https://")) {
+            cleanDomain = "https://" + cleanDomain;
+        }
+
         String cleanKey = objectKey.startsWith("/")
                 ? objectKey.substring(1)
                 : objectKey;
