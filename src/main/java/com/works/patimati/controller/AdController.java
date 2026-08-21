@@ -112,10 +112,15 @@ public class AdController {
         );
     }
 
+    /**
+     * Kullanıcının kendi ilanları. {@code active} <b>gönderilmezse "hepsi"</b>
+     * demektir — eskiden varsayılanı {@code true}ydu ve ön yüzün "Tümü"
+     * sekmesi alanı göndermediği için sessizce süzülüyordu.
+     */
     @GetMapping("/me")
     public ResponseEntity<Page<AdResponse>> getMyAds(
             Authentication authentication,
-            @RequestParam(defaultValue = "true") boolean active,
+            @RequestParam(required = false) Boolean active,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "20")
             @Min(1) @Max(MAX_PAGE_SIZE) int size

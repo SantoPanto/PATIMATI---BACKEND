@@ -76,6 +76,13 @@ public interface AdRepository extends JpaRepository<Ad, Long> {
             Pageable pageable
     );
 
+    // Bir kullanıcının TÜM ilanları — aktiflik süzgeci olmadan.
+    // "İlanlarım > Tümü" sekmesinin karşılığı: kapanmış ilan da görünmeli.
+    Page<Ad> findAllByUser_Uid(
+            Long userId,
+            Pageable pageable
+    );
+
     // Standart kullanıcının görebileceği aktif ilanlar (askıda olmayanlar VEYA kullanıcının kendi askıdaki ilanları)
     @Query("SELECT a FROM Ad a WHERE a.active = true AND (a.suspended = false OR (a.user IS NOT NULL AND a.user.uid = :userId))")
     Page<Ad> findAllActiveForUser(@Param("userId") Long userId, Pageable pageable);

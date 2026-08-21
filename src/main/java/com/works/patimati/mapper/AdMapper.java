@@ -152,7 +152,8 @@ public class AdMapper {
                 ad.getAiIsPet(),
                 ad.getIsPosterAllowed(),
                 ad.getShowEmailOnPoster(),
-                ad.getShowPhoneOnPoster()
+                ad.getShowPhoneOnPoster(),
+                ad.getResolutionStatus()
         );
     }
 
