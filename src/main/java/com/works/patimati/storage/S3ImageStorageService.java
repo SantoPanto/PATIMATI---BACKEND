@@ -231,25 +231,26 @@ public class S3ImageStorageService implements ImageStorageService {
             );
         }
 
-        try {
-            URI reference = URI.create(storageReference);
-            String objectKey = reference.getPath();
-
-            if (!STORAGE_SCHEME.equalsIgnoreCase(reference.getScheme())
-                    || !properties.bucket().equals(reference.getHost())
-                    || objectKey == null
-                    || objectKey.length() <= 1) {
-                throw new InvalidImageException(
-                        "Geçersiz fotoğraf depolama referansı"
-                );
-            }
-
-            return objectKey.substring(1);
-        } catch (IllegalArgumentException exception) {
-            throw new InvalidImageException(
-                    "Geçersiz fotoğraf depolama referansı"
-            );
+        // Zaten http veya https protokolü barındırıyorsa
+        if (storageReference.startsWith("http://") || storageReference.startsWith("https://")) {
+            return storageReference;
         }
+
+        // s3://bucketName/objectKey formatı için geriye dönük uyumluluk
+        if (storageReference.startsWith(STORAGE_SCHEME + "://")) {
+            try {
+                URI reference = URI.create(storageReference);
+                String objectKey = reference.getPath();
+
+                if (objectKey != null && objectKey.length() > 1) {
+                    return objectKey.substring(1);
+                }
+            } catch (IllegalArgumentException ignored) {
+            }
+        }
+
+        // Doğrudan objectKey string'i ise (örn: ads/2026/08/...jpg)
+        return storageReference;
     }
 
     private void deleteImage(String storageReference) {

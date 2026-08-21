@@ -125,7 +125,7 @@ class AiAnahtarBasligiTest {
                                   AdRepository adRepository) {
         AiMatchService servis = new AiMatchService(
                 adRepository,
-                mock(ImageStorageService.class),
+                mock(AdService.class),
                 new RestTemplateBuilder(duzenek));
 
         // @Value alanları bağlam olmadan doldurulmaz; ölçülen şey bu iki alanın

@@ -1,5 +1,6 @@
 package com.works.patimati.controller;
 
+import com.works.patimati.dto.match.MatchedAdResponseDTO;
 import com.works.patimati.service.AiMatchService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -10,11 +11,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -40,9 +38,10 @@ class AiMatchControllerTest {
     @Test
     void matchAd_Success() throws Exception {
         // Arrange
-        Map<String, Object> mockResult = new HashMap<>();
-        mockResult.put("matchScore", 0.98);
-        List<Map<String, Object>> mockServiceResponse = List.of(mockResult);
+        MatchedAdResponseDTO mockResult = MatchedAdResponseDTO.builder()
+                .score(0.98)
+                .build();
+        List<MatchedAdResponseDTO> mockServiceResponse = List.of(mockResult);
 
         when(aiMatchService.matchImages(any(), eq("LOST"))).thenReturn(mockServiceResponse);
 
