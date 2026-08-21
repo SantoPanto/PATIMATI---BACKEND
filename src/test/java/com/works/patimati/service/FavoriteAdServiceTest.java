@@ -66,11 +66,9 @@ class FavoriteAdServiceTest {
         Page<FavoriteAd> favoritePage = new PageImpl<>(List.of(favoriteAd), pageable, 1);
         when(favoriteAdRepository.findByUserEmail(email, pageable)).thenReturn(favoritePage);
 
-        AdResponse expectedResponse = new AdResponse(
-                1L, "Kayıp Kedi", null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, false, null, null,
-                List.of("https://media.patimati.me/patimati-medya-kutusu/ads/2026/08/kedi.jpg?X-Amz-Signature=123"),
-                null, null, 100L, "Test User", true, false, null, null, null, null, null, null, null
+        AdResponse expectedResponse = mock(AdResponse.class);
+        when(expectedResponse.photoUrls()).thenReturn(
+                List.of("https://media.patimati.me/patimati-medya-kutusu/ads/2026/08/kedi.jpg?X-Amz-Signature=123")
         );
 
         when(adService.toResponseWithTemporaryPhotoUrls(ad)).thenReturn(expectedResponse);
