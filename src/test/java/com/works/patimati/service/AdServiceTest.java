@@ -53,6 +53,7 @@ class AdServiceTest {
     private AiAnalysisPublisher aiAnalysisPublisher;
     private RewardService rewardService;
     private NotificationService notificationService;
+    private ReverseGeocodingService reverseGeocodingService;
     private AdService adService;
 
     @BeforeEach
@@ -69,6 +70,10 @@ class AdServiceTest {
         rewardService = mock(RewardService.class);
         notificationService = mock(NotificationService.class);
 
+        reverseGeocodingService = mock(ReverseGeocodingService.class);
+        when(reverseGeocodingService.cozumle(any(), any()))
+                .thenReturn(java.util.Optional.empty());
+
         adService = new AdService(
                 adRepository,
                 userRepository,
@@ -76,7 +81,8 @@ class AdServiceTest {
                 imageStorageService,
                 aiAnalysisPublisher,
                 rewardService,
-                mock(NotificationService.class)
+                mock(NotificationService.class),
+                reverseGeocodingService
         );
     }
 

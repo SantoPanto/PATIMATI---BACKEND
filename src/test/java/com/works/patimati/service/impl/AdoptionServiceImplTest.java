@@ -110,7 +110,9 @@ class AdoptionServiceImplTest {
                 null,
                 "2026-08-20",
                 BigDecimal.valueOf(41.0),
-                BigDecimal.valueOf(29.0)
+                BigDecimal.valueOf(29.0),
+                null,
+                null
         );
 
         org.springframework.mock.web.MockMultipartFile image = new org.springframework.mock.web.MockMultipartFile(

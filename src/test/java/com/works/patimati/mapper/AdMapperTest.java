@@ -55,7 +55,9 @@ class AdMapperTest {
                 "2026-08-20",
                 "  Notch on the left ear  ",
                 new BigDecimal("40.195000"),
-                new BigDecimal("29.060000")
+                new BigDecimal("29.060000"),
+                null,
+                null
         );
 
         Ad ad = adMapper.toEntity(request);

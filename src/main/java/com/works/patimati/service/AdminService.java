@@ -68,4 +68,10 @@ public interface AdminService {
      * Sahiplendirme ilanı şikayetlerini bağlam bilgileriyle sayfalı listeler.
      */
     Page<AdoptionComplaintAdminResponse> getAdoptionComplaints(Pageable pageable);
+
+    /**
+     * V19 öncesi ilanların il/ilçesini koordinattan doldurur (bir defalık,
+     * dağıtımdan sonra çağrılır). Dönüş: toplam / dolan / cozulemeyen.
+     */
+    java.util.Map<String, Integer> backfillAdLocations();
 }

@@ -142,6 +142,8 @@ public class AdMapper {
                 immutablePhotoUrls(photoUrls),
                 location == null ? null : location.getY(),
                 location == null ? null : location.getX(),
+                ad.getCity(),
+                ad.getDistrict(),
                 owner == null ? null : owner.getUid(),
                 ownerDisplayName(owner),
                 ad.isActive(),

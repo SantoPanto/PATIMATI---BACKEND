@@ -59,6 +59,7 @@ public class AdService {
     private final AiAnalysisPublisher aiAnalysisPublisher;
     private final RewardService rewardService;
     private final NotificationService notificationService;
+    private final ReverseGeocodingService reverseGeocodingService;
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
     /**
@@ -94,6 +95,7 @@ public class AdService {
         Ad savedAd;
         try {
             Ad ad = adMapper.toEntity(request);
+            konumBilgisiniDoldur(ad, request.city(), request.district());
             ad.setUser(owner);
             ad.setActive(true);
 
@@ -118,6 +120,40 @@ public class AdService {
         aiAnalysisPublisher.publish(savedAd);
 
         return response;
+    }
+
+    /**
+     * İl/ilçeyi doldurur (V19): form beyanı öncelikli; beyan yoksa
+     * koordinattan ters geokodlama denenir. Geokodlama servisi istisna
+     * fırlatmaz — başarısızlıkta alanlar boş kalır, ilan kaydı hiçbir
+     * durumda engellenmez.
+     *
+     * <p>Kayıp/bulundu akışı {@code createAd} içinden, sahiplendirme akışı
+     * {@code AdoptionServiceImpl.createAdoptionAd} içinden çağırır.
+     */
+    public void konumBilgisiniDoldur(Ad ad, String beyanIl, String beyanIlce) {
+        String il = normalizeBlank(beyanIl);
+        String ilce = normalizeBlank(beyanIlce);
+
+        if (il == null && ad.getLocation() != null) {
+            var cozum = reverseGeocodingService.cozumle(
+                    ad.getLocation().getY(),
+                    ad.getLocation().getX()
+            );
+            if (cozum.isPresent()) {
+                il = cozum.get().il();
+                if (ilce == null) {
+                    ilce = cozum.get().ilce();
+                }
+            }
+        }
+
+        ad.setCity(il);
+        ad.setDistrict(ilce);
+    }
+
+    private static String normalizeBlank(String value) {
+        return (value == null || value.isBlank()) ? null : value.trim();
     }
 
     private void deleteImagesSafely(List<String> photoReferences) {
