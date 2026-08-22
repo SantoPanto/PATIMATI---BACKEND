@@ -14,6 +14,12 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     List<Notification> findByUser_UidOrderByCreatedAtDescIdDesc(Long userUid);
 
+    /**
+     * Kayan pencere sayımı — NearbyAlertNotifier'ın günlük tavanı için:
+     * kullanıcıya son 24 saatte bu tipten kaç bildirim yazıldı.
+     */
+    long countByUser_UidAndTypeAndCreatedAtAfter(Long userUid, String type, java.time.OffsetDateTime after);
+
     Optional<Notification> findByIdAndUser_Uid(Long notificationId, Long userUid);
 
     @Query(value = """

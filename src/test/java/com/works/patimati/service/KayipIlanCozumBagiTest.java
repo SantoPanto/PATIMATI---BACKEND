@@ -62,7 +62,8 @@ class KayipIlanCozumBagiTest {
                 aiAnalysisPublisher,
                 rewardService,
                 notificationService,
-                org.mockito.Mockito.mock(ReverseGeocodingService.class)
+                org.mockito.Mockito.mock(ReverseGeocodingService.class),
+                org.mockito.Mockito.mock(com.works.patimati.notification.NearbyAlertNotifier.class)
         );
 
         owner = User.builder().uid(OWNER_UID).email(OWNER_EMAIL).build();
