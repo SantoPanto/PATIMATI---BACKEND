@@ -87,12 +87,17 @@ public class AiAnalysisListener {
         // Eşik AI'nın cevabından geçiyor: kaydın "o an eşik neydi" sorusuna
         // doğru cevap verebilmesi için değerin KAYNAĞINDAN gelmesi gerekiyor.
         // Backend yapılandırmasından okunsaydı iki kaynak sessizce kayardı.
-        List<AiAnalysisResult.Match> matches = result.matches() == null
-                ? List.of() : result.matches();
-        matchNotifier.recordAndNotify(ad, matches, result.matchThreshold());
+        boolean isMatchRequired = !Boolean.FALSE.equals(ad.getIsMatchRequired()) && ad.getAdType() != Ad.AdType.ADOPTION;
+        List<AiAnalysisResult.Match> matches = (isMatchRequired && result.matches() != null)
+                ? result.matches() : List.of();
+        if (isMatchRequired) {
+            matchNotifier.recordAndNotify(ad, matches, result.matchThreshold());
+        } else {
+            log.info("adId={}: isMatchRequired=false, eşleşme bildirimi adımı atlandı", ad.getId());
+        }
 
-        log.info("AI analizi tamamlandı: adId={} tür={} cins={} eşleşme={} model={}",
-                ad.getId(), ad.getAiSpecies(), ad.getAiBreed(), matches.size(),
+        log.info("AI analizi tamamlandı: adId={} isMatchRequired={} tür={} cins={} eşleşme={} model={}",
+                ad.getId(), ad.getIsMatchRequired(), ad.getAiSpecies(), ad.getAiBreed(), matches.size(),
                 ad.getAiModelVersion());
     }
 
@@ -104,7 +109,12 @@ public class AiAnalysisListener {
             return;
         }
 
-        ad.setAiEmbeddings(pairVectorsWithUrls(ad.getPhotoUrls(), analysis.embeddings()));
+        if (Boolean.FALSE.equals(ad.getIsMatchRequired()) || ad.getAdType() == Ad.AdType.ADOPTION) {
+            ad.setAiEmbeddings(null);
+            log.info("adId={}: isMatchRequired=false, vektör (embedding) kaydı veritabanına yazılmadı", ad.getId());
+        } else {
+            ad.setAiEmbeddings(pairVectorsWithUrls(ad.getPhotoUrls(), analysis.embeddings()));
+        }
         ad.setAiLabels(analysis.labels());
         ad.setAiSpecies(analysis.species());
         ad.setAiBreed(analysis.breed());

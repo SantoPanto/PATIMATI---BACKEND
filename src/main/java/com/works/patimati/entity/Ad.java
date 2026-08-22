@@ -208,6 +208,10 @@ public class Ad {
     @Builder.Default
     private Boolean showPhoneOnPoster = false;
 
+    @Column(name = "is_match_required", nullable = false)
+    @Builder.Default
+    private Boolean isMatchRequired = true;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

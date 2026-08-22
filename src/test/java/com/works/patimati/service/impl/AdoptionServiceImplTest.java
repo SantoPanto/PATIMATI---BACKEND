@@ -112,6 +112,7 @@ class AdoptionServiceImplTest {
                 BigDecimal.valueOf(41.0),
                 BigDecimal.valueOf(29.0),
                 null,
+                null,
                 null
         );
 

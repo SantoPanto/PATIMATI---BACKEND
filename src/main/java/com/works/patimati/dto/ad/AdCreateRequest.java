@@ -91,8 +91,15 @@ public record AdCreateRequest(
         String city,
 
         @Size(max = 100, message = "District can contain at most 100 characters")
-        String district
+        String district,
+
+        Boolean isMatchRequired
 ) {
+    public AdCreateRequest {
+        if (isMatchRequired == null) {
+            isMatchRequired = Boolean.TRUE;
+        }
+    }
 
     @JsonIgnore
     @AssertTrue(message = "Species must be CAT or DOG")
