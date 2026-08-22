@@ -93,7 +93,7 @@ class IsMatchRequiredTest {
                 eq(AiRabbitConfig.EXCHANGE),
                 eq(AiRabbitConfig.REQUEST_ROUTING_KEY),
                 captor.capture(),
-                any()
+                (org.springframework.amqp.core.MessagePostProcessor) any()
         );
 
         AiAnalysisRequest request = captor.getValue();
@@ -118,26 +118,29 @@ class IsMatchRequiredTest {
         float[] sampleEmbedding = new float[]{0.1f, 0.2f, 0.3f};
         AiAnalysisResult.Analysis analysis = new AiAnalysisResult.Analysis(
                 List.of(sampleEmbedding),
-                List.of("cat"),
                 "cat",
-                "Tekir",
                 0.95,
-                true
+                true,
+                "Tekir",
+                0.90,
+                "striped",
+                List.of(),
+                List.of("cat")
         );
 
         AiAnalysisResult result = new AiAnalysisResult(
                 1,
                 "req-1",
                 200L,
-                Instant.now(),
+                "ok",
                 "siglip2",
-                true,
-                null,
                 analysis,
                 List.of(),
-                List.of(),
                 0.8,
-                null
+                null,
+                null,
+                List.of(),
+                Instant.now()
         );
 
         listener.onResult(result);

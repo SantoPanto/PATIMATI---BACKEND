@@ -394,7 +394,8 @@ class AdControllerTest {
                 false,
                 false,
                 false,
-                AdResolutionStatus.NONE
+                AdResolutionStatus.NONE,
+                true
         );
     }
 
