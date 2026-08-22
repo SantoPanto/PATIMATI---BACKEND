@@ -73,7 +73,18 @@ public record AdoptionAdCreateRequest(
         @NotNull(message = "Boylam (Longitude) zorunludur")
         @DecimalMin(value = "-180.0", message = "Boylam en az -180 olabilir")
         @DecimalMax(value = "180.0", message = "Boylam en fazla 180 olabilir")
-        BigDecimal longitude
+        BigDecimal longitude,
+
+        /**
+         * İsteğe bağlı il/ilçe beyanı — sahiplendirme formu zaten soruyor.
+         * Verilirse ters geokodlamaya hiç gidilmez; verilmezse sunucu
+         * koordinattan çözmeyi dener (V19).
+         */
+        @Size(max = 100, message = "İl en fazla 100 karakter olabilir")
+        String city,
+
+        @Size(max = 100, message = "İlçe en fazla 100 karakter olabilir")
+        String district
 ) {
     @JsonIgnore
     @AssertTrue(message = "Tür kedi (CAT) veya köpek (DOG) olmalıdır")

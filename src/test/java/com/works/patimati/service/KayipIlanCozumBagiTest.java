@@ -61,7 +61,8 @@ class KayipIlanCozumBagiTest {
                 imageStorageService,
                 aiAnalysisPublisher,
                 rewardService,
-                notificationService
+                notificationService,
+                org.mockito.Mockito.mock(ReverseGeocodingService.class)
         );
 
         owner = User.builder().uid(OWNER_UID).email(OWNER_EMAIL).build();

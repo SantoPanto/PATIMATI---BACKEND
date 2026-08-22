@@ -131,4 +131,15 @@ public class AdminController {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         return ResponseEntity.ok(adminService.getAdoptionComplaints(pageable));
     }
+
+    /**
+     * V19 sonrası bir defalık: il/ilçesi boş, koordinatı dolu ilanları
+     * ters geokodlamayla doldurur. İstekler arasında ~1,1 sn beklendiği
+     * için ilan sayısına göre sürer (canlıdaki ~30 ilan ≈ 35 sn).
+     * Yeniden çağrılması güvenlidir: yalnız hâlâ boş olanlar denenir.
+     */
+    @org.springframework.web.bind.annotation.PostMapping("/ads/backfill-location")
+    public ResponseEntity<java.util.Map<String, Integer>> backfillAdLocations() {
+        return ResponseEntity.ok(adminService.backfillAdLocations());
+    }
 }

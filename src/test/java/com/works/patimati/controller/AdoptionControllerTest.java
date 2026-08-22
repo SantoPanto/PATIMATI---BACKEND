@@ -390,6 +390,8 @@ class AdoptionControllerTest {
                 List.of("https://example.com/cat.jpg"),
                 40.195,
                 29.060,
+                "Bursa",
+                "Nilüfer",
                 1L,
                 "Owner",
                 true,

@@ -19,6 +19,12 @@ import java.util.Optional;
 @Repository
 public interface AdRepository extends JpaRepository<Ad, Long> {
 
+    /**
+     * V19 backfill'i: il'i hiç yazılmamış ama koordinatı olan ilanlar.
+     * İl dolu olanlara (beyan ya da önceki backfill) dokunulmaz.
+     */
+    List<Ad> findByCityIsNullAndLocationIsNotNull();
+
     // Yalnızca aktif bir ilanı getirir.
     Optional<Ad> findByIdAndActiveTrue(Long adId);
 

@@ -114,6 +114,8 @@ public class AdoptionServiceImpl implements AdoptionService {
                 .aiStatus(AiStatus.NOT_APPLICABLE) // AI işlemine girmeyecek
                 .build();
 
+        adService.konumBilgisiniDoldur(ad, request.city(), request.district());
+
         Ad savedAd = adRepository.save(ad);
         log.info("Sahiplendirme ilanı oluşturuldu. adId={}, owner={}", savedAd.getId(), ownerEmail);
 

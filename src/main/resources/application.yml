@@ -100,6 +100,15 @@ jwt:
 app:
   frontend:
     url: ${FRONTEND_URL:http://localhost:5173} # Frontend'in ayağa kalktığı adres
+  geocoding:
+    # Ters geokodlama: koordinat → il/ilçe (V19). Kayıt anında ve
+    # admin backfill ucunda kullanılır. Kapalıyken ya da servis hata
+    # verdiğinde ilan akışı ETKİLENMEZ — alanlar boş kalır.
+    # Nominatim politikası: tanıtıcı User-Agent zorunlu, hız ≤1 istek/sn
+    # (backfill istekler arasında bekler).
+    url: ${GEOCODING_URL:https://nominatim.openstreetmap.org/reverse}
+    enabled: ${GEOCODING_ENABLED:true}
+    timeout-ms: ${GEOCODING_TIMEOUT_MS:2500}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:4200,http://localhost:5173,https://patimati.me}
   storage:

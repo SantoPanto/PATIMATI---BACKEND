@@ -81,7 +81,17 @@ public record AdCreateRequest(
         @NotNull(message = "Longitude is required")
         @DecimalMin(value = "-180.0", message = "Longitude must be at least -180")
         @DecimalMax(value = "180.0", message = "Longitude must be at most 180")
-        BigDecimal longitude
+        BigDecimal longitude,
+
+        /**
+         * İsteğe bağlı il/ilçe beyanı. Verilirse ters geokodlamaya hiç
+         * gidilmez; verilmezse sunucu koordinattan çözmeyi dener (V19).
+         */
+        @Size(max = 100, message = "City can contain at most 100 characters")
+        String city,
+
+        @Size(max = 100, message = "District can contain at most 100 characters")
+        String district
 ) {
 
     @JsonIgnore
