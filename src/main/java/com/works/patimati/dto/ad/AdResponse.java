@@ -39,6 +39,13 @@ public record AdResponse(
         List<String> photoUrls,
         Double latitude,
         Double longitude,
+        /**
+         * İl/ilçe (V19) — kartlar ham koordinat yerine bunu gösterir.
+         * Eski kayıtlarda backfill koşulana kadar null gelebilir; ön yüz
+         * null'da koordinat göstermeye devam eder.
+         */
+        String city,
+        String district,
         Long ownerId,
         String ownerDisplayName,
         boolean active,

@@ -137,6 +137,17 @@ public class Ad {
     @Column(columnDefinition = "geometry(Point, 4326)")
     private Point location;
 
+    /**
+     * İl/ilçe — kartlarda ham koordinat yerine gösterilir. Kayıtta form
+     * beyanı öncelikli, yoksa koordinattan ters geokodlama; ikisi de
+     * yoksa null kalır (V19).
+     */
+    @Column(name = "city", length = 100)
+    private String city;
+
+    @Column(name = "district", length = 100)
+    private String district;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;

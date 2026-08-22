@@ -65,7 +65,8 @@ class IlanYenidenYayinlamaTest {
                 mock(ImageStorageService.class),
                 mock(AiAnalysisPublisher.class),
                 mock(RewardService.class),
-                mock(NotificationService.class)
+                mock(NotificationService.class),
+                mock(ReverseGeocodingService.class)
         );
 
         sahip = User.builder().uid(SAHIP_UID).email(SAHIP_EPOSTA).build();

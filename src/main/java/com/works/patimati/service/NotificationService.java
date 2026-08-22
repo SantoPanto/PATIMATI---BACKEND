@@ -100,13 +100,13 @@ public class NotificationService {
                 );
 
                 if (!result.gonderildi()) {
-                    log.warn("Bildirim kalÄ±cÄ± olarak kaydedildi ancak push gÃ¶nderilemedi: "
+                    log.warn("Bildirim kalıcı olarak kaydedildi ancak push gönderilemedi: "
                                     + "notificationId={} recipientUid={} reason={}",
                             notification.getId(), recipient.getUid(), result.aciklama());
                 }
                 return result;
             } catch (RuntimeException exception) {
-                log.warn("Bildirim kalÄ±cÄ± olarak kaydedildi ancak push gÃ¶nderimi hata verdi: "
+                log.warn("Bildirim kalıcı olarak kaydedildi ancak push gönderimi hata verdi: "
                                 + "notificationId={} recipientUid={}",
                         notification.getId(), recipient.getUid(), exception);
                 return PushResult.FAILED;
@@ -114,7 +114,7 @@ public class NotificationService {
         } catch (RuntimeException exception) {
             // A notification must not take down the existing ad/message flow
             // if the notification table is temporarily unavailable.
-            log.error("Bildirim kalÄ±cÄ±laÅŸtÄ±rÄ±lamadÄ±: recipientUid={}",
+            log.error("Bildirim kalıcılaştırılamadı: recipientUid={}",
                     recipient.getUid(), exception);
             return PushResult.FAILED;
         }
@@ -126,7 +126,7 @@ public class NotificationService {
         Notification notification = notificationRepository
                 .findByIdAndUser_Uid(notificationId, user.getUid())
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Bildirim bulunamadÄ±: " + notificationId
+                        "Bildirim bulunamadı: " + notificationId
                 ));
 
         if (!notification.isRead()) {
@@ -186,7 +186,7 @@ public class NotificationService {
     private User findUserByEmail(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "KullanÄ±cÄ± bulunamadÄ±: " + email
+                        "Kullanıcı bulunamadı: " + email
                 ));
     }
 

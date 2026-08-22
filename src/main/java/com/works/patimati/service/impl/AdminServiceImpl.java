@@ -15,12 +15,18 @@ import com.works.patimati.repository.UserComplaintRepository;
 import com.works.patimati.repository.UserRepository;
 import com.works.patimati.service.AdminService;
 import com.works.patimati.service.AdService;
+import com.works.patimati.service.ReverseGeocodingService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import com.works.patimati.dto.admin.AdoptionComplaintAdminResponse;
@@ -31,12 +37,15 @@ import com.works.patimati.repository.AdoptionComplaintRepository;
 @RequiredArgsConstructor
 public class AdminServiceImpl implements AdminService {
 
+    private static final Logger log = LoggerFactory.getLogger(AdminServiceImpl.class);
+
     private final UserRepository userRepository;
     private final AdRepository adRepository;
     private final AdComplaintRepository adComplaintRepository;
     private final UserComplaintRepository userComplaintRepository;
     private final AdoptionComplaintRepository adoptionComplaintRepository;
     private final AdService adService;
+    private final ReverseGeocodingService reverseGeocodingService;
 
     @Transactional(readOnly = true)
     @Override
@@ -221,5 +230,63 @@ public class AdminServiceImpl implements AdminService {
                     complaint.getCreatedAt()
             );
         });
+    }
+
+    /**
+     * V19 backfill'i: il'i boş, koordinatı dolu ilanları koordinattan
+     * çözüp kaydeder. Nominatim hız politikası (≤1 istek/sn) gereği
+     * aramalar arasında bekler — bu yüzden BİLEREK @Transactional değil:
+     * uzun süren tek dev transaction yerine kayıt başına kısa save.
+     * Çözülemeyen ilan (servis hatası / adressiz nokta) atlanır; uç
+     * yeniden çağrılırsa yalnız hâlâ boş olanlar denenir.
+     */
+    @Override
+    public Map<String, Integer> backfillAdLocations() {
+        List<Ad> adaylar = adRepository.findByCityIsNullAndLocationIsNotNull();
+
+        int dolan = 0;
+        int cozulemeyen = 0;
+
+        for (int i = 0; i < adaylar.size(); i++) {
+            Ad ad = adaylar.get(i);
+            var cozum = reverseGeocodingService.cozumle(
+                    ad.getLocation().getY(),
+                    ad.getLocation().getX()
+            );
+
+            if (cozum.isPresent()) {
+                ad.setCity(cozum.get().il());
+                ad.setDistrict(cozum.get().ilce());
+                adRepository.save(ad);
+                dolan++;
+            } else {
+                cozulemeyen++;
+            }
+
+            boolean sonKayit = i == adaylar.size() - 1;
+            if (!sonKayit && !geokodAramalariArasindaBekle()) {
+                break;
+            }
+        }
+
+        log.info("İl/ilçe backfill bitti: toplam={} dolan={} cozulemeyen={}",
+                adaylar.size(), dolan, cozulemeyen);
+
+        Map<String, Integer> sonuc = new LinkedHashMap<>();
+        sonuc.put("toplam", adaylar.size());
+        sonuc.put("dolan", dolan);
+        sonuc.put("cozulemeyen", cozulemeyen);
+        return sonuc;
+    }
+
+    /** @return kesintiye uğradıysa false — döngü erken biter. */
+    private static boolean geokodAramalariArasindaBekle() {
+        try {
+            Thread.sleep(1100);
+            return true;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
     }
 }
