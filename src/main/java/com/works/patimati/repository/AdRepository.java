@@ -3,6 +3,7 @@ package com.works.patimati.repository;
 import com.works.patimati.ai.AiCandidateRow;
 import com.works.patimati.entity.Ad;
 import com.works.patimati.entity.enums.AdResolutionStatus;
+import com.works.patimati.entity.enums.AiStatus;
 import org.locationtech.jts.geom.Point;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -34,6 +35,13 @@ public interface AdRepository extends JpaRepository<Ad, Long> {
     // pasif ilana dokunmak imkânsızdı. Başka yerlerde bunu kullanmayın; aktif
     // ilan bekleyen akışlar aktifliği sorgunun kendisinde şart koşmalı.
     Optional<Ad> findByIdAndUser_Uid(Long adId, Long userId);
+
+    /**
+     * Belirli AI durumundaki aktif ilanlar — toplu yeniden analiz bunun
+     * üzerinden FAILED kalanları toplar. Pasif ilan bilerek dışarıda: sahibi
+     * yayından kaldırdığı ilanın analizini de istemiyordur.
+     */
+    List<Ad> findAllByAiStatusAndActiveTrue(AiStatus aiStatus);
 
     // İlanları aktiflik durumuna göre sayfalı biçimde listeler.
     Page<Ad> findAllByActive(
