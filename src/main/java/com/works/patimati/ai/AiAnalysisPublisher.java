@@ -62,6 +62,22 @@ public class AiAnalysisPublisher {
                 return;
             }
 
+            // isMatchRequired (develop, popup-eşik-konum): ilan sahibi
+            // eşleştirme istemiyorsa aday hiç toplanmaz, AI'ya da bu niyet
+            // açıkça bildirilir.
+            boolean matchRequired = ad.getIsMatchRequired() != null
+                    ? ad.getIsMatchRequired()
+                    : (ad.getAdType() != Ad.AdType.ADOPTION);
+
+            // Faz 2 revize blueprint §1: MatchCandidateGatherer hem konumsuz
+            // ilanlar için var olan boş-liste hatasını düzeltir hem de Flow
+            // B'yi (native ilan artık external Instagram adaylarını da
+            // görür) hiçbir yeni tetikleyici mekanizma eklemeden sağlar —
+            // her iki tabloyu birden okur.
+            List<AiCandidate> candidates = matchRequired
+                    ? candidateGatherer.findCandidatesForAd(ad)
+                    : List.of();
+
             AiAnalysisRequest request = AiAnalysisRequest.forAd(
                     AiRabbitConfig.SCHEMA_VERSION,
                     UUID.randomUUID().toString(),
@@ -69,13 +85,8 @@ public class AiAnalysisPublisher {
                     ad.getAdType().name(),
                     declaredSpecies(ad),
                     photoUrls,
-                    // Faz 2 revize blueprint §1: bu tek satır hem konumsuz
-                    // ilanlar için var olan boş-liste hatasını düzeltir hem de
-                    // Flow B'yi (native ilan artık external Instagram
-                    // adaylarını da görür) hiçbir yeni tetikleyici mekanizma
-                    // eklemeden sağlar — MatchCandidateGatherer her iki
-                    // tabloyu birden okur.
-                    candidateGatherer.findCandidatesForAd(ad));
+                    candidates,
+                    matchRequired);
 
             aiRabbitTemplate.convertAndSend(
                     AiRabbitConfig.EXCHANGE,
@@ -91,8 +102,8 @@ public class AiAnalysisPublisher {
                         return message;
                     });
 
-            log.info("AI analiz isteği yayınlandı: adId={} aday={} fotoğraf={}",
-                    ad.getId(), request.candidates().size(), request.photoUrls().size());
+            log.info("AI analiz isteği yayınlandı: adId={} isMatchRequired={} aday={} fotoğraf={}",
+                    ad.getId(), matchRequired, request.candidates().size(), request.photoUrls().size());
 
         } catch (Exception e) {
             // Yutulan istisna bilinçli: ilan zaten kaydedildi, kullanıcıyı
@@ -106,15 +117,14 @@ public class AiAnalysisPublisher {
     /**
      * İlan analize uygun mu?
      *
-     * <p>ADOPTION eşleştirmeye girmez (§5) ve fotoğrafsız ilan analiz edilemez —
-     * ikisi de kuyruğa boşuna mesaj koymamak için burada eleniyor.
+     * <p>Fotoğrafsız ilan analiz edilemez.
      */
     private boolean isEligible(Ad ad) {
         if (ad.getId() == null) {
             log.warn("Kaydedilmemiş ilan analiz kuyruğuna gönderilemez");
             return false;
         }
-        if (ad.getAdType() == null || ad.getAdType() == Ad.AdType.ADOPTION) {
+        if (ad.getAdType() == null) {
             return false;
         }
         if (ad.getPhotoUrls() == null || ad.getPhotoUrls().isEmpty()) {

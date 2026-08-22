@@ -92,7 +92,8 @@ public class ExternalAnalysisPublisher {
                     record.getId(),
                     post.getCaption(),
                     triggeringComment,
-                    null);
+                    null,
+                    true);
 
             aiRabbitTemplate.convertAndSend(
                     AiRabbitConfig.EXCHANGE,

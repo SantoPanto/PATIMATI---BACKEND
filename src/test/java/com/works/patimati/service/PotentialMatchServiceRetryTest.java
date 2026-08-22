@@ -1,9 +1,11 @@
 package com.works.patimati.service;
 
-import com.works.patimati.ai.AiMatchNotifier;
 import com.works.patimati.entity.PotentialMatch;
 import com.works.patimati.entity.PotentialMatchRecipient;
+import com.works.patimati.entity.User;
 import com.works.patimati.entity.enums.MatchStatus;
+import com.works.patimati.notification.PushNotificationService;
+import com.works.patimati.notification.PushResult;
 import com.works.patimati.repository.AdRepository;
 import com.works.patimati.repository.PotentialMatchRecipientRepository;
 import com.works.patimati.repository.PotentialMatchRepository;
@@ -21,6 +23,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -40,7 +43,7 @@ import static org.mockito.Mockito.when;
 class PotentialMatchServiceRetryTest {
 
     private PotentialMatchRecipientRepository recipientRepository;
-    private AiMatchNotifier notifier;
+    private PushNotificationService pushNotificationService;
     private PotentialMatchService service;
 
     @BeforeEach
@@ -49,14 +52,14 @@ class PotentialMatchServiceRetryTest {
         recipientRepository = mock(PotentialMatchRecipientRepository.class);
         AdRepository adRepository = mock(AdRepository.class);
         ExternalPetRecordRepository externalPetRecordRepository = mock(ExternalPetRecordRepository.class);
-        notifier = mock(AiMatchNotifier.class);
+        pushNotificationService = mock(PushNotificationService.class);
         UserRepository userRepository = mock(UserRepository.class);
         ExternalSourceMediaRepository externalSourceMediaRepository = mock(ExternalSourceMediaRepository.class);
         ImageStorageService imageStorageService = mock(ImageStorageService.class);
 
         service = new PotentialMatchService(
                 potentialMatchRepository, recipientRepository, adRepository,
-                externalPetRecordRepository, notifier, userRepository,
+                externalPetRecordRepository, pushNotificationService, userRepository,
                 externalSourceMediaRepository, imageStorageService);
 
         ReflectionTestUtils.setField(service, "maxSendAttempts", 2);
@@ -70,11 +73,12 @@ class PotentialMatchServiceRetryTest {
         when(recipientRepository.findPendingForRetry(eq(2), any(Instant.class))).thenReturn(List.of(stuck));
         when(recipientRepository.findExhaustedPending(2)).thenReturn(List.of());
         when(recipientRepository.findById(1L)).thenReturn(Optional.of(stuck));
-        when(notifier.sendOne(stuck)).thenReturn(true);
+        when(pushNotificationService.send(anyString(), anyString(), anyString(), any(), anyString()))
+                .thenReturn(PushResult.SENT);
 
         service.retryPendingNotifications();
 
-        verify(notifier).sendOne(stuck);
+        verify(pushNotificationService).send(anyString(), anyString(), anyString(), any(), anyString());
         verify(recipientRepository).markNotifiedIfPending(eq(1L), any(Instant.class));
     }
 
@@ -85,7 +89,8 @@ class PotentialMatchServiceRetryTest {
         when(recipientRepository.findPendingForRetry(eq(2), any(Instant.class))).thenReturn(List.of(stuck));
         when(recipientRepository.findExhaustedPending(2)).thenReturn(List.of());
         when(recipientRepository.findById(2L)).thenReturn(Optional.of(stuck));
-        when(notifier.sendOne(stuck)).thenReturn(false);
+        when(pushNotificationService.send(anyString(), anyString(), anyString(), any(), anyString()))
+                .thenReturn(PushResult.FAILED);
 
         service.retryPendingNotifications();
 
@@ -104,13 +109,14 @@ class PotentialMatchServiceRetryTest {
         service.retryPendingNotifications();
 
         verify(recipientRepository).markNotificationFailedIfPending(3L);
-        verifyNoInteractions(notifier); // tükenmiş satır için ARTIK gönderim denenmez
+        verifyNoInteractions(pushNotificationService); // tükenmiş satır için ARTIK gönderim denenmez
     }
 
     private PotentialMatchRecipient recipient(Long id, MatchStatus status, short attempts) {
         PotentialMatch match = PotentialMatch.builder().id(100L)
                 .candidateKind(PotentialMatch.CandidateKind.AD).build();
+        User user = User.builder().uid(id).fcmToken("fcm-token-" + id).build();
         return PotentialMatchRecipient.builder()
-                .id(id).potentialMatch(match).status(status).sendAttempts(attempts).build();
+                .id(id).potentialMatch(match).recipient(user).status(status).sendAttempts(attempts).build();
     }
 }

@@ -41,7 +41,7 @@ import java.time.Instant;
 @Builder
 public class PotentialMatchRecipient {
 
-    public enum Role {
+    public enum RecipientRole {
         OWNER_A,
         OWNER_B,
         OWNER
@@ -61,7 +61,7 @@ public class PotentialMatchRecipient {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 16)
-    private Role role;
+    private RecipientRole role;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

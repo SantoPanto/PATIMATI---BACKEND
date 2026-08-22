@@ -30,13 +30,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * GERÇEK PostgreSQL'e karşı çalışır (yerel docker: patimati-postgres).
  *
- * <p><b>Neden mock değil:</b> {@code recordAdMatch}/{@code recordExternalMatch}'in
- * asıl garantisi — aynı çift için ikinci kez çağrılınca yeni satır oluşmaması —
+ * <p><b>Neden mock değil:</b> {@code recordExternalMatch}'in asıl garantisi —
+ * aynı çift için ikinci kez çağrılınca yeni satır oluşmaması —
  * {@code potential_matches} üzerindeki kısmi benzersiz indekslere ({@code
  * ON CONFLICT DO NOTHING}) dayanır. Repository'yi taklit etmek yalnızca "servis
  * repository metodunu çağırdı mı" sorusunu yanıtlar, "veritabanı gerçekten
  * tekrarı engelliyor mu" sorusunu YANITLAMAZ — bu yüzden bu test gerçek SQL
  * çalıştırır.
+ *
+ * <p><b>Native↔native eşleşmeler burada YOK:</b> o akış {@code ad_matches}/
+ * {@code AiMatchNotifier} üzerinden yürüyor (bkz. o sınıfların testleri).
+ * {@code PotentialMatchService} yalnızca native↔external (Instagram)
+ * eşleşmeleri kaydeder — aynı eşleşmeyi iki sistemin birden yazmaması için.
  *
  * <p>Her test {@code @Transactional} ile sarılıp geri alınır; kalıcı veri
  * bırakmaz. Flyway migration'ları (V9-V11) context açılışında gerçek DB'ye
@@ -71,10 +76,10 @@ class PotentialMatchServiceTest {
 
     @BeforeEach
     void setUp() {
-        // fcmToken bilerek boş: AiMatchNotifier.sendOne token yoksa gerçek
-        // Firebase'e hiç dokunmadan "gönderilecek bir şey yok" der ve true
-        // döner — bu testler yalnızca kalıcılık/dedup'ı doğrular, teslimatı
-        // değil (o PotentialMatchServiceRetryTest'te, taklitlerle).
+        // fcmToken bilerek boş: PotentialMatchService.sendOne token yoksa
+        // gerçek Firebase'e hiç dokunmadan "gönderilecek bir şey yok" der ve
+        // true döner — bu testler yalnızca kalıcılık/dedup'ı doğrular,
+        // teslimatı değil (o PotentialMatchServiceRetryTest'te, taklitlerle).
         ownerA = userRepository.save(User.builder()
                 .email("owner-a-" + System.nanoTime() + "@test.patimati")
                 .firstName("A").lastName("Test").role(User.Role.USER).build());
@@ -88,39 +93,6 @@ class PotentialMatchServiceTest {
         adB = adRepository.save(Ad.builder()
                 .title("Bulunan kedi B").adType(Ad.AdType.FOUND)
                 .species(Species.CAT).user(ownerB).active(true).build());
-    }
-
-    @Test
-    void nativeAdAdMatchCreatesOneMatchAndTwoRecipients() {
-        potentialMatchService.recordAdMatch(adA.getId(), adB.getId(), 0.8f, 0.7f, 0.6f, 0.75f, "test/v1");
-
-        List<PotentialMatch> matches = matchesFor(adA, adB);
-        assertThat(matches).hasSize(1);
-        assertThat(matches.get(0).getCandidateKind()).isEqualTo(PotentialMatch.CandidateKind.AD);
-
-        List<PotentialMatchRecipient> recipients = recipientRepository.findAll().stream()
-                .filter(r -> r.getPotentialMatch().getId().equals(matches.get(0).getId()))
-                .toList();
-        assertThat(recipients).hasSize(2);
-        assertThat(recipients).extracting(r -> r.getRecipient().getUid())
-                .containsExactlyInAnyOrder(ownerA.getUid(), ownerB.getUid());
-    }
-
-    @Test
-    void reRecordingSamePairInReverseOrderDoesNotDuplicateMatchOrRecipients() {
-        potentialMatchService.recordAdMatch(adA.getId(), adB.getId(), 0.8f, 0.7f, 0.6f, 0.75f, "test/v1");
-        // Aynı çift TERS sırayla yeniden puanlanıyor (örn. B'nin kendi analiz
-        // turu A'yı aday olarak buldu) — kanonik LEAST/GREATEST sıralaması
-        // sayesinde bu hâlâ AYNI satıra düşmeli, ikinci bir satır YARATMAMALI.
-        potentialMatchService.recordAdMatch(adB.getId(), adA.getId(), 0.81f, 0.71f, 0.61f, 0.76f, "test/v1");
-
-        List<PotentialMatch> matches = matchesFor(adA, adB);
-        assertThat(matches).hasSize(1);
-
-        List<PotentialMatchRecipient> recipients = recipientRepository.findAll().stream()
-                .filter(r -> r.getPotentialMatch().getId().equals(matches.get(0).getId()))
-                .toList();
-        assertThat(recipients).hasSize(2);
     }
 
     @Test
@@ -148,7 +120,7 @@ class PotentialMatchServiceTest {
                 .toList();
         assertThat(recipients).hasSize(1);
         assertThat(recipients.get(0).getRecipient().getUid()).isEqualTo(ownerA.getUid());
-        assertThat(recipients.get(0).getRole()).isEqualTo(PotentialMatchRecipient.Role.OWNER);
+        assertThat(recipients.get(0).getRole()).isEqualTo(PotentialMatchRecipient.RecipientRole.OWNER);
     }
 
     @Test
@@ -171,15 +143,5 @@ class PotentialMatchServiceTest {
                         && r.getPotentialMatch().getExternalRecord().getId().equals(record.getId()))
                 .toList();
         assertThat(recipients).hasSize(1);
-    }
-
-    private List<PotentialMatch> matchesFor(Ad a, Ad b) {
-        Long lo = Math.min(a.getId(), b.getId());
-        Long hi = Math.max(a.getId(), b.getId());
-        return potentialMatchRepository.findAll().stream()
-                .filter(m -> m.getCandidateKind() == PotentialMatch.CandidateKind.AD
-                        && m.getAdA().getId().equals(lo)
-                        && m.getAdB() != null && m.getAdB().getId().equals(hi))
-                .toList();
     }
 }

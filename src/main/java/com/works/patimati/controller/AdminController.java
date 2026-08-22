@@ -98,6 +98,20 @@ public class AdminController {
     }
 
     /**
+     * FAILED durumundaki tüm aktif ilanları topluca yeniden analize gönderir.
+     * AI servisi arızası düzeltildikten sonra takılı kalan ilanları kurtarmak
+     * için: arıza sırasında açılan her ilan FAILED kalıyor ve kendiliğinden
+     * bir daha analiz edilmiyordu.
+     */
+    @PostMapping("/ads/reanalyze-failed")
+    public ResponseEntity<Map<String, Object>> reanalyzeFailedAds() {
+        int kuyruklanan = adminService.reanalyzeFailedAds();
+        return ResponseEntity.ok(Map.of(
+                "queued", kuyruklanan,
+                "message", kuyruklanan + " ilan yeniden analize gönderildi."));
+    }
+
+    /**
      * İlan şikayetlerini incelemek için bağlam bilgileriyle listeler.
      */
     @GetMapping("/complaints/ads")
@@ -143,5 +157,16 @@ public class AdminController {
     ) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "detectedAt"));
         return ResponseEntity.ok(adminService.getExternalPosts(pageable));
+    }
+
+    /**
+     * V19 sonrası bir defalık: il/ilçesi boş, koordinatı dolu ilanları
+     * ters geokodlamayla doldurur. İstekler arasında ~1,1 sn beklendiği
+     * için ilan sayısına göre sürer (canlıdaki ~30 ilan ≈ 35 sn).
+     * Yeniden çağrılması güvenlidir: yalnız hâlâ boş olanlar denenir.
+     */
+    @org.springframework.web.bind.annotation.PostMapping("/ads/backfill-location")
+    public ResponseEntity<java.util.Map<String, Integer>> backfillAdLocations() {
+        return ResponseEntity.ok(adminService.backfillAdLocations());
     }
 }

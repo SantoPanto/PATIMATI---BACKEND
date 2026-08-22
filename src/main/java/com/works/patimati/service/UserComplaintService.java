@@ -88,4 +88,29 @@ public class UserComplaintService {
                 savedComplaint.getCreatedAt()
         );
     }
+
+    @Transactional
+    public ComplaintResponse resolveUserComplaint(Long complaintId) {
+        UserComplaint complaint = userComplaintRepository.findById(complaintId)
+                .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı profil şikayeti bulunamadı ID: " + complaintId));
+
+        complaint.setStatus(ComplaintStatus.COZULDU);
+        UserComplaint updatedComplaint = userComplaintRepository.save(complaint);
+
+        String reporterEmail = userRepository.findById(updatedComplaint.getReporterId())
+                .map(User::getEmail)
+                .orElse(null);
+
+        return new ComplaintResponse(
+                updatedComplaint.getId(),
+                updatedComplaint.getReporterId(),
+                reporterEmail,
+                null,
+                updatedComplaint.getReportedUserId(),
+                updatedComplaint.getReason(),
+                updatedComplaint.getDescription(),
+                updatedComplaint.getStatus(),
+                updatedComplaint.getCreatedAt()
+        );
+    }
 }

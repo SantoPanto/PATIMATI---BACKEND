@@ -1,13 +1,9 @@
 package com.works.patimati.repository;
 
 import com.works.patimati.entity.User;
-import org.locationtech.jts.geom.Point;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -21,11 +17,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     boolean existsByPhoneAndEmailNot(String phone, String email);
 
-    // KISIM 3
-    // PARAMETREDE ::geography YAZILAMAZ — Hibernate parametre adını
-    // "point::geography" diye okur. Hata AdService.notifyNearbyUsersSafely
-    // içinde yutulduğu için ilan 201 dönüyor, ama YAKINDAKİ KULLANICILARA
-    // HİÇ BİLDİRİM GİTMİYORDU. Sütunda (u.location::geography) sorun yok.
-    @Query(value = "SELECT * FROM users u WHERE u.fcm_token IS NOT NULL AND ST_DWithin(u.location::geography, CAST(:point AS geography), :distanceInMeters) = true", nativeQuery = true)
-    List<User> findUsersNearby(@Param("point") Point point, @Param("distanceInMeters") double distanceInMeters);
+    // Eski findUsersNearby (aboneliksiz yakındaki-kullanıcı bildirimi) buradan
+    // kaldırıldı; yerini AlertSubscriptionRepository.findEnabledWithinOwnRadius
+    // aldı. Oradaki PARAMETREDE-::geography-YAZILAMAZ uyarısı bu sorguda
+    // yaşanmış gerçek bir hatadan geliyordu.
 }

@@ -1,0 +1,11 @@
+-- B1 (canlı bulgu, 21.08.2026): bulundu formu uzun adresi açıklamaya kattığında
+-- INSERT "value too long for type character varying(255)" ile düşüyordu.
+--
+-- Kök sebep: ads.description V1'de TEXT tanımlı; ama canlı veritabanı Flyway
+-- devreye girmeden ÖNCE Hibernate (ddl-auto) ile kurulduğu için
+-- baseline-on-migrate V1'i hiç koşturmadı ve sütun Hibernate varsayılanı olan
+-- VARCHAR(255) olarak kaldı. DTO doğrulaması 3000 karaktere izin veriyor
+-- (AdCreateRequest); sınırı veritabanı biçimi koyuyordu.
+--
+-- TEXT'e çevirmek V1'in gerçekten koştuğu kurulumlarda no-op'tur.
+ALTER TABLE ads ALTER COLUMN description TYPE TEXT;

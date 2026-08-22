@@ -1,10 +1,8 @@
 package com.works.patimati.service;
 
-import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
-import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.works.patimati.dto.AuthResponse;
+import com.works.patimati.dto.ChangePasswordRequest;
 import com.works.patimati.dto.FcmTokenUpdateDTO;
-import com.works.patimati.dto.GoogleAuthRequest;
 import com.works.patimati.dto.LoginRequest;
 import com.works.patimati.dto.RegisterRequest;
 import com.works.patimati.dto.User.UpdateProfileRequest;
@@ -20,15 +18,14 @@ import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
-import java.security.GeneralSecurityException;
+import com.works.patimati.exception.ResourceNotFoundException;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,7 +39,6 @@ public class UserService {
     private final UserRepository userRepository;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
-    private final GoogleIdTokenVerifier googleIdTokenVerifier;
     private final LoginRateLimiter loginRateLimiter;
 
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
@@ -132,106 +128,70 @@ public class UserService {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
     }
 
-    // --- GOOGLE GİRİŞİ ---
-    public ResponseEntity<?> googleLogin(GoogleAuthRequest request) {
-        // request.getEmail()/getGoogleId()/getFirstName()/getLastName() ARTIK
-        // HİÇ okunmuyor -- öncesinde bu alanlara client'ın gönderdiği hâliyle
-        // doğrudan güveniliyordu: var olan bir kullanıcının e-postasını
-        // gönderen biri, hiçbir şifre girmeden o hesabın JWT'sini alabiliyordu
-        // (uç nokta permitAll, idToken hiç doğrulanmıyordu). Artık TEK kimlik
-        // kaynağı, Google'a karşı doğrulanmış idToken'ın payload'ı.
-        GoogleIdToken.Payload payload = verifyGoogleIdToken(request.getIdToken());
-
-        String email = payload.getEmail();
-        if (email == null || email.isBlank()) {
-            throw new AccessDeniedException("Google idToken'ında e-posta bilgisi yok.");
-        }
-        if (!Boolean.TRUE.equals(payload.getEmailVerified())) {
-            throw new AccessDeniedException("Google e-postası doğrulanmamış.");
-        }
-        String googleId = payload.getSubject();
-        String[] name = resolveName(payload);
-        String firstName = name[0];
-        String lastName = name[1];
-
-        Optional<User> optionalUser = userRepository.findByEmail(email);
-        User user;
-
-        if (optionalUser.isPresent()) {
-            user = optionalUser.get();
-            user.setFcmToken(request.getFcmToken());
-            user.setFirstName(firstName);
-            user.setLastName(lastName);
-
-            if (user.getGoogleId() == null) {
-                user.setGoogleId(googleId);
-            }
-            userRepository.save(user);
-        } else {
-            user = User.builder()
-                    .email(email)
-                    .googleId(googleId)
-                    .firstName(firstName)
-                    .lastName(lastName)
-                    .role(User.Role.USER)
-                    .fcmToken(request.getFcmToken())
-                    .enabled(true)
-                    .build();
-            userRepository.save(user);
-        }
-
-        String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
-        return ResponseEntity.ok().body(new AuthResponse(token, convertToUserResponseDTO(user)));
-    }
+    /*
+     * GOOGLE GİRİŞİ (/api/auth/google, googleLogin) KALDIRILDI (D-7 / hesap
+     * devralma) -- develop tarafında zaten silinmişti (bkz. UserController).
+     * Bu daldaki bağımsız düzeltme (idToken'ı doğrulayıp e-postayı gövdeden
+     * değil doğrulanmış payload'dan okumak) artık gereksiz: uç zaten
+     * kullanılmıyordu, gerçek Google girişi processOAuth2User üzerinden
+     * (OAuth2AuthenticationSuccessHandler) yürüyor. GERİ GETİRİLECEKSE bkz.
+     * UserController'daki not ve HesapDevralmaUcuKapaliTest.
+     */
 
     /**
-     * idToken'ı Google'a karşı doğrular ({@link GoogleAuthConfig}'teki
-     * {@code googleIdTokenVerifier} bean'i -- imza, süre ve audience
-     * (GOOGLE_CLIENT_ID) kontrolünü tek seferde yapar). Geçersiz, süresi
-     * dolmuş ya da doğrulanamayan her durumda {@link AccessDeniedException}
-     * fırlatır -- GlobalExceptionHandler bunu zaten 403'e çeviriyor.
+     * Giriş yapmış kullanıcının şifresini güvenli şekilde değiştirme
+     *
+     * @param email   JWT doğrulamasından geçen kullanıcının e-posta adresi
+     * @param request mevcut ve yeni şifre bilgileri
      */
-    private GoogleIdToken.Payload verifyGoogleIdToken(String idTokenString) {
-        GoogleIdToken idToken;
-        try {
-            idToken = googleIdTokenVerifier.verify(idTokenString);
-        } catch (GeneralSecurityException | IOException | IllegalArgumentException e) {
-            throw new AccessDeniedException("Google idToken doğrulanamadı: " + e.getMessage(), e);
+    @Transactional
+    public void changePassword(
+            String email,
+            ChangePasswordRequest request
+    ) {
+        // Yeni şifrenin iki alanda da aynı girildiğini sunucu tarafında doğrula
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new IllegalArgumentException(
+                    "Yeni şifre ve şifre tekrarı birbiriyle eşleşmiyor."
+            );
         }
 
-        if (idToken == null) {
-            throw new AccessDeniedException("Google idToken geçersiz veya süresi dolmuş.");
-        }
-        return idToken.getPayload();
-    }
+        // Kullanıcı bilgisi istemciden değil, doğrulanmış JWT kimliğinden bulunur.
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Kullanıcı kaydı bulunamadı."
+                ));
 
-    /**
-     * given_name/family_name standart claim'leri varsa onları kullanır;
-     * yoksa (ör. istemci yalnızca "email" scope'u istediyse) "name"
-     * claim'ini boşluktan ikiye böler; o da yoksa sabit bir yer tutucuya
-     * düşer -- User.firstName/lastName NOT NULL, boş bırakılamaz.
-     */
-    private String[] resolveName(GoogleIdToken.Payload payload) {
-        String given = (String) payload.get("given_name");
-        String family = (String) payload.get("family_name");
-        if (isPresent(given) && isPresent(family)) {
-            return new String[]{truncate(given), truncate(family)};
+        if (user.getPassword() == null) {
+            throw new IllegalStateException(
+                    "Google ile oluşturulan hesaplarda mevcut şifre değiştirilemez."
+            );
         }
 
-        String fullName = (String) payload.get("name");
-        String[] parts = isPresent(fullName) ? fullName.trim().split("\\s+", 2) : new String[0];
+        // Mevcut şifre, veritabanındaki BCrypt hash'i ile karşılaştırılır.
+        if (!passwordEncoder.matches(
+                request.getCurrentPassword(),
+                user.getPassword()
+        )) {
+            throw new IllegalArgumentException("Mevcut şifre hatalı.");
+        }
 
-        String firstName = isPresent(given) ? given : parts.length > 0 ? parts[0] : "Google";
-        String lastName = isPresent(family) ? family : parts.length > 1 ? parts[1] : "Kullanıcı";
-        return new String[]{truncate(firstName), truncate(lastName)};
-    }
+        // Kullanıcının aynı şifreyi tekrar belirlemesini engelle.
+        if (passwordEncoder.matches(
+                request.getNewPassword(),
+                user.getPassword()
+        )) {
+            throw new IllegalArgumentException(
+                    "Yeni şifre mevcut şifreden farklı olmalıdır."
+            );
+        }
 
-    private boolean isPresent(String value) {
-        return value != null && !value.isBlank();
-    }
+        // Veritabanına hiçbir zaman düz metin şifre yazılmaz.
+        user.setPassword(
+                passwordEncoder.encode(request.getNewPassword())
+        );
 
-    private String truncate(String value) {
-        return value.length() > 50 ? value.substring(0, 50) : value;
+        userRepository.save(user);
     }
 
     // --- GOOGLE OAUTH2 SUCCESS HANDLER KULLANICI İŞLEME ---
@@ -428,5 +388,37 @@ public class UserService {
                 "message", "Kullanıcı kaydı bulunamadı."
         );
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(notFoundResponse);
+    }
+
+    @Transactional
+    public ResponseEntity<?> changePassword(ChangePasswordRequest request) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
+            Map<String, Object> errorResponse = Map.of(
+                    "success", false,
+                    "message", "Oturum süreniz dolmuş veya yetkisiz erişim."
+            );
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+        }
+
+        try {
+            changePassword(authentication.getName(), request);
+            Map<String, Object> successResponse = Map.of(
+                    "success", true,
+                    "message", "Şifreniz başarıyla değiştirildi."
+            );
+            return ResponseEntity.ok().body(successResponse);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            ));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            ));
+        }
     }
 }

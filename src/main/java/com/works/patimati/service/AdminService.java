@@ -50,6 +50,12 @@ public interface AdminService {
     void deleteAdAsAdmin(Long adId);
 
     /**
+     * FAILED durumundaki tüm aktif ilanları yeniden analize gönderir;
+     * kuyruğa yazılan ilan sayısını döner.
+     */
+    int reanalyzeFailedAds();
+
+    /**
      * İlan şikayetlerini bağlam bilgileriyle (ilan başlığı, sahibi, şikayet eden) sayfalı listeler.
      */
     Page<AdComplaintAdminResponse> getAdComplaints(Pageable pageable);
@@ -69,4 +75,10 @@ public interface AdminService {
      * en yeniden eskiye sayfalı listeler.
      */
     Page<ExternalPostAdminResponse> getExternalPosts(Pageable pageable);
+
+    /**
+     * V19 öncesi ilanların il/ilçesini koordinattan doldurur (bir defalık,
+     * dağıtımdan sonra çağrılır). Dönüş: toplam / dolan / cozulemeyen.
+     */
+    java.util.Map<String, Integer> backfillAdLocations();
 }

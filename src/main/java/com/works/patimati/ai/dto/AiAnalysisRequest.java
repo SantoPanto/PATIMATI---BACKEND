@@ -33,6 +33,9 @@ import java.util.List;
  * @param triggeringComment EKLENDİ. Yalnızca EXTERNAL istekte, varsa dolu.
  * @param matchThreshold   EKLENDİ. Kaynak bazlı eşik geçersiz kılma; null ise
  *                         AI kendi ortam değişkenindeki varsayılanı kullanır.
+ * @param isMatchRequired  EKLENDİ (develop, popup-eşik-konum). İlan eşleştirme
+ *                         istemiyorsa false; candidates zaten boş gönderilir,
+ *                         bu alan yalnızca AI tarafına niyeti açıkça bildirir.
  */
 public record AiAnalysisRequest(
         int schemaVersion,
@@ -46,13 +49,15 @@ public record AiAnalysisRequest(
         Long externalRecordId,
         String caption,
         String triggeringComment,
-        Double matchThreshold
+        Double matchThreshold,
+        Boolean isMatchRequired
 ) {
     /** Native (mevcut) istekler için — kaynak her zaman PatiMati'dir. */
     public static AiAnalysisRequest forAd(
             int schemaVersion, String requestId, Long adId, String adType,
-            String declaredSpecies, List<String> photoUrls, List<AiCandidate> candidates) {
+            String declaredSpecies, List<String> photoUrls, List<AiCandidate> candidates,
+            Boolean isMatchRequired) {
         return new AiAnalysisRequest(schemaVersion, requestId, adId, adType, declaredSpecies,
-                photoUrls, candidates, "PATIMATI", null, null, null, null);
+                photoUrls, candidates, "PATIMATI", null, null, null, null, isMatchRequired);
     }
 }

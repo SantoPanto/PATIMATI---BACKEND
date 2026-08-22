@@ -65,6 +65,6 @@ public record AdoptionAdUpdateRequest(
     @JsonIgnore
     @AssertTrue(message = "Tür kedi (CAT) veya köpek (DOG) olmalıdır")
     public boolean isSupportedSpecies() {
-        return species == Species.CAT || species == Species.DOG;
+        return species == null || species == Species.CAT || species == Species.DOG;
     }
 }

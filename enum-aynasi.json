@@ -1,0 +1,220 @@
+{
+  "_aciklama": "Backend enum'larının değer listesi. ELLE DÜZENLENMEZ — scripts/enum-aynasi.py --uret ile üretilir, CI bayatlığını denetler. Ön yüz bu dosyanın kopyasını client/src/services/enum-aynasi.json altında tutar ve kendi tiplerini ona karşı sınar.",
+  "enumlar": {
+    "AdResolutionStatus": {
+      "kaynak": "src/main/java/com/works/patimati/entity/enums/AdResolutionStatus.java",
+      "degerler": [
+        "NONE",
+        "FOUND",
+        "ADOPTED"
+      ]
+    },
+    "AdType": {
+      "kaynak": "src/main/java/com/works/patimati/entity/Ad.java",
+      "degerler": [
+        "LOST",
+        "FOUND",
+        "ADOPTION"
+      ]
+    },
+    "AgeGroup": {
+      "kaynak": "src/main/java/com/works/patimati/entity/enums/AgeGroup.java",
+      "degerler": [
+        "UNKNOWN",
+        "BABY",
+        "YOUNG",
+        "ADULT",
+        "SENIOR"
+      ]
+    },
+    "AiStatus": {
+      "kaynak": "src/main/java/com/works/patimati/entity/enums/AiStatus.java",
+      "degerler": [
+        "PENDING",
+        "DONE",
+        "FAILED",
+        "NOT_APPLICABLE"
+      ]
+    },
+    "CandidateKind": {
+      "kaynak": "src/main/java/com/works/patimati/entity/PotentialMatch.java",
+      "degerler": [
+        "AD",
+        "EXTERNAL"
+      ]
+    },
+    "CoatPattern": {
+      "kaynak": "src/main/java/com/works/patimati/entity/enums/CoatPattern.java",
+      "degerler": [
+        "UNKNOWN",
+        "SOLID",
+        "STRIPED",
+        "SPOTTED",
+        "PATCHED",
+        "CALICO",
+        "TORTOISESHELL",
+        "OTHER"
+      ]
+    },
+    "ComplaintReason": {
+      "kaynak": "src/main/java/com/works/patimati/entity/enums/ComplaintReason.java",
+      "degerler": [
+        "SAHTE_ILAN",
+        "UYGUNSUZ_ICERIK",
+        "DOLANDIRICILIK",
+        "KOTU_DIL_KULLANIMI",
+        "DIGER"
+      ]
+    },
+    "ComplaintStatus": {
+      "kaynak": "src/main/java/com/works/patimati/entity/enums/ComplaintStatus.java",
+      "degerler": [
+        "BEKLEMEDE",
+        "INCELEMEDE",
+        "COZULDU"
+      ]
+    },
+    "Decision": {
+      "kaynak": "src/main/java/com/works/patimati/dto/match/PotentialMatchDecisionRequest.java",
+      "degerler": [
+        "CONFIRMED",
+        "REJECTED"
+      ]
+    },
+    "ExternalCategory": {
+      "kaynak": "src/main/java/com/works/patimati/entity/enums/ExternalCategory.java",
+      "degerler": [
+        "LOST",
+        "FOUND",
+        "ADOPTION",
+        "IRRELEVANT",
+        "UNCERTAIN"
+      ]
+    },
+    "ExternalProcessingStatus": {
+      "kaynak": "src/main/java/com/works/patimati/entity/enums/ExternalProcessingStatus.java",
+      "degerler": [
+        "DISCOVERED",
+        "COLLECTED",
+        "MEDIA_STORED",
+        "ANALYZING",
+        "ANALYZED",
+        "MATCHING",
+        "COMPLETED",
+        "FAILED",
+        "NEEDS_REVIEW"
+      ]
+    },
+    "ExternalSource": {
+      "kaynak": "src/main/java/com/works/patimati/entity/enums/ExternalSource.java",
+      "degerler": [
+        "INSTAGRAM"
+      ]
+    },
+    "EyeColor": {
+      "kaynak": "src/main/java/com/works/patimati/entity/enums/EyeColor.java",
+      "degerler": [
+        "UNKNOWN",
+        "BROWN",
+        "BLUE",
+        "GREEN",
+        "AMBER",
+        "HAZEL",
+        "HETEROCHROMIA",
+        "OTHER"
+      ]
+    },
+    "MatchStatus": {
+      "kaynak": "src/main/java/com/works/patimati/entity/enums/MatchStatus.java",
+      "degerler": [
+        "PENDING",
+        "NOTIFIED",
+        "VIEWED",
+        "REJECTED",
+        "CONFIRMED",
+        "EXPIRED",
+        "NOTIFICATION_FAILED"
+      ]
+    },
+    "PetColor": {
+      "kaynak": "src/main/java/com/works/patimati/entity/enums/PetColor.java",
+      "degerler": [
+        "BLACK",
+        "WHITE",
+        "GRAY",
+        "BROWN",
+        "ORANGE",
+        "CREAM",
+        "GOLDEN",
+        "BEIGE",
+        "OTHER"
+      ]
+    },
+    "PetGender": {
+      "kaynak": "src/main/java/com/works/patimati/entity/enums/PetGender.java",
+      "degerler": [
+        "UNKNOWN",
+        "FEMALE",
+        "MALE"
+      ]
+    },
+    "PresenceStatus": {
+      "kaynak": "src/main/java/com/works/patimati/entity/enums/PresenceStatus.java",
+      "degerler": [
+        "UNKNOWN",
+        "YES",
+        "NO"
+      ]
+    },
+    "ProcessingState": {
+      "kaynak": "src/main/java/com/works/patimati/entity/external/ExternalSourceMedia.java",
+      "degerler": [
+        "PENDING",
+        "STORED",
+        "FAILED"
+      ]
+    },
+    "PushResult": {
+      "kaynak": "src/main/java/com/works/patimati/notification/PushResult.java",
+      "degerler": [
+        "SENT",
+        "PUSH_DISABLED",
+        "NO_RECIPIENT",
+        "NO_TOKEN",
+        "FAILED"
+      ]
+    },
+    "RecipientRole": {
+      "kaynak": "src/main/java/com/works/patimati/entity/PotentialMatchRecipient.java",
+      "degerler": [
+        "OWNER_A",
+        "OWNER_B",
+        "OWNER"
+      ]
+    },
+    "Role": {
+      "kaynak": "src/main/java/com/works/patimati/entity/User.java",
+      "degerler": [
+        "GUEST",
+        "USER",
+        "ADMIN"
+      ]
+    },
+    "Species": {
+      "kaynak": "src/main/java/com/works/patimati/entity/enums/Species.java",
+      "degerler": [
+        "CAT",
+        "DOG",
+        "UNKNOWN"
+      ]
+    },
+    "TriggerType": {
+      "kaynak": "src/main/java/com/works/patimati/entity/enums/TriggerType.java",
+      "degerler": [
+        "POST_TAG",
+        "CAPTION_MENTION",
+        "COMMENT_MENTION"
+      ]
+    }
+  }
+}

@@ -35,17 +35,20 @@ import java.util.Optional;
  * (yalnızca analiz) sonucu bir {@link ExternalPetRecord}'a yazılır ve
  * ardından kategori uyumluysa (LOST/FOUND, needs_review değilse) Aşama 2
  * ({@link ExternalMatchingService}) tetiklenir. Aksi hâlde native davranış
- * — {@link Ad}'a yazılır — AYNEN korunur, tek fark eşleşmelerin artık
- * {@link AiMatchNotifier} yerine {@link PotentialMatchService} üzerinden
- * kalıcı/dedup'lı hâle gelmesidir.
+ * — {@link Ad}'a yazılır — AYNEN korunur.
  *
- * <p><b>Tekrar teslime dayanıklıdır</b> (§8): her iki yol da idempotent-by-
- * overwrite'tır. RabbitMQ "en az bir kez" teslim eder, yani aynı mesaj iki
- * kez gelebilir; satır yazımı {@code ad_id}/{@code externalRecordId}
- * üzerinden idempotenttir. Eski yaklaşımın (bkz. {@link AiMatchNotifier})
- * açık bıraktığı "tekrar teslimde aynı çifte bildirim iki kez gider"
- * sorunu, bildirimi {@code PotentialMatchService} üzerinden DB seviyesinde
- * dedup'layarak kapatılmıştır.
+ * <p><b>Eşleşme kaydı kaynağa göre iki ayrı sisteme bölünür</b> (aynı
+ * eşleşmenin iki sistem birden yazması hem çift bildirime hem çakışan dedup
+ * anahtarlarına yol açardı):
+ * <ul>
+ *   <li>native↔native eşleşmeler değişmeden {@link AiMatchNotifier} üzerinden
+ *       {@code ad_matches} tablosuna gider (develop'taki B6 düzeltmesi,
+ *       canlıda zaten oturmuş — burada HİÇ dokunulmuyor).</li>
+ *   <li>native↔external (Instagram) eşleşmeler {@link PotentialMatchService}
+ *       üzerinden {@code potential_matches} tablosuna gider. Tam ikame
+ *       (native↔native'in de PotentialMatch'e taşınması) ayrı bir PR'ın
+ *       konusu.</li>
+ * </ul>
  */
 @Component
 @RequiredArgsConstructor
@@ -59,6 +62,7 @@ public class AiAnalysisListener {
     private final ExternalSourceMediaRepository externalSourceMediaRepository;
     private final PotentialMatchService potentialMatchService;
     private final ExternalMatchingService externalMatchingService;
+    private final AiMatchNotifier matchNotifier;
 
     @RabbitListener(queues = AiRabbitConfig.RESULT_QUEUE,
                     containerFactory = "aiListenerContainerFactory")
@@ -102,27 +106,44 @@ public class AiAnalysisListener {
         adRepository.save(ad);
         logSkipped(result);
 
-        List<AiAnalysisResult.Match> matches = result.matches() == null ? List.of() : result.matches();
-        for (AiAnalysisResult.Match match : matches) {
-            if (!match.match()) {
-                continue;
+        // Eşleşmelerin KAYDI ve eşiği geçenler için bildirim.
+        //
+        // ⚠ Burada eskiden "hangi çifte daha önce bildirim gitti bilgisini
+        // notifier tutuyor" yazıyordu. YANLIŞTI: notifier de hiçbir şey
+        // tutmuyordu (ölçüldü, 17.08). İki bileşen de ötekinin yaptığını
+        // sanıyordu. Artık kayıt gerçekten yazılıyor ve damga oradan okunuyor.
+        //
+        // Eşik AI'nın cevabından geçiyor: kaydın "o an eşik neydi" sorusuna
+        // doğru cevap verebilmesi için değerin KAYNAĞINDAN gelmesi gerekiyor.
+        // Backend yapılandırmasından okunsaydı iki kaynak sessizce kayardı.
+        boolean isMatchRequired = !Boolean.FALSE.equals(ad.getIsMatchRequired()) && ad.getAdType() != Ad.AdType.ADOPTION;
+        List<AiAnalysisResult.Match> matches = (isMatchRequired && result.matches() != null)
+                ? result.matches() : List.of();
+        if (isMatchRequired) {
+            // Native<->native: ad_matches sistemi (AiMatchNotifier, develop'taki
+            // B6 düzeltmesi) HİÇ değiştirilmeden kullanılıyor -- kendi
+            // match.adId()==null denetimiyle external-yalnız eşleşmeleri zaten
+            // atlar.
+            matchNotifier.recordAndNotify(ad, matches, result.matchThreshold());
+
+            // Native<->external (Flow B): yalnızca PotentialMatch yazar --
+            // ad_matches'e hiç dokunulmaz, aynı eşleşmeyi iki sistem birden
+            // yazıp çift bildirime/dedup çakışmasına yol açmasın diye.
+            for (AiAnalysisResult.Match match : matches) {
+                if (match.match() && match.externalRecordId() != null) {
+                    potentialMatchService.recordExternalMatch(
+                            ad.getId(), match.externalRecordId(),
+                            (float) match.visual(), (float) match.label(), (float) match.location(),
+                            (float) match.score(), ad.getAiModelVersion());
+                }
             }
-            if (match.externalRecordId() != null) {
-                // Flow B: native ilan artık external Instagram adaylarını da görüyor.
-                potentialMatchService.recordExternalMatch(
-                        ad.getId(), match.externalRecordId(),
-                        (float) match.visual(), (float) match.label(), (float) match.location(),
-                        (float) match.score(), ad.getAiModelVersion());
-            } else if (match.adId() != null) {
-                potentialMatchService.recordAdMatch(
-                        ad.getId(), match.adId(),
-                        (float) match.visual(), (float) match.label(), (float) match.location(),
-                        (float) match.score(), ad.getAiModelVersion());
-            }
+        } else {
+            log.info("adId={}: isMatchRequired=false, eşleşme bildirimi adımı atlandı", ad.getId());
         }
 
-        log.info("AI analizi tamamlandı: adId={} tür={} cins={} eşleşme={} model={}",
-                ad.getId(), ad.getAiSpecies(), ad.getAiBreed(), matches.size(), ad.getAiModelVersion());
+        log.info("AI analizi tamamlandı: adId={} isMatchRequired={} tür={} cins={} eşleşme={} model={}",
+                ad.getId(), ad.getIsMatchRequired(), ad.getAiSpecies(), ad.getAiBreed(), matches.size(),
+                ad.getAiModelVersion());
     }
 
     // ------------------------------------------------------------------
@@ -248,7 +269,12 @@ public class AiAnalysisListener {
             return;
         }
 
-        ad.setAiEmbeddings(pairVectorsWithUrls(ad.getPhotoUrls(), analysis.embeddings()));
+        if (Boolean.FALSE.equals(ad.getIsMatchRequired()) || ad.getAdType() == Ad.AdType.ADOPTION) {
+            ad.setAiEmbeddings(null);
+            log.info("adId={}: isMatchRequired=false, vektör (embedding) kaydı veritabanına yazılmadı", ad.getId());
+        } else {
+            ad.setAiEmbeddings(pairVectorsWithUrls(ad.getPhotoUrls(), analysis.embeddings()));
+        }
         ad.setAiLabels(analysis.labels());
         ad.setAiSpecies(analysis.species());
         ad.setAiBreed(analysis.breed());

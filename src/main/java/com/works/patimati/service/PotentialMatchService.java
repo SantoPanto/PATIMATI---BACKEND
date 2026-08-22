@@ -1,6 +1,5 @@
 package com.works.patimati.service;
 
-import com.works.patimati.ai.AiMatchNotifier;
 import com.works.patimati.dto.match.PotentialMatchDecisionRequest;
 import com.works.patimati.dto.match.PotentialMatchSummaryResponse;
 import com.works.patimati.entity.Ad;
@@ -10,6 +9,8 @@ import com.works.patimati.entity.User;
 import com.works.patimati.entity.enums.MatchStatus;
 import com.works.patimati.entity.external.ExternalPetRecord;
 import com.works.patimati.exception.ResourceNotFoundException;
+import com.works.patimati.notification.PushNotificationService;
+import com.works.patimati.notification.PushResult;
 import com.works.patimati.repository.AdRepository;
 import com.works.patimati.repository.PotentialMatchRecipientRepository;
 import com.works.patimati.repository.PotentialMatchRepository;
@@ -29,18 +30,24 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
- * Eşleşmelerin kalıcılığı ve bildirim teslimatı — Faz 1 taslağının en büyük
- * eksiğini kapatır: mevcut native↔native eşleştirme hiçbir zaman kalıcı
- * değildi, her yeniden analizde aynı çifte tekrar bildirim gidiyordu.
+ * Native↔external (Instagram) eşleşmelerin kalıcılığı ve bildirim teslimatı.
  *
- * <p>Faz 2 revize blueprint §2/§3/§4'teki düzeltilmiş tasarım:
+ * <p><b>Yalnızca native↔external:</b> native↔native eşleşmeler bilerek burada
+ * DEĞİL — o akış {@code ad_matches} tablosu ve {@link com.works.patimati.ai.AiMatchNotifier}
+ * üzerinden yürüyor (develop'taki B6 düzeltmesi, canlıda zaten oturmuş).
+ * Kaynağa göre ayrım: aynı eşleşmeyi iki sistemin birden yazması hem çift
+ * bildirime hem çakışan dedup anahtarlarına yol açardı. Tam ikame (native↔native
+ * eşleşmelerin de buraya taşınması) ayrı bir PR'ın konusu.
+ *
+ * <p>Faz 2 revize blueprint §2/§3/§4'teki tasarım:
  * <ul>
  *   <li>Eşleşme KİMLİĞİ ({@link PotentialMatch}) ve bildirim HEDEFİ
- *       ({@link PotentialMatchRecipient}) ayrı satırlardır — native↔native'de
- *       iki bağımsız alıcı satırı, native↔external'da bir tane.</li>
+ *       ({@link PotentialMatchRecipient}) ayrı satırlardır — native↔external'da
+ *       tek alıcı: ilan sahibi.</li>
  *   <li>Teslimat sırası GÖNDER-sonra-işaretle'dir (taslaktaki
  *       işaretle-sonra-gönder'in TERSİ): çökme anında sessiz kayıp yerine
  *       nadir/sınırlı bir tekrar bildirim tercih edilir — bu proje için
@@ -57,7 +64,7 @@ public class PotentialMatchService {
     private final PotentialMatchRecipientRepository recipientRepository;
     private final AdRepository adRepository;
     private final ExternalPetRecordRepository externalPetRecordRepository;
-    private final AiMatchNotifier notifier;
+    private final PushNotificationService pushNotificationService;
     private final UserRepository userRepository;
     private final ExternalSourceMediaRepository externalSourceMediaRepository;
     private final ImageStorageService imageStorageService;
@@ -67,52 +74,6 @@ public class PotentialMatchService {
 
     @Value("${potential-match.retry-grace-period:PT2M}")
     private Duration retryGracePeriod;
-
-    /**
-     * Native↔native bir eşleşmeyi kaydeder. {@code (adAId, adBId)} kanonik
-     * sırada (küçük id önce) tutulur — hangi ilanın analizi eşleşmeyi
-     * bulduğuna bakılmaksızın DAİMA aynı satıra düşsün diye; DB'deki
-     * LEAST/GREATEST indeksi bunu ikinci bir güvenlik katmanı olarak zaten
-     * garanti eder, buradaki sıralama okunabilirlik + tutarlılık içindir.
-     */
-    @Transactional
-    public void recordAdMatch(Long subjectAdId, Long candidateAdId,
-                               float visual, float label, float location, float finalScore,
-                               String matchingVersion) {
-        if (subjectAdId == null || candidateAdId == null || subjectAdId.equals(candidateAdId)) {
-            return;
-        }
-        Long adAId = Math.min(subjectAdId, candidateAdId);
-        Long adBId = Math.max(subjectAdId, candidateAdId);
-
-        Optional<Long> insertedId = potentialMatchRepository.insertAdMatchIfAbsent(
-                adAId, adBId, visual, label, location, finalScore, matchingVersion);
-
-        if (insertedId.isEmpty()) {
-            // Zaten var — muhtemelen daha önceki bir analiz turu. Alıcı
-            // satırları da zaten var demektir; tekrar oluşturmuyoruz (bu,
-            // "duplicate match = recipient sayısı değişmez" gereksinimidir).
-            log.debug("AD-AD eşleşmesi zaten mevcut: {} <-> {}", adAId, adBId);
-            return;
-        }
-
-        Optional<Ad> adA = adRepository.findById(adAId);
-        Optional<Ad> adB = adRepository.findById(adBId);
-        if (adA.isEmpty() || adB.isEmpty()) {
-            log.warn("Yeni PotentialMatch (AD) için ilanlardan biri bulunamadı: {} / {}", adAId, adBId);
-            return;
-        }
-
-        PotentialMatch match = potentialMatchRepository.findById(insertedId.get()).orElse(null);
-        if (match == null) {
-            return;
-        }
-
-        createRecipientAndSend(match, adA.get().getUser(), PotentialMatchRecipient.Role.OWNER_A);
-        createRecipientAndSend(match, adB.get().getUser(), PotentialMatchRecipient.Role.OWNER_B);
-
-        log.info("Yeni PotentialMatch (AD<->AD): {} <-> {} skor={}", adAId, adBId, finalScore);
-    }
 
     /** Native↔external bir eşleşmeyi kaydeder — tek alıcı: ilan sahibi. */
     @Transactional
@@ -144,13 +105,13 @@ public class PotentialMatchService {
             return;
         }
 
-        createRecipientAndSend(match, ad.get().getUser(), PotentialMatchRecipient.Role.OWNER);
+        createRecipientAndSend(match, ad.get().getUser(), PotentialMatchRecipient.RecipientRole.OWNER);
 
         log.info("Yeni PotentialMatch (AD<->EXTERNAL): ad={} external={} skor={}",
                 adId, externalRecordId, finalScore);
     }
 
-    private void createRecipientAndSend(PotentialMatch match, User recipient, PotentialMatchRecipient.Role role) {
+    private void createRecipientAndSend(PotentialMatch match, User recipient, PotentialMatchRecipient.RecipientRole role) {
         if (recipient == null) {
             return;
         }
@@ -171,12 +132,67 @@ public class PotentialMatchService {
         if (recipient == null) {
             return;
         }
-        boolean sent = notifier.sendOne(recipient);
+        boolean sent = sendOne(recipient);
         if (sent) {
             recipientRepository.markNotifiedIfPending(recipientId, Instant.now());
         } else {
             recipientRepository.incrementSendAttempts(recipientId);
         }
+    }
+
+    /**
+     * Tek bir alıcıya tek bir FCM bildirimi gönderir. {@code collapseKey},
+     * alıcı satırının kendi kimliğine bağlanır: aynı bildirim (nadir de olsa)
+     * iki kez tetiklenirse cihaz/OS seviyesinde tek bildirime düşürülür —
+     * bu, {@code potential_matches}/{@code potential_match_recipients}
+     * üzerindeki DB seviyesindeki dedup'ın YERİNE geçmez, ikincil bir savunmadır.
+     *
+     * @return true ise gönderim BAŞARILI (ya da gönderilecek alıcı/token
+     *         yoktu — bu durumda tekrar denemenin bir anlamı kalmaz); false
+     *         ise BAŞARISIZ, çağıran {@code sendAttempts} artırıp PENDING'de bırakmalı.
+     */
+    boolean sendOne(PotentialMatchRecipient recipient) {
+        User user = recipient.getRecipient();
+        if (user == null) {
+            log.warn("Eşleşme bildirimi atlandı (recipientId={}): ilgili kullanıcı yok", recipient.getId());
+            return true;
+        }
+
+        PushResult sonuc = pushNotificationService.send(
+                user.getFcmToken(),
+                "Olası eşleşme bulundu",
+                buildBody(recipient.getPotentialMatch(), recipient.getRole()),
+                Map.of(
+                        "type", "POTENTIAL_MATCH",
+                        "potentialMatchId", String.valueOf(recipient.getPotentialMatch().getId()),
+                        "recipientId", String.valueOf(recipient.getId())
+                ),
+                "potential-match-" + recipient.getId()
+        );
+
+        return switch (sonuc) {
+            case SENT -> true;
+            case NO_TOKEN, NO_RECIPIENT -> true;
+            case PUSH_DISABLED, FAILED -> {
+                log.warn("Eşleşme bildirimi gönderilemedi (recipientId={}): {}",
+                        recipient.getId(), sonuc.aciklama());
+                yield false;
+            }
+        };
+    }
+
+    /**
+     * Hiçbir zaman kesinlik iddia etmez (sözleşme §7 kural 3): "bulundu"
+     * değil "benzeyen bir kayıt tespit edildi" dili kullanılır.
+     */
+    private String buildBody(PotentialMatch match, PotentialMatchRecipient.RecipientRole role) {
+        if (match.getCandidateKind() == PotentialMatch.CandidateKind.EXTERNAL) {
+            return "Evcil hayvanınıza benzeyen bir hayvan tespit ettik. "
+                    + "Kaydı inceleyerek aynı hayvan olup olmadığını kontrol edebilirsiniz.";
+        }
+        Ad other = role == PotentialMatchRecipient.RecipientRole.OWNER_B ? match.getAdA() : match.getAdB();
+        String title = other != null && other.getTitle() != null ? other.getTitle() : "bir ilan";
+        return "İlanınıza benzeyen bir ilan var: " + title + ". Siz de bakar mısınız?";
     }
 
     /**
@@ -262,7 +278,7 @@ public class PotentialMatchService {
 
         if (match.getCandidateKind() == PotentialMatch.CandidateKind.AD) {
             // role=OWNER_B -> çağıran adB sahibi -> karşı taraf adA; aksi hâlde tersi.
-            Ad other = recipient.getRole() == PotentialMatchRecipient.Role.OWNER_B
+            Ad other = recipient.getRole() == PotentialMatchRecipient.RecipientRole.OWNER_B
                     ? match.getAdA() : match.getAdB();
             counterparty = new PotentialMatchSummaryResponse.Counterparty(
                     "AD", other.getId(), other.getTitle(), representativeAdPhoto(other),

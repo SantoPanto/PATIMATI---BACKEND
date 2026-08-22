@@ -41,6 +41,7 @@ class AiAnalysisListenerTest {
     private ExternalSourceMediaRepository externalSourceMediaRepository;
     private PotentialMatchService potentialMatchService;
     private ExternalMatchingService externalMatchingService;
+    private AiMatchNotifier matchNotifier;
     private AiAnalysisListener listener;
 
     private ExternalSourcePost post;
@@ -54,10 +55,12 @@ class AiAnalysisListenerTest {
         externalSourceMediaRepository = mock(ExternalSourceMediaRepository.class);
         potentialMatchService = mock(PotentialMatchService.class);
         externalMatchingService = mock(ExternalMatchingService.class);
+        matchNotifier = mock(AiMatchNotifier.class);
 
         listener = new AiAnalysisListener(
                 adRepository, externalPetRecordRepository, externalSourcePostRepository,
-                externalSourceMediaRepository, potentialMatchService, externalMatchingService);
+                externalSourceMediaRepository, potentialMatchService, externalMatchingService,
+                matchNotifier);
 
         post = ExternalSourcePost.builder().id(1L).build();
         record = ExternalPetRecord.builder().id(10L).post(post).build();

@@ -19,6 +19,18 @@ import java.util.List;
  *                         {@code AiAnalysisListener} yazma hedefini
  *                         ({@code Ad} mı {@code ExternalPetRecord} mı) bu
  *                         alanın varlığına göre seçer.
+ * @param matchThreshold sonuç üretilirken AI'da geçerli olan bildirim eşiği.
+ *                       <b>Sarmalayıcı {@code Double}, ilkel değil:</b> alan
+ *                       gelmezse {@code null} kalır ve "AI söylemedi" ayrı bir
+ *                       durum olarak görünür; ilkel {@code double} olsaydı
+ *                       {@code 0.0}'a düşer ve <i>"o an eşik sıfırdı"</i> gibi
+ *                       yanlış bir iddiaya dönüşürdü. {@code ad_match} satırı
+ *                       bu değeri kalıcı olarak saklar
+ *                       ({@code threshold_at_time}, NOT NULL): eşik zamanla
+ *                       değişiyor (0.70 → 0.80, AI PR #17) ve kaydın geçmişe
+ *                       dair doğru konuşabilmesi için o anki değeri bilmesi
+ *                       gerekiyor. Değeri <b>yalnız AI üretir</b>; backend
+ *                       yapılandırmasından okunsaydı iki kaynak sessizce kayardı.
  */
 public record AiAnalysisResult(
         int schemaVersion,
@@ -28,6 +40,7 @@ public record AiAnalysisResult(
         String modelVersion,
         Analysis analysis,
         List<Match> matches,
+        Double matchThreshold,
         SkippedCandidates skippedCandidates,
         AiError error,
         List<FailedPhoto> failedPhotos,

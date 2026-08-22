@@ -1,11 +1,17 @@
--- V11: potential_matches + potential_match_recipients.
+-- V25: potential_matches + potential_match_recipients.
 -- Karşılığı: Faz 2 revize blueprint §3 (düzeltilmiş iki-tablo tasarımı).
 --
 -- potential_matches yalnızca "hangi çift eşleşti" kimliğidir.
 -- potential_match_recipients "kime bildirilecek ve o kullanıcının kararı
--- ne" bilgisidir — native↔native bir eşleşmede İKİ bağımsız satır olur,
--- native↔external'da BİR satır olur. Bu ayrım, taslak sürümdeki
--- "source_ad_id hem kimlik hem bildirim hedefi" karışıklığını çözer.
+-- ne" bilgisidir.
+--
+-- YALNIZCA native<->external (Instagram): native<->native eşleşmeler
+-- bilerek burada DEĞİL -- o akış ad_matches tablosu ve AiMatchNotifier
+-- üzerinden yürüyor (develop'taki B6 düzeltmesi, canlıda zaten oturmuş).
+-- Aynı eşleşmeyi iki sistemin birden yazması hem çift bildirime hem
+-- çakışan dedup anahtarlarına yol açardı. CandidateKind.AD şeması ileride
+-- tam ikame (ayrı bir PR) için burada duruyor, ama şu an hiçbir yol
+-- oraya yazmıyor.
 
 CREATE TABLE IF NOT EXISTS potential_matches (
     id                   BIGSERIAL PRIMARY KEY,
