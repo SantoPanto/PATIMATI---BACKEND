@@ -94,7 +94,7 @@ class AiAnahtarBasligiTest {
                 .andExpect(header("X-Api-Key", ANAHTAR))
                 .andRespond(withSuccess("{\"matches\":[]}", MediaType.APPLICATION_JSON));
 
-        servis.matchImages(List.of(fotograf()), "LOST");
+        servis.matchImages(List.of(fotograf()), "LOST", null, null);
 
         // İkinci beklenti hiç karşılanmasaydı (akış /match'e varmadan dönseydi)
         // yukarıdaki başlık iddiası sınanmamış olurdu; verify() onu yakalar.
