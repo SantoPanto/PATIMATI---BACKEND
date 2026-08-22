@@ -78,7 +78,7 @@ class PosterSettingsTest {
         when(adRepository.saveAndFlush(any(Ad.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         AdResponse mockResponse = new AdResponse(
-                100L, "Başlık", "Açıklama", Ad.AdType.LOST, null, null, null, null, null, null, null, null, null, null, null, null, false, null, null, java.util.List.of(), null, null, null, null, 1L, "Owner", true, false, null, null, null, null, true, true, true, com.works.patimati.entity.enums.AdResolutionStatus.NONE
+                100L, "Başlık", "Açıklama", Ad.AdType.LOST, null, null, null, null, null, null, null, null, null, null, null, null, false, null, null, java.util.List.of(), null, null, null, null, 1L, "Owner", true, false, null, null, null, null, true, true, true, com.works.patimati.entity.enums.AdResolutionStatus.NONE, true
         );
         when(adMapper.toResponse(any(Ad.class), anyList())).thenReturn(mockResponse);
 
