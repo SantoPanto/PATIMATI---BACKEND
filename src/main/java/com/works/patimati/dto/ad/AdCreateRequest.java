@@ -1,6 +1,12 @@
 package com.works.patimati.dto.ad;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateDeserializer;
+import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
 import com.works.patimati.entity.Ad;
 import com.works.patimati.entity.enums.AgeGroup;
 import com.works.patimati.entity.enums.CoatPattern;
@@ -38,6 +44,8 @@ public record AdCreateRequest(
         @Size(max = 100, message = "Breed can contain at most 100 characters")
         String breed,
 
+        @com.fasterxml.jackson.annotation.JsonAlias({"color", "colors"})
+        @com.fasterxml.jackson.databind.annotation.JsonDeserialize(using = com.works.patimati.jackson.PetColorSetDeserializer.class)
         @Size(max = 9, message = "At most 9 colors can be selected")
         Set<PetColor> colors,
 
@@ -57,8 +65,10 @@ public record AdCreateRequest(
         @Size(max = 32, message = "Microchip number can contain at most 32 characters")
         String microchipNumber,
 
-        @PastOrPresent(message = "Lost date cannot be in the future")
-        LocalDate lostDate,
+        @NotBlank(message = "Tarih alanı boş bırakılamaz")
+        @jakarta.validation.constraints.Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}$", message = "Tarih formatı yyyy-MM-dd olmalıdır")
+        @JsonAlias({"date", "eventDate", "incidentDate"})
+        String lostDate,
 
         @Size(max = 1000, message = "Distinctive marks can contain at most 1000 characters")
         String distinctiveMarks,
@@ -71,7 +81,17 @@ public record AdCreateRequest(
         @NotNull(message = "Longitude is required")
         @DecimalMin(value = "-180.0", message = "Longitude must be at least -180")
         @DecimalMax(value = "180.0", message = "Longitude must be at most 180")
-        BigDecimal longitude
+        BigDecimal longitude,
+
+        /**
+         * İsteğe bağlı il/ilçe beyanı. Verilirse ters geokodlamaya hiç
+         * gidilmez; verilmezse sunucu koordinattan çözmeyi dener (V19).
+         */
+        @Size(max = 100, message = "City can contain at most 100 characters")
+        String city,
+
+        @Size(max = 100, message = "District can contain at most 100 characters")
+        String district
 ) {
 
     @JsonIgnore

@@ -59,8 +59,9 @@ public record AdUpdateRequest(
         @Size(max = 32, message = "Microchip number can contain at most 32 characters")
         String microchipNumber,
 
-        @PastOrPresent(message = "Lost date cannot be in the future")
-        LocalDate lostDate,
+        @jakarta.validation.constraints.Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}$", message = "Tarih formatı yyyy-MM-dd olmalıdır")
+        @com.fasterxml.jackson.annotation.JsonAlias({"date", "eventDate", "incidentDate"})
+        String lostDate,
 
         @Size(max = 1000, message = "Distinctive marks can contain at most 1000 characters")
         String distinctiveMarks,

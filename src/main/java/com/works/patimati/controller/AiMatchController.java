@@ -1,5 +1,6 @@
 package com.works.patimati.controller;
 
+import com.works.patimati.dto.match.MatchedAdResponseDTO;
 import com.works.patimati.service.AiMatchService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
@@ -24,11 +25,12 @@ public class AiMatchController {
             @RequestParam("images") List<MultipartFile> images,
             @RequestParam("listingType") String listingType) {
         try {
-            var results = aiMatchService.matchImages(images, listingType);
+            List<MatchedAdResponseDTO> results = aiMatchService.matchImages(images, listingType);
             return ResponseEntity.ok(results);
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.internalServerError().body("AI servisi ge\u00E7ici olarak hizmet veremiyor.");
+            return ResponseEntity.internalServerError().body("AI servisi geçici olarak hizmet veremiyor.");
         }
     }
 }
+

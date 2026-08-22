@@ -10,6 +10,7 @@ import com.works.patimati.entity.enums.PetGender;
 import com.works.patimati.entity.enums.PresenceStatus;
 import com.works.patimati.entity.enums.Species;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
@@ -51,10 +52,12 @@ class AdMapperTest {
                 null,
                 null,
                 "123 456 789",
-                LocalDate.now(),
+                "2026-08-20",
                 "  Notch on the left ear  ",
                 new BigDecimal("40.195000"),
-                new BigDecimal("29.060000")
+                new BigDecimal("29.060000"),
+                null,
+                null
         );
 
         Ad ad = adMapper.toEntity(request);
@@ -155,5 +158,57 @@ class AdMapperTest {
                 .withFailMessage("Analiz henüz yapılmadı; aiIsPet null kalmalı, "
                         + "false 'hayvan yok' demektir ve burada ölçülmüş bir şey yok")
                 .isNull();
+    }
+
+    @Test
+    @DisplayName("Sahibin kaldırdığı ilan ile yöneticinin askıya aldığı ilan AYIRT EDİLEBİLMELİ")
+    void askiyaAlmaSahipKaldirmasindanAyirtEdilebilmeli() {
+        // Ölçülen kusur: yönetici askıya alırken HEM suspended HEM active
+        // yazıyor (AdminServiceImpl), sahip kaldırınca yalnız active yazılıyor.
+        // Cevapta suspended dönmediği sürece arayüz ikisini ayırt edemiyordu:
+        // askıya alınan ilan sahibin "Yayından Kaldırılan" sekmesine düşüyor ve
+        // yanına "Yeniden Yayınla" düğmesi çiziliyordu. Kullanıcı basıyor, uç
+        // haklı olarak reddediyor ve ekranda sebep görünmüyordu — sahip
+        // ilanının İNCELEMEDE olduğunu hiçbir yerden öğrenemiyordu.
+        AdResponse sahipKaldirdi = adMapper.toResponse(asgariIlan(false, false));
+        AdResponse yoneticiAskiyaAldi = adMapper.toResponse(asgariIlan(false, true));
+
+        assertThat(sahipKaldirdi.active()).isFalse();
+        assertThat(sahipKaldirdi.suspended())
+                .withFailMessage("Sahibin kendi kaldırdığı ilan askıda görünüyor — "
+                        + "arayüz ona 'inceleme altında' der ve yeniden yayınlamayı "
+                        + "haksız yere engeller.")
+                .isFalse();
+
+        assertThat(yoneticiAskiyaAldi.active()).isFalse();
+        assertThat(yoneticiAskiyaAldi.suspended())
+                .withFailMessage("""
+                        Askıya alınmış ilan cevapta askıda GÖRÜNMÜYOR. Arayüzün
+                        elinde yalnız active kalır, iki durum aynı görünür ve
+                        sahibe her zaman reddedilecek bir "Yeniden Yayınla"
+                        düğmesi gösterilir.""")
+                .isTrue();
+    }
+
+    @Test
+    @DisplayName("Yayındaki ilan askıda görünmemeli")
+    void yayindakiIlanAskidaGorunmemeli() {
+        AdResponse yayinda = adMapper.toResponse(asgariIlan(true, false));
+
+        assertThat(yayinda.active()).isTrue();
+        assertThat(yayinda.suspended()).isFalse();
+    }
+
+    /** İki bayrağı ölçmek için gereken en küçük geçerli ilan. */
+    private Ad asgariIlan(boolean aktif, boolean askida) {
+        return Ad.builder()
+                .id(7L)
+                .title("Kayıp tekir kedi")
+                .adType(Ad.AdType.LOST)
+                .species(Species.CAT)
+                .aiStatus(AiStatus.PENDING)
+                .active(aktif)
+                .suspended(askida)
+                .build();
     }
 }

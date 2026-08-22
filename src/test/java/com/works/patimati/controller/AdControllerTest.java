@@ -3,6 +3,7 @@ package com.works.patimati.controller;
 import com.works.patimati.dto.ad.AdResponse;
 import com.works.patimati.entity.Ad;
 import com.works.patimati.entity.enums.AgeGroup;
+import com.works.patimati.entity.enums.AdResolutionStatus;
 import com.works.patimati.entity.enums.AiStatus;
 import com.works.patimati.entity.enums.CoatPattern;
 import com.works.patimati.entity.enums.EyeColor;
@@ -49,15 +50,17 @@ class AdControllerTest {
 
     private AdService adService;
     private UserRepository userRepository;
+    private com.works.patimati.service.PosterService posterService;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         adService = mock(AdService.class);
         userRepository = mock(UserRepository.class);
+        posterService = mock(com.works.patimati.service.PosterService.class);
 
         mockMvc = MockMvcBuilders
-                .standaloneSetup(new AdController(adService, userRepository))
+                .standaloneSetup(new AdController(adService, userRepository, posterService))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
@@ -117,6 +120,52 @@ class AdControllerTest {
     }
 
     @Test
+    void shouldCreateAdWithSingularColorStringAndPetColorDeserializer() throws Exception {
+        AdResponse response = response();
+
+        String requestJson = """
+                {
+                  "title": "Kayıp tekir kedi",
+                  "adType": "LOST",
+                  "species": "CAT",
+                  "color": "BLACK",
+                  "lostDate": "2026-07-20",
+                  "latitude": 40.195,
+                  "longitude": 29.060
+                }
+                """;
+
+        MockPart adPart = new MockPart(
+                "ad",
+                "ad",
+                requestJson.getBytes(StandardCharsets.UTF_8)
+        );
+        adPart.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+
+        MockMultipartFile image = new MockMultipartFile(
+                "images",
+                "cat.jpg",
+                MediaType.IMAGE_JPEG_VALUE,
+                new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF}
+        );
+
+        when(adService.createAd(
+                eq("owner@patimati.com"),
+                any(),
+                anyList()
+        )).thenReturn(response);
+
+        mockMvc.perform(
+                        multipart("/api/ads")
+                                .part(adPart)
+                                .file(image)
+                                .principal(authentication())
+                )
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(7));
+    }
+
+    @Test
     void shouldRejectInvalidCreateRequestBeforeCallingService()
             throws Exception {
         String requestJson = """
@@ -124,6 +173,7 @@ class AdControllerTest {
                   "title": "",
                   "adType": "LOST",
                   "species": "CAT",
+                  "lostDate": "2026-07-20",
                   "latitude": 40.195,
                   "longitude": 29.060
                 }
@@ -159,6 +209,93 @@ class AdControllerTest {
                 .andExpect(jsonPath(
                         "$.validationErrors.title"
                 ).exists());
+    }
+
+    @Test
+    void shouldRejectCreateRequestWithoutLostDateBeforeCallingService()
+            throws Exception {
+        String requestJson = """
+                {
+                  "title": "Kayıp kedi",
+                  "adType": "LOST",
+                  "species": "CAT",
+                  "latitude": 40.195,
+                  "longitude": 29.060
+                }
+                """;
+
+        MockPart adPart = new MockPart(
+                "ad",
+                "ad",
+                requestJson.getBytes(StandardCharsets.UTF_8)
+        );
+        adPart.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+
+        MockMultipartFile image = new MockMultipartFile(
+                "images",
+                "cat.jpg",
+                MediaType.IMAGE_JPEG_VALUE,
+                new byte[]{
+                        (byte) 0xFF,
+                        (byte) 0xD8,
+                        (byte) 0xFF
+                }
+        );
+
+        mockMvc.perform(
+                        multipart("/api/ads")
+                                .part(adPart)
+                                .file(image)
+                                .principal(authentication())
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.title").value("Doğrulama hatası"))
+                .andExpect(jsonPath("$.invalid_params.lostDate").value("Tarih alanı boş bırakılamaz"))
+                .andExpect(jsonPath("$.validationErrors.lostDate").exists());
+
+        verifyNoInteractions(adService);
+    }
+
+    @Test
+    void shouldRejectCreateRequestWithoutImageBeforeCallingService()
+            throws Exception {
+        String requestJson = """
+            {
+              "title": "Kayıp tekir kedi",
+              "adType": "LOST",
+              "species": "CAT",
+              "lostDate": "2026-07-20",
+              "latitude": 40.195,
+              "longitude": 29.060
+            }
+            """;
+
+        MockPart adPart = new MockPart(
+                "ad",
+                "ad",
+                requestJson.getBytes(StandardCharsets.UTF_8)
+        );
+        adPart.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+
+        /*
+         * B-8 Controller testi:
+         * İlan bilgileri geçerli olsa bile "images" alanı gönderilmediği
+         * için isteğin 400 Bad Request ile reddedilmesi gerekir.
+         */
+        mockMvc.perform(
+                        multipart("/api/ads")
+                                .part(adPart)
+                                .principal(authentication())
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.title")
+                        .value("Geçersiz istek"));
+
+        /*
+         * Eksik fotoğraf Controller seviyesinde tespit edildiği için
+         * Service katmanında hiçbir işlem başlamamalıdır.
+         */
+        verifyNoInteractions(adService);
     }
 
     @Test
@@ -239,18 +376,25 @@ class AdControllerTest {
                 PresenceStatus.UNKNOWN,
                 PresenceStatus.UNKNOWN,
                 false,
-                LocalDate.of(2026, 7, 20),
+                "2026-07-20",
                 null,
                 List.of("https://example.com/cat.jpg"),
                 40.195,
                 29.060,
+                "Bursa",
+                "Nilüfer",
                 42L,
                 "Test User",
                 true,
+                false,
                 Instant.parse("2026-07-27T12:00:00Z"),
                 Instant.parse("2026-07-27T12:00:00Z"),
                 AiStatus.DONE,
-                true
+                true,
+                false,
+                false,
+                false,
+                AdResolutionStatus.NONE
         );
     }
 

@@ -1,8 +1,10 @@
 package com.works.patimati.config;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Profile;
 import org.springframework.util.StringUtils;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
@@ -20,30 +22,22 @@ import java.net.URI;
 @EnableConfigurationProperties(S3StorageProperties.class)
 public class S3Config {
 
-    /**
-     * S3 ve MinIO kimlik bilgisi sağlayıcısı (Credentials Provider).
-     * 
-     * Local MinIO (Development):
-     *   `accessKey` ve `secretKey` tanımlıysa StaticCredentialsProvider kullanılır.
-     * 
-     * AWS S3 (Production):
-     *   Canlı ortama geçildiğinde ortam değişkenleri, IAM Rolleri veya DefaultCredentialsProvider kullanılır.
-     */
+    // --- LOCAL / DEFAULT PROFILE (MinIO) ---
+
     @Bean
+    @Profile({"local", "default"})
     public AwsCredentialsProvider awsCredentialsProvider(S3StorageProperties properties) {
-        // Local MinIO (Development) static credentials
         if (StringUtils.hasText(properties.accessKey()) && StringUtils.hasText(properties.secretKey())) {
             return StaticCredentialsProvider.create(
                     AwsBasicCredentials.create(properties.accessKey(), properties.secretKey())
             );
         }
 
-        // AWS S3 (Production) - IAM Roles / Env Vars / AWS Profile
-        // return DefaultCredentialsProvider.builder().build();
         return DefaultCredentialsProvider.builder().build();
     }
 
     @Bean
+    @Profile({"local", "default"})
     public S3Client s3Client(
             S3StorageProperties properties,
             AwsCredentialsProvider credentialsProvider
@@ -62,6 +56,7 @@ public class S3Config {
     }
 
     @Bean
+    @Profile({"local", "default"})
     public S3Presigner s3Presigner(
             S3StorageProperties properties,
             AwsCredentialsProvider credentialsProvider
@@ -79,18 +74,45 @@ public class S3Config {
         return builder.build();
     }
 
-    /**
-     * Path-style adresleme kararının TEK yeri — hem istemci hem presigner buradan besleniyor.
-     *
-     * <p>Presigner'a path-style bilgisini geçirmenin başka yolu yok:
-     * {@code S3Presigner.Builder} sınıfında {@code forcePathStyle} metodu
-     * <b>bulunmuyor</b> (AWS SDK 2.49.3'te javap ile doğrulandı). Bu satır buradan
-     * kaldırılıp yerine yalnız {@code S3ClientBuilder.forcePathStyle(...)} konursa
-     * yükleme çalışmaya devam eder ama presigner sessizce virtual-host URL üretir:
-     * {@code http://patimati-medya-kutusu.localhost:9000/...} — böyle bir alan adı
-     * çözülmediği için hiçbir fotoğraf görüntülenemez ve AI servisi fotoğrafları
-     * indiremez. Bekçisi: {@code S3PresignedUrlSekliTest}.
-     */
+    // --- PROD PROFILE (Cloudflare R2 / S3) ---
+
+    @Bean
+    @Profile("prod")
+    public AwsCredentialsProvider awsCredentialsProviderProd(
+            @Value("${aws.s3.access-key:}") String accessKey,
+            @Value("${aws.s3.secret-key:}") String secretKey
+    ) {
+        if (StringUtils.hasText(accessKey) && StringUtils.hasText(secretKey)) {
+            return StaticCredentialsProvider.create(
+                    AwsBasicCredentials.create(accessKey, secretKey)
+            );
+        }
+        return DefaultCredentialsProvider.builder().build();
+    }
+
+    @Bean
+    @Profile("prod")
+    public S3Client s3ClientProd(
+            AwsCredentialsProvider awsCredentialsProviderProd,
+            @Value("${aws.s3.endpoint:}") String endpointUrl,
+            @Value("${aws.s3.region:auto}") String regionStr
+    ) {
+        String effectiveRegion = StringUtils.hasText(regionStr) ? regionStr : "auto";
+        S3ClientBuilder builder = S3Client.builder()
+                .region(Region.of(effectiveRegion))
+                .credentialsProvider(awsCredentialsProviderProd)
+                .serviceConfiguration(S3Configuration.builder()
+                        .pathStyleAccessEnabled(true)
+                        .chunkedEncodingEnabled(false)
+                        .build());
+
+        if (StringUtils.hasText(endpointUrl)) {
+            builder.endpointOverride(URI.create(endpointUrl.trim()));
+        }
+
+        return builder.build();
+    }
+
     private S3Configuration serviceConfiguration(S3StorageProperties properties) {
         return S3Configuration.builder()
                 .pathStyleAccessEnabled(properties.pathStyleAccess())

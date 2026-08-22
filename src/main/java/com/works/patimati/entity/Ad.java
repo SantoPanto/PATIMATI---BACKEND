@@ -7,6 +7,7 @@ import com.works.patimati.entity.enums.EyeColor;
 import com.works.patimati.entity.enums.PetColor;
 import com.works.patimati.entity.enums.PetGender;
 import com.works.patimati.entity.enums.PresenceStatus;
+import com.works.patimati.entity.enums.AdResolutionStatus;
 import com.works.patimati.entity.enums.Species;
 import jakarta.persistence.*;
 import lombok.*;
@@ -136,6 +137,17 @@ public class Ad {
     @Column(columnDefinition = "geometry(Point, 4326)")
     private Point location;
 
+    /**
+     * İl/ilçe — kartlarda ham koordinat yerine gösterilir. Kayıtta form
+     * beyanı öncelikli, yoksa koordinattan ters geokodlama; ikisi de
+     * yoksa null kalır (V19).
+     */
+    @Column(name = "city", length = 100)
+    private String city;
+
+    @Column(name = "district", length = 100)
+    private String district;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
@@ -144,9 +156,57 @@ public class Ad {
     @Builder.Default
     private boolean active = true;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "resolution_status", nullable = false, length = 20)
+    @Builder.Default
+    private AdResolutionStatus resolutionStatus = AdResolutionStatus.NONE;
+
+    /**
+     * Bu kayıp ilan hangi <b>bulundu ilanıyla</b> eşleşerek kapandı.
+     *
+     * <p>Bilerek {@code null} olabilir: geçmiş kayıtlarda bu bilgi yok ve
+     * kullanıcı eşleşen ilanı seçmeden de kapatabilir. Bağ kurulmadığında
+     * {@code resolutionStatus} yine {@code FOUND} olur — yalnız hangi ilanla
+     * olduğu bilinmez.
+     *
+     * <p><b>Neden saklıyoruz:</b> eşleşme skorundaki konum kanalının ağırlığı
+     * ölçümle tartışılamıyordu, çünkü <i>gerçekte eşleşen bir çiftin arası
+     * kaç km</i> sorusunun cevabı sistemde hiç yoktu. Bu alan dolmaya
+     * başlayınca eşleşen çiftlerin mesafe dağılımı rastgele çiftlerinkiyle
+     * karşılaştırılabilir.
+     *
+     * <p>İlişki {@code @ManyToOne} DEĞİL, düz kimlik: bu bağ yalnız ölçüm
+     * için okunuyor, nesne grafiğine bağlamak her ilan yüklemesinde
+     * gereksiz bir sorgu riski getirirdi.
+     */
+    @Column(name = "resolved_by_ad_id")
+    private Long resolvedByAdId;
+
+    /**
+     * İlanı kapatırken bildirilen <b>bulan kullanıcı</b>.
+     *
+     * <p>Bu değer isteğe zaten geliyordu ({@code ResolveLostAdRequest}) ama
+     * yalnız ödül puanı verilip <b>atılıyordu</b>. Saklanmadığı için "kim
+     * buldu" sorusu sonradan cevaplanamıyordu.
+     */
+    @Column(name = "finder_user_id")
+    private Long finderUserId;
+
     @Column(name = "suspended", nullable = false)
     @Builder.Default
     private boolean suspended = false;
+
+    @Column(name = "is_poster_allowed", nullable = false)
+    @Builder.Default
+    private Boolean isPosterAllowed = false;
+
+    @Column(name = "show_email_on_poster", nullable = false)
+    @Builder.Default
+    private Boolean showEmailOnPoster = false;
+
+    @Column(name = "show_phone_on_poster", nullable = false)
+    @Builder.Default
+    private Boolean showPhoneOnPoster = false;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

@@ -7,13 +7,12 @@ import com.works.patimati.service.AdComplaintService;
 import com.works.patimati.service.UserComplaintService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import jakarta.validation.constraints.Min;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
 
@@ -75,5 +74,25 @@ public class ComplaintController {
         return ResponseEntity
                 .created(URI.create("/api/complaints/" + response.id()))
                 .body(response);
+    }
+
+    /**
+     * İlan Şikayeti Çözme Uç Noktası (Sadece Admin).
+     * PATCH /api/complaints/ad/{id}/resolve
+     */
+    @PatchMapping("/ad/{id}/resolve")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ComplaintResponse> resolveAdComplaint(@PathVariable @Min(1) Long id) {
+        return ResponseEntity.ok(adComplaintService.resolveAdComplaint(id));
+    }
+
+    /**
+     * Kullanıcı Profil Şikayeti Çözme Uç Noktası (Sadece Admin).
+     * PATCH /api/complaints/user/{id}/resolve
+     */
+    @PatchMapping("/user/{id}/resolve")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ComplaintResponse> resolveUserComplaint(@PathVariable @Min(1) Long id) {
+        return ResponseEntity.ok(userComplaintService.resolveUserComplaint(id));
     }
 }

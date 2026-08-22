@@ -1,8 +1,8 @@
 package com.works.patimati.service;
 
 import com.works.patimati.dto.AuthResponse;
+import com.works.patimati.dto.ChangePasswordRequest;
 import com.works.patimati.dto.FcmTokenUpdateDTO;
-import com.works.patimati.dto.GoogleAuthRequest;
 import com.works.patimati.dto.LoginRequest;
 import com.works.patimati.dto.RegisterRequest;
 import com.works.patimati.dto.User.UpdateProfileRequest;
@@ -22,6 +22,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.works.patimati.dto.ChangePasswordRequest;
+import com.works.patimati.exception.ResourceNotFoundException;
 
 import java.util.HashMap;
 import java.util.List;
@@ -109,36 +112,60 @@ public class UserService {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
     }
 
-    // --- GOOGLE GİRİŞİ ---
-    public ResponseEntity<?> googleLogin(GoogleAuthRequest request) {
-        Optional<User> optionalUser = userRepository.findByEmail(request.getEmail());
-        User user;
-
-        if (optionalUser.isPresent()) {
-            user = optionalUser.get();
-            user.setFcmToken(request.getFcmToken());
-            user.setFirstName(request.getFirstName());
-            user.setLastName(request.getLastName());
-
-            if (user.getGoogleId() == null) {
-                user.setGoogleId(request.getGoogleId());
-            }
-            userRepository.save(user);
-        } else {
-            user = User.builder()
-                    .email(request.getEmail())
-                    .googleId(request.getGoogleId())
-                    .firstName(request.getFirstName())
-                    .lastName(request.getLastName())
-                    .role(User.Role.USER)
-                    .fcmToken(request.getFcmToken())
-                    .enabled(true)
-                    .build();
-            userRepository.save(user);
+    /**
+     * Giriş yapmış kullanıcının şifresini güvenli şekilde değiştirme
+     *
+     * @param email   JWT doğrulamasından geçen kullanıcının e-posta adresi
+     * @param request mevcut ve yeni şifre bilgileri
+     */
+    @Transactional
+    public void changePassword(
+            String email,
+            ChangePasswordRequest request
+    ) {
+        // Yeni şifrenin iki alanda da aynı girildiğini sunucu tarafında doğrula
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new IllegalArgumentException(
+                    "Yeni şifre ve şifre tekrarı birbiriyle eşleşmiyor."
+            );
         }
 
-        String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
-        return ResponseEntity.ok().body(new AuthResponse(token, convertToUserResponseDTO(user)));
+        // Kullanıcı bilgisi istemciden değil, doğrulanmış JWT kimliğinden bulunur.
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Kullanıcı kaydı bulunamadı."
+                ));
+
+        if (user.getPassword() == null) {
+            throw new IllegalStateException(
+                    "Google ile oluşturulan hesaplarda mevcut şifre değiştirilemez."
+            );
+        }
+
+        // Mevcut şifre, veritabanındaki BCrypt hash'i ile karşılaştırılır.
+        if (!passwordEncoder.matches(
+                request.getCurrentPassword(),
+                user.getPassword()
+        )) {
+            throw new IllegalArgumentException("Mevcut şifre hatalı.");
+        }
+
+        // Kullanıcının aynı şifreyi tekrar belirlemesini engelle.
+        if (passwordEncoder.matches(
+                request.getNewPassword(),
+                user.getPassword()
+        )) {
+            throw new IllegalArgumentException(
+                    "Yeni şifre mevcut şifreden farklı olmalıdır."
+            );
+        }
+
+        // Veritabanına hiçbir zaman düz metin şifre yazılmaz.
+        user.setPassword(
+                passwordEncoder.encode(request.getNewPassword())
+        );
+
+        userRepository.save(user);
     }
 
     // --- GOOGLE OAUTH2 SUCCESS HANDLER KULLANICI İŞLEME ---
@@ -335,5 +362,37 @@ public class UserService {
                 "message", "Kullanıcı kaydı bulunamadı."
         );
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(notFoundResponse);
+    }
+
+    @Transactional
+    public ResponseEntity<?> changePassword(ChangePasswordRequest request) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
+            Map<String, Object> errorResponse = Map.of(
+                    "success", false,
+                    "message", "Oturum süreniz dolmuş veya yetkisiz erişim."
+            );
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+        }
+
+        try {
+            changePassword(authentication.getName(), request);
+            Map<String, Object> successResponse = Map.of(
+                    "success", true,
+                    "message", "Şifreniz başarıyla değiştirildi."
+            );
+            return ResponseEntity.ok().body(successResponse);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            ));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            ));
+        }
     }
 }

@@ -2,6 +2,7 @@ package com.works.patimati.repository;
 
 import com.works.patimati.ai.AiCandidateRow;
 import com.works.patimati.entity.Ad;
+import com.works.patimati.entity.enums.AdResolutionStatus;
 import org.locationtech.jts.geom.Point;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -11,11 +12,18 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface AdRepository extends JpaRepository<Ad, Long> {
+
+    /**
+     * V19 backfill'i: il'i hiç yazılmamış ama koordinatı olan ilanlar.
+     * İl dolu olanlara (beyan ya da önceki backfill) dokunulmaz.
+     */
+    List<Ad> findByCityIsNullAndLocationIsNotNull();
 
     // Yalnızca aktif bir ilanı getirir.
     Optional<Ad> findByIdAndActiveTrue(Long adId);
@@ -26,6 +34,13 @@ public interface AdRepository extends JpaRepository<Ad, Long> {
     // İlanın hem aktif olduğunu hem de belirtilen kullanıcıya ait olduğunu kontrol eder.
     Optional<Ad> findByIdAndUser_UidAndActiveTrue(Long adId, Long userId);
 
+    // Sahiplik kontrolü YAPAR ama aktiflik ŞARTI ARAMAZ.
+    // Yalnızca "yeniden yayınla" akışı için var: yayından kaldırılmış (active=false)
+    // bir ilan, tanımı gereği yukarıdaki sorguyla BULUNAMAZ — o yüzden onunla
+    // pasif ilana dokunmak imkânsızdı. Başka yerlerde bunu kullanmayın; aktif
+    // ilan bekleyen akışlar aktifliği sorgunun kendisinde şart koşmalı.
+    Optional<Ad> findByIdAndUser_Uid(Long adId, Long userId);
+
     // İlanları aktiflik durumuna göre sayfalı biçimde listeler.
     Page<Ad> findAllByActive(
             boolean active,
@@ -34,6 +49,18 @@ public interface AdRepository extends JpaRepository<Ad, Long> {
 
     // Halka açık aktif ve askıda olmayan ilanları listeler.
     Page<Ad> findAllByActiveTrueAndSuspendedFalse(Pageable pageable);
+
+    long countByActiveTrueAndSuspendedFalse();
+
+    // Bu kullanıcının HALKA AÇIK bir ilanı var mı?
+    // Sohbet odası açma yetkisi buna bakıyor (bkz. MessageService.createOrGetRoom):
+    // halka açık ilanı olan kullanıcının adı zaten AdResponse.ownerDisplayName ile
+    // herkese görünüyor, dolayısıyla onunla oda açmak yeni bir bilgi sızdırmaz.
+    // Aynı gerekçeyle filtre "aktif ve askıda değil" — askıya alınmış ya da
+    // kapatılmış ilan halka görünmediği için sahibinin adı da görünmüyor.
+    boolean existsByUser_UidAndActiveTrueAndSuspendedFalse(Long userId);
+
+    long countByResolutionStatusIn(Collection<AdResolutionStatus> resolutionStatuses);
 
     // İlanları türüne ve aktiflik durumuna göre filtreler.
     Page<Ad> findAllByAdTypeAndActive(
@@ -52,6 +79,13 @@ public interface AdRepository extends JpaRepository<Ad, Long> {
     Page<Ad> findAllByUser_UidAndActive(
             Long userId,
             boolean active,
+            Pageable pageable
+    );
+
+    // Bir kullanıcının TÜM ilanları — aktiflik süzgeci olmadan.
+    // "İlanlarım > Tümü" sekmesinin karşılığı: kapanmış ilan da görünmeli.
+    Page<Ad> findAllByUser_Uid(
+            Long userId,
             Pageable pageable
     );
 
@@ -75,6 +109,29 @@ public interface AdRepository extends JpaRepository<Ad, Long> {
     @Query(
             value = "SELECT * FROM ads a WHERE a.active = true AND ST_DWithin(a.location::geography, CAST(:userPoint AS geography), :distanceInMeters) = true", nativeQuery = true)
     List<Ad> findNearbyAds(@Param("userPoint") Point userPoint, @Param("distanceInMeters") double distanceInMeters);
+
+    /**
+     * Herkese açık haritada gösterilebilecek yakın ilanları getirir.
+     *
+     * <p>Public uç nokta kimlik bilgisi taşımadığı için sahip ve yönetici
+     * istisnası uygulanmaz; yalnızca aktif ve askıda olmayan ilanlar döner.</p>
+     */
+    @Query(value = """
+        SELECT *
+          FROM ads a
+         WHERE a.active = TRUE
+           AND a.suspended = FALSE
+           AND a.location IS NOT NULL
+           AND ST_DWithin(
+                   a.location::geography,
+                   CAST(:userPoint AS geography),
+                   :distanceInMeters
+               ) = TRUE
+        """, nativeQuery = true)
+        List<Ad> findPublicNearbyAds(
+                @Param("userPoint") Point userPoint,
+                @Param("distanceInMeters") double distanceInMeters
+    );
 
     /**
      * AI eşleştirmesine girecek adayları süzer (entegrasyon sözleşmesi §5).

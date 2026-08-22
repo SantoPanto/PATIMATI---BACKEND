@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
@@ -17,6 +18,8 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 
+import org.springframework.beans.factory.annotation.Value;
+
 import java.util.Arrays;
 import java.util.List;
 
@@ -25,11 +28,12 @@ import java.util.List;
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    // Bağımlılıkları tanımlıyoruz
     private final JwtAuthFilter jwtAuthFilter;
     private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
 
-    // Constructor (Yapıcı Metot) ile Spring'in bu sınıfları otomatik enjekte etmesini sağlıyoruz
+    @Value("${app.cors.allowed-origins:${app.frontend.url:http://localhost:5173}}")
+    private List<String> allowedOrigins;
+
     public SecurityConfig(JwtAuthFilter jwtAuthFilter, OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.oAuth2AuthenticationSuccessHandler = oAuth2AuthenticationSuccessHandler;
@@ -56,9 +60,13 @@ public class SecurityConfig {
                                 "/api/auth/login",
                                 "/api/public/**",
                                 "/swagger-ui/**",
+                                "/swagger-ui.html",
                                 "/v3/api-docs/**",
+                                "/v3/api-docs",
                                 "/api/auth/forgot-password",
                                 "/api/auth/reset-password",
+                                "/api/ads/*/poster",
+                                "/api/v1/ads/*/poster",
                                 "/error",
                                 "/oauth2/**",
                                 "/login/oauth2/**",
@@ -135,21 +143,32 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // Frontend'in çalıştığı adreslere izin ver
-        configuration.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:4200", "http://localhost:5173"));
+        // Konfigürasyondan (application.yml/prod.yml veya CORS_ALLOWED_ORIGINS ortam değişkeni) okunan dinamik origin listesi
+        configuration.setAllowedOrigins(allowedOrigins);
 
         // İzin verilen HTTP metodları
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
 
-        // İzin verilen başlıklar
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
+        // İzin verilen ve dışarıya açılan HTTP başlıkları (Headers)
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers"));
+        configuration.setExposedHeaders(Arrays.asList("Authorization", "Location"));
 
-        // Kimlik bilgilerinin (credentials) gönderilmesine izin ver
+        // Kimlik bilgilerinin (credentials/cookies/headers) gönderilmesine izin ver
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
 
         return source;
+    }
+
+    @Bean
+    public WebSecurityCustomizer webSecurityCustomizer() {
+        return (web) -> web.ignoring().requestMatchers(
+                "/v3/api-docs/**",
+                "/v3/api-docs",
+                "/swagger-ui/**",
+                "/swagger-ui.html"
+        );
     }
 }

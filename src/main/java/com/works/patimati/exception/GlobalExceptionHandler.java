@@ -28,6 +28,19 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ProblemDetail> handleBusiness(
+            BusinessException exception,
+            HttpServletRequest request
+    ) {
+        return problem(
+                HttpStatus.BAD_REQUEST,
+                "İş Kuralı İhlali",
+                exception.getMessage(),
+                request
+        );
+    }
+
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ProblemDetail> handleNotFound(
             ResourceNotFoundException exception,
@@ -100,12 +113,13 @@ public class GlobalExceptionHandler {
     ) {
         Map<String, String> fieldErrors = new LinkedHashMap<>();
 
-        exception.getBindingResult()
-                .getFieldErrors()
-                .forEach(error -> fieldErrors.putIfAbsent(
-                        error.getField(),
-                        error.getDefaultMessage()
-                ));
+        for (org.springframework.validation.FieldError error : exception.getBindingResult().getFieldErrors()) {
+            String field = error.getField();
+            String message = error.getDefaultMessage();
+            if (!fieldErrors.containsKey(field) || "NotBlank".equals(error.getCode()) || "NotNull".equals(error.getCode()) || "NotEmpty".equals(error.getCode())) {
+                fieldErrors.put(field, message);
+            }
+        }
 
         exception.getBindingResult()
                 .getGlobalErrors()
@@ -120,6 +134,7 @@ public class GlobalExceptionHandler {
                 "Gönderilen istek verileri doğrulamadan geçemedi",
                 request
         );
+        detail.setProperty("invalid_params", fieldErrors);
         detail.setProperty("validationErrors", fieldErrors);
 
         return ResponseEntity.badRequest().body(detail);
@@ -131,7 +146,7 @@ public class GlobalExceptionHandler {
             HttpServletRequest request
     ) {
         Map<String, String> fieldErrors = new LinkedHashMap<>();
-        String detailMessage = "Gönderilen JSON verisi korrupt veya okunabilir biçimde değil.";
+        String detailMessage = "İstek gövdesi (JSON) okunamadı veya veri formatı hatalı. Lütfen tarih gibi alanların formatını (yyyy-MM-dd) kontrol edin.";
 
         Throwable mostSpecificCause = exception.getMostSpecificCause();
         if (mostSpecificCause instanceof InvalidFormatException invalidFormatException) {
@@ -141,11 +156,12 @@ public class GlobalExceptionHandler {
             String errorMessage = "Geçersiz değer: '" + invalidFormatException.getValue() + "'";
             if (invalidFormatException.getTargetType() != null && invalidFormatException.getTargetType().isEnum()) {
                 errorMessage = "'" + invalidFormatException.getValue() + "' geçerli bir enum değeri değil.";
+            } else if (invalidFormatException.getTargetType() != null && java.time.temporal.Temporal.class.isAssignableFrom(invalidFormatException.getTargetType())) {
+                errorMessage = "Tarih formatı geçersiz (yyyy-MM-dd bekleniyor): '" + invalidFormatException.getValue() + "'";
             }
             if (!fieldName.isEmpty()) {
                 fieldErrors.put(fieldName, errorMessage);
             }
-            detailMessage = "JSON veri tipi veya alan formatı geçersiz: " + (fieldName.isEmpty() ? errorMessage : fieldName + " -> " + errorMessage);
         } else {
             Throwable current = exception;
             com.fasterxml.jackson.databind.JsonMappingException jsonMappingException = null;
@@ -174,10 +190,6 @@ public class GlobalExceptionHandler {
             if (!fieldName.isEmpty() && mostSpecificCause != null && mostSpecificCause.getMessage() != null) {
                 fieldErrors.put(fieldName, mostSpecificCause.getMessage());
             }
-
-            if (mostSpecificCause != null && mostSpecificCause.getMessage() != null) {
-                detailMessage = mostSpecificCause.getMessage();
-            }
         }
 
         ProblemDetail detail = createProblem(
@@ -187,19 +199,74 @@ public class GlobalExceptionHandler {
                 request
         );
         if (!fieldErrors.isEmpty()) {
+            detail.setProperty("invalid_params", fieldErrors);
             detail.setProperty("validationErrors", fieldErrors);
         }
 
         return ResponseEntity.badRequest().body(detail);
     }
 
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ProblemDetail> handleConstraintViolation(
+            ConstraintViolationException exception,
+            HttpServletRequest request
+    ) {
+        Map<String, String> fieldErrors = new LinkedHashMap<>();
+        exception.getConstraintViolations().forEach(violation -> {
+            String propertyPath = violation.getPropertyPath().toString();
+            String field = propertyPath.contains(".")
+                    ? propertyPath.substring(propertyPath.lastIndexOf('.') + 1)
+                    : propertyPath;
+            fieldErrors.putIfAbsent(field, violation.getMessage());
+        });
+
+        ProblemDetail detail = createProblem(
+                HttpStatus.BAD_REQUEST,
+                "Doğrulama hatası",
+                "Gönderilen istek verileri doğrulamadan geçemedi",
+                request
+        );
+        detail.setProperty("invalid_params", fieldErrors);
+        detail.setProperty("validationErrors", fieldErrors);
+
+        return ResponseEntity.badRequest().body(detail);
+    }
+
+    @ExceptionHandler(HandlerMethodValidationException.class)
+    public ResponseEntity<ProblemDetail> handleHandlerMethodValidation(
+            HandlerMethodValidationException exception,
+            HttpServletRequest request
+    ) {
+        Map<String, String> fieldErrors = new LinkedHashMap<>();
+        exception.getAllValidationResults().forEach(result -> {
+            String paramName = result.getMethodParameter().getParameterName();
+            result.getResolvableErrors().forEach(error -> {
+                String key = (error instanceof org.springframework.validation.FieldError fe)
+                        ? fe.getField()
+                        : (paramName != null ? paramName : "parameter");
+                fieldErrors.putIfAbsent(key, error.getDefaultMessage());
+            });
+        });
+
+        ProblemDetail detail = createProblem(
+                HttpStatus.BAD_REQUEST,
+                "Doğrulama hatası",
+                "Gönderilen istek verileri doğrulamadan geçemedi",
+                request
+        );
+        detail.setProperty("invalid_params", fieldErrors);
+        detail.setProperty("validationErrors", fieldErrors);
+
+        return ResponseEntity.badRequest().body(detail);
+    }
+
     @ExceptionHandler({
-            ConstraintViolationException.class,
-            HandlerMethodValidationException.class,
             MethodArgumentTypeMismatchException.class,
             MissingServletRequestPartException.class,
             MissingServletRequestParameterException.class,
-            MultipartException.class
+            MultipartException.class,
+            com.fasterxml.jackson.core.JsonProcessingException.class,
+            com.fasterxml.jackson.databind.exc.InvalidDefinitionException.class
     })
     public ResponseEntity<ProblemDetail> handleInvalidRequest(
             Exception exception,
@@ -222,6 +289,27 @@ public class GlobalExceptionHandler {
                 HttpStatus.PAYLOAD_TOO_LARGE,
                 "Dosya boyutu sınırı aşıldı",
                 "Yüklenen fotoğrafların toplam boyutu izin verilen sınırı aşıyor",
+                request
+        );
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ProblemDetail> handleGenericException(
+            Exception exception,
+            HttpServletRequest request
+    ) {
+        if (exception instanceof org.springframework.web.ErrorResponse errorResponse) {
+            return problem(
+                    HttpStatus.valueOf(errorResponse.getStatusCode().value()),
+                    errorResponse.getBody().getTitle() != null ? errorResponse.getBody().getTitle() : "İstek Hatası",
+                    exception.getMessage() != null ? exception.getMessage() : "İstek işlenirken hata oluştu.",
+                    request
+            );
+        }
+        return problem(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "Sunucu Hatası",
+                exception.getMessage() != null ? exception.getMessage() : "Beklenmeyen bir sunucu hatası meydana geldi.",
                 request
         );
     }
