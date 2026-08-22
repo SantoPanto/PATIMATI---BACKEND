@@ -14,6 +14,7 @@ import com.works.patimati.entity.enums.AdResolutionStatus;
 import com.works.patimati.exception.BusinessException;
 import com.works.patimati.exception.ResourceNotFoundException;
 import com.works.patimati.mapper.AdMapper;
+import com.works.patimati.notification.NearbyAlertNotifier;
 import com.works.patimati.repository.AdRepository;
 import com.works.patimati.repository.UserRepository;
 import com.works.patimati.storage.ImageStorageService;
@@ -46,7 +47,6 @@ import static java.util.stream.Collectors.toList;
 public class AdService {
 
     private static final Logger log = LoggerFactory.getLogger(AdService.class);
-    private static final double DEFAULT_NOTIFICATION_RADIUS_METERS = 5_000.0;
     private static final List<AdResolutionStatus> HAPPY_ENDING_STATUSES = List.of(
             AdResolutionStatus.FOUND,
             AdResolutionStatus.ADOPTED
@@ -60,6 +60,7 @@ public class AdService {
     private final RewardService rewardService;
     private final NotificationService notificationService;
     private final ReverseGeocodingService reverseGeocodingService;
+    private final NearbyAlertNotifier nearbyAlertNotifier;
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
     /**
@@ -111,7 +112,10 @@ public class AdService {
 
         AdResponse response = toResponseWithTemporaryPhotoUrls(savedAd);
 
-        notifyNearbyUsersSafely(savedAd, owner.getUid());
+        // Uyarı abonelerine bildirim (yalnız KAYIP ilanlar; asla fırlatmaz).
+        // Eski aboneliksiz notifyNearbyUsersSafely'nin yerine geçti —
+        // gerekçe NearbyAlertNotifier sınıf yorumunda.
+        nearbyAlertNotifier.yeniIlaniBildir(savedAd);
 
         // AI analizini KUYRUĞA bırakır ve beklemez (entegrasyon sözleşmesi §1).
         // Fotoğraf analizi 1-3 saniye sürüyor; senkron çağrı kullanıcıyı
@@ -638,46 +642,6 @@ public class AdService {
                 .toList();
 
         return adMapper.toResponse(ad, temporaryPhotoUrls);
-    }
-
-    private void notifyNearbyUsersSafely(Ad ad, Long ownerUid) {
-        if (ad.getLocation() == null) {
-            return;
-        }
-
-        try {
-            List<User> nearbyUsers = userRepository.findUsersNearby(
-                    ad.getLocation(),
-                    DEFAULT_NOTIFICATION_RADIUS_METERS
-            );
-
-            String notificationTitle = "Olası Eşleşme!";
-            String notificationBody = "Kayıp ilanınızla uyuşabilecek yeni bir ilan var: " + ad.getTitle();
-
-            for (User nearbyUser : nearbyUsers) {
-
-                if (nearbyUser.getUid() != null && nearbyUser.getUid().equals(ownerUid)) {
-                    continue;
-                }
-
-                notificationService.createAndSend(
-                        nearbyUser,
-                        notificationTitle,
-                        notificationBody,
-                        "NEARBY_AD",
-                        java.util.Map.of(
-                                "type", "NEARBY_AD",
-                                "adId", String.valueOf(ad.getId())
-                        )
-                );
-            }
-        } catch (RuntimeException exception) {
-            log.warn(
-                    "İlan oluşturuldu ancak yakındaki kullanıcılar belirlenemedi. adId={}",
-                    ad.getId(),
-                    exception
-            );
-        }
     }
 
 }
