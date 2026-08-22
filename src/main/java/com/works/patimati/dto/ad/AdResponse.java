@@ -102,6 +102,7 @@ public record AdResponse(
          * <i>"Yayından kaldırıldı"</i> diye gösteriyor ve yanına
          * <i>"Yeniden yayınla"</i> düğmesi koyuyor — ölçüldü (21.08, canlı).
          */
-        AdResolutionStatus resolutionStatus
+        AdResolutionStatus resolutionStatus,
+        Boolean isMatchRequired
 ) {
 }

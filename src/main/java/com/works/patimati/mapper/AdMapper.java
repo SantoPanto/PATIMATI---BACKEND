@@ -53,6 +53,9 @@ public class AdMapper {
                 .lostDate(parseDate(request.lostDate()))
                 .distinctiveMarks(normalizeNullable(request.distinctiveMarks()))
                 .location(toPoint(request.latitude(), request.longitude()))
+                .city(normalizeNullable(request.city()))
+                .district(normalizeNullable(request.district()))
+                .isMatchRequired(request.isMatchRequired() != null ? request.isMatchRequired() : Boolean.TRUE)
                 .build();
 
         applyCollarFields(
@@ -155,7 +158,8 @@ public class AdMapper {
                 ad.getIsPosterAllowed(),
                 ad.getShowEmailOnPoster(),
                 ad.getShowPhoneOnPoster(),
-                ad.getResolutionStatus()
+                ad.getResolutionStatus(),
+                ad.getIsMatchRequired()
         );
     }
 

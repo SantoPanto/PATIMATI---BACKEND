@@ -70,6 +70,12 @@ public class AiAnalysisPublisher {
                 return;
             }
 
+            boolean matchRequired = ad.getIsMatchRequired() != null
+                    ? ad.getIsMatchRequired()
+                    : (ad.getAdType() != Ad.AdType.ADOPTION);
+
+            List<AiCandidate> candidates = matchRequired ? collectCandidates(ad) : List.of();
+
             AiAnalysisRequest request = new AiAnalysisRequest(
                     AiRabbitConfig.SCHEMA_VERSION,
                     UUID.randomUUID().toString(),
@@ -77,7 +83,8 @@ public class AiAnalysisPublisher {
                     ad.getAdType().name(),
                     declaredSpecies(ad),
                     photoUrls,
-                    collectCandidates(ad));
+                    candidates,
+                    matchRequired);
 
             aiRabbitTemplate.convertAndSend(
                     AiRabbitConfig.EXCHANGE,
@@ -93,8 +100,8 @@ public class AiAnalysisPublisher {
                         return message;
                     });
 
-            log.info("AI analiz isteği yayınlandı: adId={} aday={} fotoğraf={}",
-                    ad.getId(), request.candidates().size(), request.photoUrls().size());
+            log.info("AI analiz isteği yayınlandı: adId={} isMatchRequired={} aday={} fotoğraf={}",
+                    ad.getId(), matchRequired, request.candidates().size(), request.photoUrls().size());
 
         } catch (Exception e) {
             // Yutulan istisna bilinçli: ilan zaten kaydedildi, kullanıcıyı
@@ -108,15 +115,14 @@ public class AiAnalysisPublisher {
     /**
      * İlan analize uygun mu?
      *
-     * <p>ADOPTION eşleştirmeye girmez (§5) ve fotoğrafsız ilan analiz edilemez —
-     * ikisi de kuyruğa boşuna mesaj koymamak için burada eleniyor.
+     * <p>Fotoğrafsız ilan analiz edilemez.
      */
     private boolean isEligible(Ad ad) {
         if (ad.getId() == null) {
             log.warn("Kaydedilmemiş ilan analiz kuyruğuna gönderilemez");
             return false;
         }
-        if (ad.getAdType() == null || ad.getAdType() == Ad.AdType.ADOPTION) {
+        if (ad.getAdType() == null) {
             return false;
         }
         if (ad.getPhotoUrls() == null || ad.getPhotoUrls().isEmpty()) {

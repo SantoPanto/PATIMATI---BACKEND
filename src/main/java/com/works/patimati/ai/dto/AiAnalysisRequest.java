@@ -24,6 +24,7 @@ public record AiAnalysisRequest(
         String adType,
         String declaredSpecies,
         List<String> photoUrls,
-        List<AiCandidate> candidates
+        List<AiCandidate> candidates,
+        Boolean isMatchRequired
 ) {
 }
