@@ -90,6 +90,16 @@ ai:
     window-days: ${AI_MATCHING_WINDOW_DAYS:90}
     # Aday başına ~7 KB (768 float); 100 aday ≈ 700 KB mesaj.
     max-candidates: ${AI_MATCHING_MAX_CANDIDATES:100}
+  rabbitmq:
+    # ai.analysis.result kuyruğuna x-dead-letter-exchange argümanı eklemek
+    # KAPALI varsayılan: bu kuyruk broker'da bu argüman OLMADAN zaten canlı
+    # olabilir ve RabbitMQ var olan bir kuyruğun argümanlarını yerinde
+    # DEĞİŞTİRMEZ. Tek taraflı açmak (ya da yalnızca bu tarafta açmak)
+    # PRECONDITION_FAILED'a yol açar. Açılış sırası: Python tarafındaki
+    # eşdeğeri (SONUC_KUYRUGU_DLQ_ENABLED, app/topoloji.py) İLE BİRLİKTE
+    # true yapılmalı VE kuyruk canlıda bir kez silinip yeniden kurulmalı
+    # (bkz. docs/entegrasyon-sozlesmesi.md §2, PATIMATI-AI deposu).
+    result-dlq-enabled: ${AI_RESULT_DLQ_ENABLED:false}
 
 # JWT Ayarları
 jwt:

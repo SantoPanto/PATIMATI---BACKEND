@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -41,6 +42,15 @@ public class AiRabbitConfig {
     /** Mesaj şemasının sürümü. Değişirse iki taraf birlikte güncellenir (§9). */
     public static final int SCHEMA_VERSION = 1;
 
+    /**
+     * {@code ai.analysis.result} kuyruğuna dead-letter-exchange argümanını
+     * eklemek KAPALI varsayılan. Bkz. {@code aiResultQueue()} javadoc'u ve
+     * Python tarafındaki eşdeğeri: {@code SONUC_KUYRUGU_DLQ_ENABLED}
+     * (app/topoloji.py, PATIMATI-AI deposu).
+     */
+    @Value("${ai.rabbitmq.result-dlq-enabled:false}")
+    private boolean resultDlqEnabled;
+
     @Bean
     DirectExchange aiExchange() {
         return ExchangeBuilder.directExchange(EXCHANGE).durable(true).build();
@@ -64,8 +74,31 @@ public class AiRabbitConfig {
                 .build();
     }
 
+    /**
+     * AI'dan dönen sonuçlar. {@code onResult}'ta (AiAnalysisListener)
+     * beklenmeyen bir istisna -- ya da mesaj hiç ayrıştırılamıyorsa
+     * (Jackson2JsonMessageConverter dönüştürme hatası) -- bu kuyruğun DLX'i
+     * olmadan mesaj SONSUZA DEK aynı kuyruğa yeniden teslim edilirdi (zehirli
+     * mesaj): {@code aiListenerContainerFactory}'nin
+     * {@code defaultRequeueRejected}'ı false yapılmadıkça Spring AMQP
+     * varsayılanı `true`'dur, yani reddedilen mesaj DLX'e DEĞİL aynı kuyruğa
+     * geri gider -- bu yüzden ikisi birlikte gerekir, yalnızca
+     * {@code deadLetterExchange} yetmez.
+     *
+     * <p><b>{@code deadLetterExchange} argümanı {@code resultDlqEnabled}
+     * (varsayılan kapalı) ile korunuyor.</b> Bu kuyruk broker'da bu argüman
+     * OLMADAN zaten canlı olabilir; RabbitMQ var olan bir kuyruğun
+     * argümanlarını yerinde değiştirmez, tek taraflı (ya da yalnızca bu
+     * taraftan) açmak {@code PRECONDITION_FAILED} ile kanalı kapatır. Açılış
+     * sırası: Python tarafındaki eşdeğeriyle ({@code SONUC_KUYRUGU_DLQ_ENABLED})
+     * BİRLİKTE true yapılmalı VE kuyruk canlıda bir kez silinip yeniden
+     * kurulmalı.
+     */
     @Bean
     Queue aiResultQueue() {
+        if (resultDlqEnabled) {
+            return QueueBuilder.durable(RESULT_QUEUE).deadLetterExchange(DLX).build();
+        }
         return QueueBuilder.durable(RESULT_QUEUE).build();
     }
 
