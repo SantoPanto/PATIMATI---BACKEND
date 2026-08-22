@@ -144,7 +144,8 @@ class AiIsPetPersistedTest {
                 mock(ExternalSourcePostRepository.class),
                 mock(ExternalSourceMediaRepository.class),
                 mock(PotentialMatchService.class),
-                mock(ExternalMatchingService.class)
+                mock(ExternalMatchingService.class),
+                mock(AiMatchNotifier.class)
         ).onResult(sonuc);
         return ad;
     }

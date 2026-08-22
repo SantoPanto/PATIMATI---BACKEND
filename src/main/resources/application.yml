@@ -85,6 +85,11 @@ ai:
     #
     # Boş bırakılırsa başlık hiç eklenmez — bugünkü kurulum aynen çalışır.
     api-key: ${AI_API_KEY:}
+    # AiMatchClient'ın senkron çağırdığı AI HTTP ucu (RabbitMQ'nun aksine
+    # bu TEK yeni Java<->Python HTTP bağımlılığıdır — Faz 2 revize
+    # blueprint §1/§5).
+    base-url: ${AI_SERVICE_BASE_URL:http://localhost:8000}
+    match-timeout: ${AI_SERVICE_MATCH_TIMEOUT:5s}
   matching:
     # Aday yarıçapı. Bildirim yarıçapından (5 km) BİLEREK farklı:
     # kaybolan hayvan yürür, günlerce uzaklaşabilir.
@@ -103,12 +108,6 @@ ai:
     # değeri kullanır. 0.80'i Instagram için doğrulanmış kesin bir değer
     # olarak burada HARD-CODE ETMİYORUZ (blueprint §22) — bu yüzden boş
     # string yerine anahtarın kendisi tanımsız bırakılıyor.
-  service:
-    # AiMatchClient'ın senkron çağırdığı AI HTTP ucu (RabbitMQ'nun aksine
-    # bu TEK yeni Java<->Python HTTP bağımlılığıdır — Faz 2 revize
-    # blueprint §1/§5).
-    base-url: ${AI_SERVICE_BASE_URL:http://localhost:8000}
-    match-timeout: ${AI_SERVICE_MATCH_TIMEOUT:5s}
   rabbitmq:
     # ai.analysis.result kuyruğuna x-dead-letter-exchange argümanı eklemek
     # KAPALI varsayılan: bu kuyruk broker'da bu argüman OLMADAN zaten canlı

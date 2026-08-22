@@ -8,7 +8,12 @@ import com.works.patimati.entity.Ad;
 import com.works.patimati.entity.enums.AdResolutionStatus;
 import com.works.patimati.entity.enums.PetColor;
 import com.works.patimati.entity.enums.Species;
+import com.works.patimati.external.ExternalMatchingService;
 import com.works.patimati.repository.AdRepository;
+import com.works.patimati.repository.external.ExternalPetRecordRepository;
+import com.works.patimati.repository.external.ExternalSourceMediaRepository;
+import com.works.patimati.repository.external.ExternalSourcePostRepository;
+import com.works.patimati.service.PotentialMatchService;
 import com.works.patimati.storage.ImageStorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -43,8 +48,15 @@ class IsMatchRequiredTest {
         imageStorageService = mock(ImageStorageService.class);
         matchNotifier = mock(AiMatchNotifier.class);
 
-        publisher = new AiAnalysisPublisher(aiRabbitTemplate, adRepository, imageStorageService);
-        listener = new AiAnalysisListener(adRepository, matchNotifier);
+        publisher = new AiAnalysisPublisher(aiRabbitTemplate, adRepository, imageStorageService, mock(MatchCandidateGatherer.class));
+        listener = new AiAnalysisListener(
+                adRepository,
+                mock(ExternalPetRecordRepository.class),
+                mock(ExternalSourcePostRepository.class),
+                mock(ExternalSourceMediaRepository.class),
+                mock(PotentialMatchService.class),
+                mock(ExternalMatchingService.class),
+                matchNotifier);
     }
 
     @Test
@@ -140,7 +152,9 @@ class IsMatchRequiredTest {
                 null,
                 null,
                 List.of(),
-                Instant.now()
+                Instant.now(),
+                null,
+                null
         );
 
         listener.onResult(result);

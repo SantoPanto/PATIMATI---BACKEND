@@ -112,7 +112,7 @@ class AiAnalysisListenerTest {
         AiAnalysisResult.NlpAttributes nlp = new AiAnalysisResult.NlpAttributes(
                 "FOUND", 0.9, null, null, null, null, null, null, null, null, null, null, null, false);
         AiAnalysisResult result = new AiAnalysisResult(
-                1, "req", null, "ok", "test/v1", analysis, List.of(), null, null, List.of(),
+                1, "req", null, "ok", "test/v1", analysis, List.of(), null, null, null, List.of(),
                 Instant.now(), 10L, nlp);
 
         listener.onResult(result);
@@ -125,7 +125,7 @@ class AiAnalysisListenerTest {
     @Test
     void missingRecordIsLoggedAndSkippedWithoutThrowing() {
         AiAnalysisResult result = new AiAnalysisResult(
-                1, "req", null, "ok", "test/v1", null, List.of(), null, null, List.of(),
+                1, "req", null, "ok", "test/v1", null, List.of(), null, null, null, List.of(),
                 Instant.now(), 999L, null);
 
         listener.onResult(result); // 999L hiçbir mock'ta yok -> findById boş döner
@@ -140,7 +140,7 @@ class AiAnalysisListenerTest {
                 category, 0.85, "cat", null, null, null, null, null,
                 "Bursa", 0.5, null, false, null, needsReview);
         return new AiAnalysisResult(
-                1, "req-1", null, "ok", "test/v1", analysis, List.of(), null, null, List.of(),
+                1, "req-1", null, "ok", "test/v1", analysis, List.of(), null, null, null, List.of(),
                 Instant.now(), 10L, nlp);
     }
 }
