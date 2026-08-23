@@ -152,14 +152,14 @@ class AdminServiceImplTest {
                 AdComplaint.builder().id(2L).reporterId(2L).adId(20L).reason(ComplaintReason.DIGER).build()
         );
         Pageable pageable = PageRequest.of(0, 20);
-        when(adComplaintRepository.findAll(pageable)).thenReturn(new PageImpl<>(sikayetler, pageable, 2));
+        when(adComplaintRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), eq(pageable))).thenReturn(new PageImpl<>(sikayetler, pageable, 2));
         when(userRepository.findAllById(any())).thenReturn(List.of(
                 kullanici(1L, "Şikayetçi", "Bir", "sik1@test.com"),
                 kullanici(2L, "Şikayetçi", "İki", "sik2@test.com")
         ));
         when(adRepository.findAllById(any())).thenReturn(List.of(ad1, ad2));
 
-        Page<AdComplaintAdminResponse> sonuc = adminService.getAdComplaints(pageable);
+        Page<AdComplaintAdminResponse> sonuc = adminService.getAdComplaints(null, pageable);
 
         assertThat(sonuc.getContent()).hasSize(2);
         AdComplaintAdminResponse ilk = sonuc.getContent().get(0);
@@ -180,14 +180,14 @@ class AdminServiceImplTest {
                 UserComplaint.builder().id(2L).reporterId(3L).reportedUserId(1L).reason(ComplaintReason.DIGER).build()
         );
         Pageable pageable = PageRequest.of(0, 20);
-        when(userComplaintRepository.findAll(pageable)).thenReturn(new PageImpl<>(sikayetler, pageable, 2));
+        when(userComplaintRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), eq(pageable))).thenReturn(new PageImpl<>(sikayetler, pageable, 2));
         when(userRepository.findAllById(any())).thenReturn(List.of(
                 kullanici(1L, "Bir", "Kullanıcı", "u1@test.com"),
                 kullanici(2L, "İki", "Kullanıcı", "u2@test.com"),
                 kullanici(3L, "Üç", "Kullanıcı", "u3@test.com")
         ));
 
-        Page<UserComplaintAdminResponse> sonuc = adminService.getUserComplaints(pageable);
+        Page<UserComplaintAdminResponse> sonuc = adminService.getUserComplaints(null, pageable);
 
         assertThat(sonuc.getContent()).hasSize(2);
         assertThat(sonuc.getContent().get(0).reporterFullName()).isEqualTo("Bir Kullanıcı");
@@ -206,11 +206,11 @@ class AdminServiceImplTest {
                 AdoptionComplaint.builder().id(1L).reporterId(1L).adId(10L).reason(ComplaintReason.UYGUNSUZ_ICERIK).build()
         );
         Pageable pageable = PageRequest.of(0, 20);
-        when(adoptionComplaintRepository.findAll(pageable)).thenReturn(new PageImpl<>(sikayetler, pageable, 1));
+        when(adoptionComplaintRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), eq(pageable))).thenReturn(new PageImpl<>(sikayetler, pageable, 1));
         when(userRepository.findAllById(any())).thenReturn(List.of(kullanici(1L, "Şikayetçi", "Bir", "sik1@test.com")));
         when(adRepository.findAllById(any())).thenReturn(List.of(ad1));
 
-        Page<AdoptionComplaintAdminResponse> sonuc = adminService.getAdoptionComplaints(pageable);
+        Page<AdoptionComplaintAdminResponse> sonuc = adminService.getAdoptionComplaints(null, pageable);
 
         assertThat(sonuc.getContent()).hasSize(1);
         assertThat(sonuc.getContent().get(0).adTitle()).isEqualTo("Sahiplendirme İlanı");

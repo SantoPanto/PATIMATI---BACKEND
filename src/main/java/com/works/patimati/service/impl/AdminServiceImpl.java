@@ -45,6 +45,9 @@ import java.util.stream.Collectors;
 import com.works.patimati.dto.admin.AdoptionComplaintAdminResponse;
 import com.works.patimati.entity.AdoptionComplaint;
 import com.works.patimati.repository.AdoptionComplaintRepository;
+import com.works.patimati.specification.AdSpecification;
+import com.works.patimati.specification.ComplaintSpecification;
+import com.works.patimati.specification.UserSpecification;
 
 @Service
 @RequiredArgsConstructor
@@ -67,8 +70,8 @@ public class AdminServiceImpl implements AdminService {
 
     @Transactional(readOnly = true)
     @Override
-    public Page<UserDetailForAdminDTO> getAllUsers(Pageable pageable) {
-        return userRepository.findAll(pageable)
+    public Page<UserDetailForAdminDTO> getAllUsers(String search, Pageable pageable) {
+        return userRepository.findAll(UserSpecification.withSearch(search), pageable)
                 .map(user -> new UserDetailForAdminDTO(
                         user.getUid(),
                         user.getFirstName(),
@@ -102,8 +105,8 @@ public class AdminServiceImpl implements AdminService {
 
     @Transactional(readOnly = true)
     @Override
-    public Page<AdResponse> getAllAds(Pageable pageable) {
-        return adRepository.findAll(pageable)
+    public Page<AdResponse> getAllAds(String search, Pageable pageable) {
+        return adRepository.findAll(AdSpecification.withSearch(search), pageable)
                 .map(adService::toResponseWithTemporaryPhotoUrls);
     }
 
@@ -146,8 +149,8 @@ public class AdminServiceImpl implements AdminService {
 
     @Transactional(readOnly = true)
     @Override
-    public Page<AdComplaintAdminResponse> getAdComplaints(Pageable pageable) {
-        Page<AdComplaint> complaints = adComplaintRepository.findAll(pageable);
+    public Page<AdComplaintAdminResponse> getAdComplaints(String search, Pageable pageable) {
+        Page<AdComplaint> complaints = adComplaintRepository.findAll(ComplaintSpecification.forAd(search), pageable);
         List<AdComplaint> content = complaints.getContent();
 
         // Sayfadaki tüm reporterId/adId'ler önce toplanıp TEK sorguda çekiliyor
@@ -193,8 +196,8 @@ public class AdminServiceImpl implements AdminService {
 
     @Transactional(readOnly = true)
     @Override
-    public Page<UserComplaintAdminResponse> getUserComplaints(Pageable pageable) {
-        Page<UserComplaint> complaints = userComplaintRepository.findAll(pageable);
+    public Page<UserComplaintAdminResponse> getUserComplaints(String search, Pageable pageable) {
+        Page<UserComplaint> complaints = userComplaintRepository.findAll(ComplaintSpecification.forUser(search), pageable);
         List<UserComplaint> content = complaints.getContent();
 
         // Şikayet eden + şikayet edilen kullanıcı id'leri TEK listede toplanıp
@@ -238,8 +241,8 @@ public class AdminServiceImpl implements AdminService {
 
     @Transactional(readOnly = true)
     @Override
-    public Page<AdoptionComplaintAdminResponse> getAdoptionComplaints(Pageable pageable) {
-        Page<AdoptionComplaint> complaints = adoptionComplaintRepository.findAll(pageable);
+    public Page<AdoptionComplaintAdminResponse> getAdoptionComplaints(String search, Pageable pageable) {
+        Page<AdoptionComplaint> complaints = adoptionComplaintRepository.findAll(ComplaintSpecification.forAdoption(search), pageable);
         List<AdoptionComplaint> content = complaints.getContent();
 
         Map<Long, User> reportersById = userRepository.findAllById(
