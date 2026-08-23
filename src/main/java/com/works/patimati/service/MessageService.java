@@ -76,7 +76,8 @@ public class MessageService {
                 Map.of(
                         "type", "MESSAGE",
                         "messageId", String.valueOf(savedMessage.getId()),
-                        "senderId", String.valueOf(sender.getUid())
+                        "senderId", String.valueOf(sender.getUid()),
+                        "referenceId", String.valueOf(sender.getUid())
                 )
         );
 
