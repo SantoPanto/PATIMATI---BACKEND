@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import lombok.extern.slf4j.Slf4j;
 import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @Service
@@ -73,17 +72,10 @@ public class MessageService {
                 savedMessage.getId(), recipient.getEmail(), sender.getEmail());
 
         // Anlık İletim (Broadcast) - Hem alıcının hem de gönderenin özel WebSocket kuyruğuna iletiliyor
-        notificationService.createAndSend(
+        notificationService.createOrStackMessageNotification(
                 recipient,
-                "Yeni mesaj",
-                sender.getFirstName() + " size yeni bir mesaj gönderdi.",
-                "MESSAGE",
-                Map.of(
-                        "type", "MESSAGE",
-                        "messageId", String.valueOf(savedMessage.getId()),
-                        "senderId", String.valueOf(sender.getUid()),
-                        "referenceId", String.valueOf(sender.getUid())
-                )
+                sender,
+                savedMessage.getId()
         );
 
         messagingTemplate.convertAndSendToUser(
