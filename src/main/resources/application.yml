@@ -1,7 +1,3 @@
-#server root seviyesinde olmalı
-server:
-  forward-headers-strategy: native
-
 spring:
   # --- RFC 7807 ProblemDetail Ayarı ---
   mvc:
@@ -43,6 +39,13 @@ spring:
     # Baseline sürüm numarasını V1 script'imizle eşleştiriyoruz
     baseline-version: 1
     baseline-description: "Init Schema"
+    # main ile feature dalları paralel migration numaraları üretebiliyor
+    # (örn. main V9/V10 eklerken feature dalı kendi V9-V12'sini zaten
+    # uygulamış, sonradan V11-V14'e yeniden numaralandırıldı). Böyle bir
+    # ortam merge edildiğinde DB'de zaten UYGULANMIŞ daha yüksek sürümden
+    # SONRA daha düşük sürümlü yeni migration'lar gelir — outOfOrder
+    # olmadan Flyway bunu validate hatası sayar.
+    out-of-order: true
 
   # OAuth2 Google Giriş Ayarları
   security:
@@ -82,6 +85,11 @@ ai:
     #
     # Boş bırakılırsa başlık hiç eklenmez — bugünkü kurulum aynen çalışır.
     api-key: ${AI_API_KEY:}
+    # AiMatchClient'ın senkron çağırdığı AI HTTP ucu (RabbitMQ'nun aksine
+    # bu TEK yeni Java<->Python HTTP bağımlılığıdır — Faz 2 revize
+    # blueprint §1/§5).
+    base-url: ${AI_SERVICE_BASE_URL:http://localhost:8000}
+    match-timeout: ${AI_SERVICE_MATCH_TIMEOUT:5s}
   matching:
     # Aday yarıçapı. Bildirim yarıçapından (5 km) BİLEREK farklı:
     # kaybolan hayvan yürür, günlerce uzaklaşabilir.
@@ -90,6 +98,16 @@ ai:
     window-days: ${AI_MATCHING_WINDOW_DAYS:90}
     # Aday başına ~7 KB (768 float); 100 aday ≈ 700 KB mesaj.
     max-candidates: ${AI_MATCHING_MAX_CANDIDATES:100}
+    # Konumsuz fallback'in aday sınırı — mesafeye göre sıralanamadığı için
+    # BİLEREK max-candidates'ten küçük (Faz 2 revize blueprint §5/§21).
+    no-location-candidate-limit: ${AI_MATCHING_NO_LOCATION_LIMIT:30}
+    # Kaynak bazlı eşik geçersiz kılma — BİLEREK burada tanımlı DEĞİL.
+    # AI_MATCHING_INSTAGRAM_THRESHOLD ortam değişkeni verilmezse
+    # ExternalMatchingService'teki @Value("...:#{null}") null'a düşer ve
+    # AI kendi ortam değişkenindeki (MATCH_THRESHOLD, varsayılan 0.80)
+    # değeri kullanır. 0.80'i Instagram için doğrulanmış kesin bir değer
+    # olarak burada HARD-CODE ETMİYORUZ (blueprint §22) — bu yüzden boş
+    # string yerine anahtarın kendisi tanımsız bırakılıyor.
   rabbitmq:
     # ai.analysis.result kuyruğuna x-dead-letter-exchange argümanı eklemek
     # KAPALI varsayılan: bu kuyruk broker'da bu argüman OLMADAN zaten canlı
@@ -100,6 +118,34 @@ ai:
     # true yapılmalı VE kuyruk canlıda bir kez silinip yeniden kurulmalı
     # (bkz. docs/entegrasyon-sozlesmesi.md §2, PATIMATI-AI deposu).
     result-dlq-enabled: ${AI_RESULT_DLQ_ENABLED:false}
+
+# Instagram ingestion (Faz 2 revize blueprint) — özellik bayrağı.
+# KAPALIYKEN mevcut PatiMati işlevselliği hiçbir şekilde etkilenmez.
+instagram:
+  ingestion:
+    enabled: ${INSTAGRAM_INGESTION_ENABLED:false}
+
+# Collector -> Backend medya transferinin paylaşılan sırrı (blueprint §48).
+# Kullanıcı JWT/OAuth altyapısıyla KARIŞTIRILMAZ, en dar kapsamlıdır.
+internal:
+  ingestion:
+    api-key: ${INTERNAL_INGESTION_API_KEY:}
+
+# PotentialMatch bildirim teslimatı (blueprint §4/§13) — gönder-sonra-
+# işaretle sırasının süpürücü parametreleri.
+potential-match:
+  max-send-attempts: ${POTENTIAL_MATCH_MAX_SEND_ATTEMPTS:5}
+  retry-grace-period: ${POTENTIAL_MATCH_RETRY_GRACE_PERIOD:PT2M}
+  retry-interval: ${POTENTIAL_MATCH_RETRY_INTERVAL:PT2M}
+
+# external_source_posts süpürücüleri (blueprint §5/§11) — takılı kalmış
+# gönderileri ve Aşama 2 (eşleştirme) yeniden denemelerini yönetir.
+external:
+  maintenance:
+    stale-grace-period: ${EXTERNAL_STALE_GRACE_PERIOD:PT6H}
+    stage2-retry-max-age: ${EXTERNAL_STAGE2_RETRY_MAX_AGE:P1D}
+    sweep-interval: ${EXTERNAL_SWEEP_INTERVAL:PT15M}
+    stage2-retry-interval: ${EXTERNAL_STAGE2_RETRY_INTERVAL:PT5M}
 
 # JWT Ayarları
 jwt:
@@ -161,6 +207,25 @@ app:
     # Virgülle ayrılmış origin listesi ortam değişkeniyle canlı ortamda değiştirilebilir.
     allowed-origins: ${WEBSOCKET_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:4200,http://localhost:5173}
 
+# Üretimde bir ters proxy'nin (Nginx/Cloudflare/ALB/Railway vb.) arkasında
+# çalışıyoruz -- "native" gömülü Tomcat'in kendi forwarded-header desteğini
+# (RemoteIpValve muadili) açar, bu da request.getRemoteAddr()'ı gerçekten
+# YENİDEN YAZAR. BİLİNÇLİ OLARAK "framework" DEĞİL: o strateji Spring'in
+# ForwardedHeaderFilter'ını kullanır ve yalnızca URL/şema/host yeniden
+# kurulumunu (redirect'ler, getRequestURL) düzeltir -- getRemoteAddr()'a HİÇ
+# dokunmaz. LoginRateLimiter (IP bazlı brute-force koruması) tam olarak
+# getRemoteAddr()'a güvendiği için bu ayrım burada kritik: "framework"
+# seçilseydi rate limiter hâlâ istemcinin uydurduğu X-Forwarded-For'u
+# görmeye devam ederdi.
+server:
+  # PATIMATI-AI-social'daki AYNI sorunun aynı çözümü (bkz. o reponun
+  # Dockerfile'ındaki "$PORT'u onurlandırma" notu) -- Railway her servise
+  # rastgele bir $PORT atar, sabit 8080'i dinleyen bir uygulamaya trafik hiç
+  # ulaşmaz. ${PORT:8080}: PORT ortam değişkeni varsa onu kullan, yoksa
+  # (yerel geliştirme) 8080'e düş -- kimsenin local kurulumu bozulmuyor.
+  port: ${PORT:8080}
+  forward-headers-strategy: native
+
 # OpenAPI / Swagger UI Yapılandırması
 springdoc:
   api-docs:
@@ -171,5 +236,3 @@ springdoc:
     path: /swagger-ui.html
     operationsSorter: alpha
     tagsSorter: alpha
-
-

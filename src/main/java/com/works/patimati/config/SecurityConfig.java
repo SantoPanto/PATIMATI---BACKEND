@@ -1,5 +1,6 @@
 package com.works.patimati.config;
 
+import com.works.patimati.security.InternalServiceAuthFilter;
 import com.works.patimati.security.JwtAuthFilter;
 import com.works.patimati.security.OAuth2AuthenticationSuccessHandler;
 import jakarta.servlet.http.HttpServletResponse;
@@ -30,13 +31,17 @@ public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
     private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
+    private final InternalServiceAuthFilter internalServiceAuthFilter;
 
     @Value("${app.cors.allowed-origins:${app.frontend.url:http://localhost:5173}}")
     private List<String> allowedOrigins;
 
-    public SecurityConfig(JwtAuthFilter jwtAuthFilter, OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler) {
+    // Constructor (Yapıcı Metot) ile Spring'in bu sınıfları otomatik enjekte etmesini sağlıyoruz
+    public SecurityConfig(JwtAuthFilter jwtAuthFilter, OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler,
+                           InternalServiceAuthFilter internalServiceAuthFilter) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.oAuth2AuthenticationSuccessHandler = oAuth2AuthenticationSuccessHandler;
+        this.internalServiceAuthFilter = internalServiceAuthFilter;
     }
 
     @Bean
@@ -82,6 +87,11 @@ public class SecurityConfig {
                                 "/ws-connect/**" // SockJS’in kullandığı alt adresleri kapsar.
                         ).permitAll() // Kayıt, giriş, OAuth2 ve açık uçlara HERKES erişebilsin
                         .requestMatchers("/api/auth/userlist", "/api/admin/**").hasRole("ADMIN") // Yöneticilere özel uç noktalar
+                        // /internal/** normal kullanıcı JWT'si DEĞİL, paylaşılan-sır
+                        // başlığı ister (InternalServiceAuthFilter). Burada permitAll
+                        // GÖRÜNMÜYOR bilerek: filtre, anahtar tutmazsa isteği zaten
+                        // 401 ile keser; tutarsa bir Authentication kurar ve
+                        // aşağıdaki anyRequest().authenticated() doğal olarak geçer.
                         .anyRequest().authenticated() // Diğer tüm uç noktalar için token/giriş zorunlu olsun
                 )
 
@@ -135,6 +145,10 @@ public class SecurityConfig {
 
         // JWT filtresini UsernamePasswordAuthenticationFilter'dan önce çalışacak şekilde ekliyoruz
         http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+
+        // /internal/** için paylaşılan-sır doğrulaması JWT filtresinden ÖNCE çalışır —
+        // Collector kullanıcı JWT'si taşımaz, kendi dar kapsamlı anahtarını taşır.
+        http.addFilterBefore(internalServiceAuthFilter, JwtAuthFilter.class);
 
         return http.build();
     }

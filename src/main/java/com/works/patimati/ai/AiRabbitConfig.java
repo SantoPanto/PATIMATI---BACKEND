@@ -35,6 +35,7 @@ public class AiRabbitConfig {
     public static final String REQUEST_QUEUE = "ai.analysis.request";
     public static final String RESULT_QUEUE = "ai.analysis.result";
     public static final String DLQ = "ai.analysis.request.dlq";
+    public static final String RESULT_DLQ = "ai.analysis.result.dlq";
 
     public static final String REQUEST_ROUTING_KEY = "analysis.request";
     public static final String RESULT_ROUTING_KEY = "analysis.result";
@@ -108,6 +109,11 @@ public class AiRabbitConfig {
     }
 
     @Bean
+    Queue aiResultDeadLetterQueue() {
+        return QueueBuilder.durable(RESULT_DLQ).build();
+    }
+
+    @Bean
     Binding aiRequestBinding() {
         return BindingBuilder.bind(aiRequestQueue()).to(aiExchange()).with(REQUEST_ROUTING_KEY);
     }
@@ -131,6 +137,21 @@ public class AiRabbitConfig {
         return BindingBuilder.bind(aiDeadLetterQueue())
                 .to(aiDeadLetterExchange())
                 .with(REQUEST_ROUTING_KEY);
+    }
+
+    /**
+     * Sonuç kuyruğunun ölü mektupları, {@code aiDeadLetterBinding} ile AYNI
+     * gerekçeyle -- orijinal yönlendirme anahtarıyla, {@code RESULT_QUEUE}'nun
+     * kendi anahtarı {@code analysis.result} -- kendi DLQ'suna bağlanır.
+     * İstek ve sonuç kuyruklarının ölü mektupları BİLEREK aynı DLQ'da
+     * TOPLANMAZ: aynı DLX'i (tek exchange, mevcut altyapı) paylaşırlar ama
+     * her birinin kendi kuyruğu vardır, tıpkı istek tarafındaki gibi.
+     */
+    @Bean
+    Binding aiResultDeadLetterBinding() {
+        return BindingBuilder.bind(aiResultDeadLetterQueue())
+                .to(aiDeadLetterExchange())
+                .with(RESULT_ROUTING_KEY);
     }
 
     /**
@@ -191,6 +212,16 @@ public class AiRabbitConfig {
      * kullanır ve snake_case alanları tanımaz: {@code ad_id} okunamaz,
      * sonuç sessizce boş nesneye dönüşür. Yayınlama tarafını ayarlayıp bu
      * tarafı unutmak, bulunması zor bir hata kaynağıdır.
+     *
+     * <p><b>{@code defaultRequeueRejected(false)} BİLEREK verildi.</b> Spring
+     * AMQP'nin kendi varsayılanı {@code true}'dur: dinleyici (ör. onResult)
+     * bir istisna fırlattığında ya da mesaj hiç dönüştürülemediğinde,
+     * container mesajı reddeder AMA {@code requeue=true} ile — yani mesaj
+     * DLX'e DEĞİL, aynı kuyruğa geri döner ve anında yeniden teslim edilir.
+     * Sonuç: zehirli mesaj sonsuz döngüye girer, kuyruk tıkanır, ardından
+     * gelen tüm analiz sonuçları da işlenemez hâle gelir — {@code aiResultQueue}
+     * üzerinde bir DLX tanımlamak TEK BAŞINA bunu önlemez, ikisi birlikte
+     * gerekir (bkz. {@code aiResultQueue} javadoc'u).
      */
     @Bean
     RabbitListenerContainerFactory<?> aiListenerContainerFactory(
@@ -199,6 +230,7 @@ public class AiRabbitConfig {
         SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
         factory.setConnectionFactory(connectionFactory);
         factory.setMessageConverter(aiJsonMessageConverter);
+        factory.setDefaultRequeueRejected(false);
         return factory;
     }
 }
