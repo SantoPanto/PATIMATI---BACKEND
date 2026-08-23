@@ -127,7 +127,8 @@ class AiAnahtarBasligiTest {
         AiMatchService servis = new AiMatchService(
                 adRepository,
                 mock(AdService.class),
-                new RestTemplateBuilder(duzenek));
+                new RestTemplateBuilder(duzenek),
+                new com.works.patimati.mapper.AiAnalyzeMapper());
 
         // @Value alanları bağlam olmadan doldurulmaz; ölçülen şey bu iki alanın
         // isteğe nasıl yansıdığı olduğu için burada elle veriliyor.

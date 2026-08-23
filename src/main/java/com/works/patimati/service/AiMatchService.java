@@ -40,11 +40,6 @@ public class AiMatchService {
     private final AiAnalyzeMapper aiAnalyzeMapper;
 
     public AiMatchService(AdRepository adRepository, AdService adService,
-                          org.springframework.boot.web.client.RestTemplateBuilder restTemplateBuilder) {
-        this(adRepository, adService, restTemplateBuilder, new AiAnalyzeMapper());
-    }
-
-    public AiMatchService(AdRepository adRepository, AdService adService,
                           org.springframework.boot.web.client.RestTemplateBuilder restTemplateBuilder,
                           AiAnalyzeMapper aiAnalyzeMapper) {
         this.adRepository = adRepository;
