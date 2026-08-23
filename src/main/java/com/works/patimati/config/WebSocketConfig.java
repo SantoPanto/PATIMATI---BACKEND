@@ -49,35 +49,26 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
      */
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
-        /*
-         * /queue ve /topic ile başlayan hedefleri Spring'in bellek içi broker'ı yönetir.
-         * Faz 2 kapsamındaki kullanıcıya özel mesajlar /user/queue/... adresinden
-         * dinlenecek ve genel yayınlar /topic/... kanalından sunulacaktır.
-         */
-        registry.enableSimpleBroker(PRIVATE_QUEUE_PREFIX, PUBLIC_TOPIC_PREFIX);
+        org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler taskScheduler =
+                new org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler();
+        taskScheduler.setPoolSize(1);
+        taskScheduler.setThreadNamePrefix("wss-heartbeat-thread-");
+        taskScheduler.initialize();
 
-        // /app ile başlayan mesajlar ileride yazılacak @MessageMapping metotlarına gider.
+        registry.enableSimpleBroker(PRIVATE_QUEUE_PREFIX, PUBLIC_TOPIC_PREFIX)
+                .setTaskScheduler(taskScheduler)
+                .setHeartbeatValue(new long[] { 10000, 10000 });
+
         registry.setApplicationDestinationPrefixes(APPLICATION_DESTINATION_PREFIX);
-
-        // Kullanıcıya özel mesaj hedeflerinin genel ön ekini açıkça tanımlar.
         registry.setUserDestinationPrefix(USER_DESTINATION_PREFIX);
     }
 
-    /**
-     * Frontend istemcilerinin STOMP bağlantısını başlatacağı endpoint'i kaydeder.
-     */
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        /*
-         * Origin listesi application.yml üzerinden gelir. Böylece bilinmeyen
-         * web sitelerinin tarayıcı üzerinden mesajlaşma bağlantısı kurması engellenir.
-         *
-         * withSockJS(), tarayıcı veya ağ ortamı doğrudan WebSocket kullanamadığında
-         * SockJS'in uygun geri dönüş taşıma yöntemini seçmesini sağlar.
-         */
         registry.addEndpoint(WEBSOCKET_ENDPOINT)
                 .setAllowedOrigins(properties.allowedOrigins().toArray(String[]::new))
-                .withSockJS();
+                .withSockJS()
+                .setHeartbeatTime(10000);
     }
 
     /*
