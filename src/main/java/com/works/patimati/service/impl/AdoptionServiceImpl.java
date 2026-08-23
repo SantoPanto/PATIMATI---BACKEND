@@ -13,7 +13,9 @@ import com.works.patimati.entity.AdoptionComplaint;
 import com.works.patimati.entity.User;
 import com.works.patimati.entity.enums.AiStatus;
 import com.works.patimati.entity.enums.AdResolutionStatus;
+import com.works.patimati.entity.enums.AgeGroup;
 import com.works.patimati.entity.enums.CoatPattern;
+import com.works.patimati.entity.enums.PetGender;
 import com.works.patimati.entity.enums.ComplaintStatus;
 import com.works.patimati.entity.enums.EyeColor;
 import com.works.patimati.exception.ResourceNotFoundException;
@@ -91,8 +93,30 @@ public class AdoptionServiceImpl implements AdoptionService {
                 .adType(Ad.AdType.ADOPTION)
                 .species(request.species())
                 .breed(request.breed() != null ? request.breed().trim() : "MIXED_OR_UNKNOWN")
-                .gender(request.gender())
-                .ageGroup(request.ageGroup())
+                /*
+                 * ⚠ NULL KORUMASI — ads.gender ve ads.age_group VARCHAR(20)
+                 * NOT NULL (V3), DTO'da ise ikisi de @NotNull DEĞİL. Ham
+                 * geçirilince null gelen bir istek Hibernate'in açık NULL
+                 * insert'iyle kısıt ihlaline düşüyor ve kullanıcıya
+                 * "Gönderilen verilerden biri kaydedilemedi: bir alan izin
+                 * verilen sınırı aşıyor ya da beklenen biçimde değil."
+                 * gösteriliyor (GlobalExceptionHandler:346).
+                 *
+                 * LOST/FOUND yolu bunu ZATEN koruyor (AdMapper:46-47
+                 * defaultValue(..., UNKNOWN)); sahiplendirme yolu
+                 * korumuyordu. Aynı asimetri coatPattern/eyeColor için daha
+                 * önce kapatılmış (hemen aşağıdaki satırlar), gender/ageGroup
+                 * atlanmış. Ön yüz şu an bilerek hep UNKNOWN gönderiyor
+                 * (AdoptionCreatePage.tsx:565-572'deki yorum bu boşluğu
+                 * anlatıyor) — yani kural ön yüzde bir geçici çözümle
+                 * tutuluyordu; sunucu artık kendisi koruyor.
+                 */
+                .gender(request.gender() != null
+                        ? request.gender()
+                        : PetGender.UNKNOWN)
+                .ageGroup(request.ageGroup() != null
+                        ? request.ageGroup()
+                        : AgeGroup.UNKNOWN)
                 .colors(request.colors() != null ? request.colors() : Set.of())
                 .coatPattern(request.coatPattern() != null
                         ? request.coatPattern()
@@ -145,8 +169,13 @@ public class AdoptionServiceImpl implements AdoptionService {
         ad.setDescription(request.description() != null ? request.description().trim() : null);
         ad.setSpecies(request.species());
         ad.setBreed(request.breed() != null ? request.breed().trim() : "MIXED_OR_UNKNOWN");
-        ad.setGender(request.gender());
-        ad.setAgeGroup(request.ageGroup());
+        // Güncellemede de aynı NOT NULL koruması (yukarıdaki gerekçe).
+        ad.setGender(request.gender() != null
+                ? request.gender()
+                : PetGender.UNKNOWN);
+        ad.setAgeGroup(request.ageGroup() != null
+                ? request.ageGroup()
+                : AgeGroup.UNKNOWN);
         if (request.colors() != null && !request.colors().isEmpty()) {
             Set<com.works.patimati.entity.enums.PetColor> validColors = request.colors().stream()
                     .filter(java.util.Objects::nonNull)
