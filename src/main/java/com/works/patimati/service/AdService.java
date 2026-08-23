@@ -1,8 +1,5 @@
 package com.works.patimati.service;
 
-import com.google.firebase.messaging.FirebaseMessaging;
-import com.google.firebase.messaging.Message;
-import com.google.firebase.messaging.Notification;
 import com.works.patimati.ai.AiAnalysisPublisher;
 import com.works.patimati.dto.ad.AdCreateRequest;
 import com.works.patimati.dto.ad.AdCountersResponse;
@@ -14,8 +11,10 @@ import com.works.patimati.entity.Ad;
 import com.works.patimati.entity.User;
 import com.works.patimati.entity.enums.AiStatus;
 import com.works.patimati.entity.enums.AdResolutionStatus;
+import com.works.patimati.exception.BusinessException;
 import com.works.patimati.exception.ResourceNotFoundException;
 import com.works.patimati.mapper.AdMapper;
+import com.works.patimati.notification.NearbyAlertNotifier;
 import com.works.patimati.repository.AdRepository;
 import com.works.patimati.repository.UserRepository;
 import com.works.patimati.storage.ImageStorageService;
@@ -48,7 +47,6 @@ import static java.util.stream.Collectors.toList;
 public class AdService {
 
     private static final Logger log = LoggerFactory.getLogger(AdService.class);
-    private static final double DEFAULT_NOTIFICATION_RADIUS_METERS = 5_000.0;
     private static final List<AdResolutionStatus> HAPPY_ENDING_STATUSES = List.of(
             AdResolutionStatus.FOUND,
             AdResolutionStatus.ADOPTED
@@ -60,6 +58,9 @@ public class AdService {
     private final ImageStorageService imageStorageService;
     private final AiAnalysisPublisher aiAnalysisPublisher;
     private final RewardService rewardService;
+    private final NotificationService notificationService;
+    private final ReverseGeocodingService reverseGeocodingService;
+    private final NearbyAlertNotifier nearbyAlertNotifier;
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
     /**
@@ -95,6 +96,7 @@ public class AdService {
         Ad savedAd;
         try {
             Ad ad = adMapper.toEntity(request);
+            konumBilgisiniDoldur(ad, request.city(), request.district());
             ad.setUser(owner);
             ad.setActive(true);
 
@@ -110,7 +112,10 @@ public class AdService {
 
         AdResponse response = toResponseWithTemporaryPhotoUrls(savedAd);
 
-        notifyNearbyUsersSafely(savedAd, owner.getUid());
+        // Uyarı abonelerine bildirim (yalnız KAYIP ilanlar; asla fırlatmaz).
+        // Eski aboneliksiz notifyNearbyUsersSafely'nin yerine geçti —
+        // gerekçe NearbyAlertNotifier sınıf yorumunda.
+        nearbyAlertNotifier.yeniIlaniBildir(savedAd);
 
         // AI analizini KUYRUĞA bırakır ve beklemez (entegrasyon sözleşmesi §1).
         // Fotoğraf analizi 1-3 saniye sürüyor; senkron çağrı kullanıcıyı
@@ -119,6 +124,40 @@ public class AdService {
         aiAnalysisPublisher.publish(savedAd);
 
         return response;
+    }
+
+    /**
+     * İl/ilçeyi doldurur (V19): form beyanı öncelikli; beyan yoksa
+     * koordinattan ters geokodlama denenir. Geokodlama servisi istisna
+     * fırlatmaz — başarısızlıkta alanlar boş kalır, ilan kaydı hiçbir
+     * durumda engellenmez.
+     *
+     * <p>Kayıp/bulundu akışı {@code createAd} içinden, sahiplendirme akışı
+     * {@code AdoptionServiceImpl.createAdoptionAd} içinden çağırır.
+     */
+    public void konumBilgisiniDoldur(Ad ad, String beyanIl, String beyanIlce) {
+        String il = normalizeBlank(beyanIl);
+        String ilce = normalizeBlank(beyanIlce);
+
+        if (il == null && ad.getLocation() != null) {
+            var cozum = reverseGeocodingService.cozumle(
+                    ad.getLocation().getY(),
+                    ad.getLocation().getX()
+            );
+            if (cozum.isPresent()) {
+                il = cozum.get().il();
+                if (ilce == null) {
+                    ilce = cozum.get().ilce();
+                }
+            }
+        }
+
+        ad.setCity(il);
+        ad.setDistrict(ilce);
+    }
+
+    private static String normalizeBlank(String value) {
+        return (value == null || value.isBlank()) ? null : value.trim();
     }
 
     private void deleteImagesSafely(List<String> photoReferences) {
@@ -140,16 +179,44 @@ public class AdService {
     @Transactional(readOnly = true)
     public Page<AdResponse> getPublicActiveAds(
             Ad.AdType adType,
+            String search,
             Pageable pageable
     ) {
-        Page<Ad> ads = adType == null
-                ? adRepository.findAllByActiveTrueAndSuspendedFalse(pageable)
-                : adRepository.findAllByAdTypeAndActiveTrueAndSuspendedFalse(
-                adType,
-                pageable
-        );
+        String aramaMetni = temizleAramaMetni(search);
+
+        Page<Ad> ads;
+        if (aramaMetni == null) {
+            ads = adType == null
+                    ? adRepository.findAllByActiveTrueAndSuspendedFalse(pageable)
+                    : adRepository.findAllByAdTypeAndActiveTrueAndSuspendedFalse(
+                    adType,
+                    pageable
+            );
+        } else {
+            ads = adType == null
+                    ? adRepository.searchPublicActiveAds(aramaMetni, pageable)
+                    : adRepository.searchPublicActiveAdsByAdType(
+                    adType,
+                    aramaMetni,
+                    pageable
+            );
+        }
 
         return ads.map(this::toResponseWithTemporaryPhotoUrls);
+    }
+
+    /**
+     * LIKE joker karakterleri (%, _, \) kullanıcı girdisinden atılır — desen
+     * olarak değil düz metin olarak aransınlar diye; kaçış zinciri (ESCAPE)
+     * kurmaktan bilerek kaçınıldı. Temizlik sonrası boş kalan arama, hiç arama
+     * yokmuş gibi davranır ki liste boş desenle daralmasın.
+     */
+    private static String temizleAramaMetni(String search) {
+        if (search == null) {
+            return null;
+        }
+        String temiz = search.replaceAll("[%_\\\\]", "").trim();
+        return temiz.isEmpty() ? null : temiz;
     }
 
     @Transactional(readOnly = true)
@@ -241,19 +308,28 @@ public class AdService {
     }
 
     @Transactional(readOnly = true)
+    /**
+     * Kullanıcının kendi ilanları.
+     *
+     * <p>{@code active} <b>null olabilir</b> ve null "hepsi" demektir. Eskiden
+     * parametre {@code boolean}du ve ucun varsayılanı {@code true}ydu; ön yüz
+     * "Tümü" sekmesinde alanı hiç göndermediği için sunucu sessizce
+     * <i>yalnız yayındakileri</i> döndürüyordu. Sonuç: bulundu olarak kapanan
+     * ilan "Tümü"de kayboluyordu (ölçüldü, 21.08 canlı).
+     */
     public Page<AdResponse> getUserAds(
             String ownerEmail,
-            boolean active,
+            Boolean active,
             Pageable pageable
     ) {
         User owner = findUserByEmail(ownerEmail);
 
-        return adRepository.findAllByUser_UidAndActive(
-                        owner.getUid(),
-                        active,
-                        pageable
-                )
-                .map(this::toResponseWithTemporaryPhotoUrls);
+        Page<Ad> sayfa = (active == null)
+                ? adRepository.findAllByUser_Uid(owner.getUid(), pageable)
+                : adRepository.findAllByUser_UidAndActive(
+                        owner.getUid(), active, pageable);
+
+        return sayfa.map(this::toResponseWithTemporaryPhotoUrls);
     }
 
     @Transactional
@@ -264,6 +340,12 @@ public class AdService {
     ) {
         User owner = findUserByEmail(ownerEmail);
         Ad ad = findActiveOwnedAd(adId, owner.getUid());
+
+        if (ad.getAdType() == Ad.AdType.LOST || ad.getAdType() == Ad.AdType.FOUND) {
+            throw new BusinessException(
+                    "Kayıp ve Bulundu ilanlarında bilgi bütünlüğünü korumak amacıyla temel bilgilerin güncellenmesine izin verilmemektedir."
+            );
+        }
 
         adMapper.updateEntity(ad, request);
         Ad updatedAd = adRepository.saveAndFlush(ad);
@@ -351,6 +433,97 @@ public class AdService {
         adRepository.saveAndFlush(ad);
     }
 
+    /**
+     * FAILED (ya da takılı PENDING) kalmış bir ilanı sahibi yeniden analize gönderir.
+     * <p>
+     * <b>NEDEN VAR:</b> {@link AiAnalysisPublisher#publish} yalnız ilan
+     * <b>oluşturulurken</b> çağrılıyor ve LOST/FOUND ilanlarında düzenleme
+     * bilerek kapalı ({@link #updateAd}). AI servisi arızalıyken açılan bir
+     * ilan bu yüzden <b>kalıcı olarak</b> FAILED kalıyordu: aday sorgusu
+     * {@code ai_status='DONE'} istediği için ilan hiçbir eşleştirmeye
+     * giremiyor ve sahibi bunu düzeltemiyordu (21.08'de canlıda 7 ilan bu
+     * durumdaydı).
+     * <p>
+     * <b>DONE ilan yeniden analize sokulmaz.</b> Sebep yük değil, bildirim:
+     * yeniden analiz aynı çift için ters yönde ikinci bir eşleşme satırı ve
+     * yeni bildirim üretebilir (bkz. {@code AdMatchRepository} sınıf notu).
+     * FAILED/PENDING ilanın eşleşme satırı zaten yoktur, risk de yoktur.
+     * PENDING'in kabul sebebi: kuyruk mesajı kaybolursa (broker kesintisi,
+     * 15 dakikalık fotoğraf adresinin ölmesi) ilan PENDING'te takılı kalıyor —
+     * bu işlem o durumu da kurtarır ve tekrarlanabilir (idempotent-benzeri):
+     * başarısız olursa ilan yine PENDING/FAILED kalır, tekrar denenebilir.
+     */
+    @Transactional
+    public AdResponse reanalyzeAd(String ownerEmail, Long adId) {
+        User owner = findUserByEmail(ownerEmail);
+        Ad ad = findActiveOwnedAd(adId, owner.getUid());
+
+        yenidenAnalizeGonder(ad);
+
+        return toResponseWithTemporaryPhotoUrls(ad);
+    }
+
+    /**
+     * Analize uygunluğu denetler, durumu PENDING'e çeker ve kuyruğa yazar.
+     * Tekil ({@link #reanalyzeAd}) ve toplu ({@link #reanalyzeAllFailed})
+     * yolun ikisi de buradan geçer ki kurallar tek yerde yaşasın.
+     */
+    private void yenidenAnalizeGonder(Ad ad) {
+        if (ad.getAdType() == Ad.AdType.ADOPTION) {
+            throw new BusinessException(
+                    "Sahiplendirme ilanları AI eşleştirmesine girmez.");
+        }
+        if (ad.getAiStatus() == AiStatus.DONE) {
+            throw new BusinessException(
+                    "İlan zaten analiz edilmiş; yeniden analiz yalnız "
+                            + "başarısız ya da takılı kalmış ilanlar içindir.");
+        }
+        if (ad.getPhotoUrls() == null || ad.getPhotoUrls().isEmpty()) {
+            // Publisher fotoğrafsız ilanı sessizce atlar; burada sessiz
+            // kalınsaydı ilan PENDING'e çekilip kuyruğa hiç yazılmaz ve
+            // "takılı PENDING" elle üretilmiş olurdu.
+            throw new BusinessException(
+                    "Fotoğrafsız ilan analiz edilemez.");
+        }
+
+        ad.setAiStatus(AiStatus.PENDING);
+        adRepository.saveAndFlush(ad);
+        aiAnalysisPublisher.publish(ad);
+    }
+
+    /**
+     * FAILED durumundaki tüm aktif ilanları yeniden analize gönderir (yönetici).
+     * <p>
+     * Toplu yol tek tek {@link #yenidenAnalizeGonder} çağırmaz çünkü oradaki
+     * kural ihlalleri burada hata değil <b>atlama</b> sebebidir: arızalı tek
+     * bir kayıt (örn. fotoğrafsız FAILED ilan) tüm kurtarmayı durdurmamalı.
+     *
+     * @return kuyruğa yazılan ilan sayısı
+     */
+    @Transactional
+    public int reanalyzeAllFailed() {
+        List<Ad> basarisizlar = adRepository.findAllByAiStatusAndActiveTrue(AiStatus.FAILED);
+
+        int kuyruklanan = 0;
+        for (Ad ad : basarisizlar) {
+            if (ad.getAdType() == Ad.AdType.ADOPTION
+                    || ad.getPhotoUrls() == null || ad.getPhotoUrls().isEmpty()) {
+                log.warn("Yeniden analiz atlandı (uygun değil): adId={} tip={} fotoğraf={}",
+                        ad.getId(), ad.getAdType(),
+                        ad.getPhotoUrls() == null ? 0 : ad.getPhotoUrls().size());
+                continue;
+            }
+            ad.setAiStatus(AiStatus.PENDING);
+            adRepository.saveAndFlush(ad);
+            aiAnalysisPublisher.publish(ad);
+            kuyruklanan++;
+        }
+
+        log.info("Toplu yeniden analiz: {} ilan bulundu, {} kuyruğa yazıldı",
+                basarisizlar.size(), kuyruklanan);
+        return kuyruklanan;
+    }
+
     @Transactional
     public void resolveLostAd(String ownerEmail, Long adId, ResolveLostAdRequest request) {
         User owner = findUserByEmail(ownerEmail);
@@ -360,13 +533,36 @@ public class AdService {
             throw new IllegalArgumentException("İlan bir kayıp ilanı değildir.");
         }
 
+        Long finderId = (request != null) ? request.finderId() : null;
+        Long foundAdId = (request != null) ? request.foundAdId() : null;
+
+        // Eşleşen ilan bildirildiyse GERÇEKTEN var mı diye bakılır. Yoksa
+        // sessizce null bırakmak, ölçüm sorgusunda "bağ kurulmamış" ile
+        // "yanlış id gönderilmiş" durumlarını ayırt edilemez yapardı.
+        if (foundAdId != null) {
+            if (foundAdId.equals(adId)) {
+                throw new IllegalArgumentException(
+                        "Bir ilan kendisiyle eşleştirilemez.");
+            }
+            Ad eslesen = adRepository.findById(foundAdId)
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Eşleşen ilan bulunamadı: " + foundAdId));
+            if (eslesen.getAdType() != Ad.AdType.FOUND) {
+                throw new IllegalArgumentException(
+                        "Eşleşen ilan bir 'bulundu' ilanı olmalı.");
+            }
+            ad.setResolvedByAdId(foundAdId);
+        }
+
+        ad.setFinderUserId(finderId);
         ad.setActive(false);
         ad.setResolutionStatus(AdResolutionStatus.FOUND);
         adRepository.saveAndFlush(ad);
 
-        Long finderId = (request != null) ? request.finderId() : null;
         rewardService.awardLostPoint(finderId);
-        log.info("Kayıp ilanı bulundu olarak işaretlendi. adId={}, ownerId={}, finderId={}", adId, owner.getUid(), finderId);
+        log.info("Kayıp ilanı bulundu olarak işaretlendi. adId={}, ownerId={}, "
+                        + "finderId={}, eslesenIlanId={}",
+                adId, owner.getUid(), finderId, foundAdId);
     }
 
     @Transactional(readOnly = true)
@@ -448,56 +644,4 @@ public class AdService {
         return adMapper.toResponse(ad, temporaryPhotoUrls);
     }
 
-    private void notifyNearbyUsersSafely(Ad ad, Long ownerUid) {
-        if (ad.getLocation() == null) {
-            return;
-        }
-
-        try {
-            List<User> nearbyUsers = userRepository.findUsersNearby(
-                    ad.getLocation(),
-                    DEFAULT_NOTIFICATION_RADIUS_METERS
-            );
-
-            String notificationTitle = "Olası Eşleşme!";
-            String notificationBody = "Kayıp ilanınızla uyuşabilecek yeni bir ilan var: " + ad.getTitle();
-
-            for (User nearbyUser : nearbyUsers) {
-
-                if (nearbyUser.getUid() != null && nearbyUser.getUid().equals(ownerUid)) {
-                    continue;
-                }
-
-                String fcmToken = nearbyUser.getFcmToken();
-                if (fcmToken != null && !fcmToken.isBlank()) {
-                    sendPushNotification(
-                            fcmToken,
-                            notificationTitle,
-                            notificationBody
-                    );
-                }
-            }
-        } catch (RuntimeException exception) {
-            log.warn(
-                    "İlan oluşturuldu ancak yakındaki kullanıcılar belirlenemedi. adId={}",
-                    ad.getId(),
-                    exception
-            );
-        }
-    }
-
-    private void sendPushNotification(String token, String title, String body) {
-        try {
-            Message message = Message.builder()
-                    .setToken(token)
-                    .setNotification(Notification.builder()
-                            .setTitle(title)
-                            .setBody(body)
-                            .build())
-                    .build();
-            FirebaseMessaging.getInstance().send(message);
-        } catch (Exception e) {
-            log.error("Push notification gönderilemedi: {}", e.getMessage());
-        }
-    }
 }

@@ -50,6 +50,11 @@ public class S3ImageStorageService implements ImageStorageService {
 
     @Override
     public List<String> uploadImages(List<MultipartFile> images) {
+        return uploadImages(images, "ads");
+    }
+
+    @Override
+    public List<String> uploadImages(List<MultipartFile> images, String keyPrefix) {
         if (images == null || images.isEmpty()) {
             return List.of();
         }
@@ -65,7 +70,7 @@ public class S3ImageStorageService implements ImageStorageService {
 
         try {
             for (MultipartFile image : images) {
-                uploadedReferences.add(uploadImage(image));
+                uploadedReferences.add(uploadImage(image, keyPrefix));
             }
 
             return List.copyOf(uploadedReferences);
@@ -120,9 +125,9 @@ public class S3ImageStorageService implements ImageStorageService {
         }
     }
 
-    private String uploadImage(MultipartFile image) {
+    private String uploadImage(MultipartFile image, String keyPrefix) {
         byte[] imageBytes = readAndValidateJpeg(image);
-        String objectKey = createObjectKey();
+        String objectKey = createObjectKey(keyPrefix);
 
         PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                 .bucket(properties.bucket())
@@ -208,12 +213,13 @@ public class S3ImageStorageService implements ImageStorageService {
                 && (imageBytes[2] & 0xFF) == 0xFF;
     }
 
-    private String createObjectKey() {
+    private String createObjectKey(String keyPrefix) {
         LocalDate currentDate = LocalDate.now(ZoneOffset.UTC);
 
         return String.format(
                 Locale.ROOT,
-                "ads/%d/%02d/%s.jpg",
+                "%s/%d/%02d/%s.jpg",
+                keyPrefix,
                 currentDate.getYear(),
                 currentDate.getMonthValue(),
                 UUID.randomUUID()
@@ -231,25 +237,26 @@ public class S3ImageStorageService implements ImageStorageService {
             );
         }
 
-        try {
-            URI reference = URI.create(storageReference);
-            String objectKey = reference.getPath();
-
-            if (!STORAGE_SCHEME.equalsIgnoreCase(reference.getScheme())
-                    || !properties.bucket().equals(reference.getHost())
-                    || objectKey == null
-                    || objectKey.length() <= 1) {
-                throw new InvalidImageException(
-                        "Geçersiz fotoğraf depolama referansı"
-                );
-            }
-
-            return objectKey.substring(1);
-        } catch (IllegalArgumentException exception) {
-            throw new InvalidImageException(
-                    "Geçersiz fotoğraf depolama referansı"
-            );
+        // Zaten http veya https protokolü barındırıyorsa
+        if (storageReference.startsWith("http://") || storageReference.startsWith("https://")) {
+            return storageReference;
         }
+
+        // s3://bucketName/objectKey formatı için geriye dönük uyumluluk
+        if (storageReference.startsWith(STORAGE_SCHEME + "://")) {
+            try {
+                URI reference = URI.create(storageReference);
+                String objectKey = reference.getPath();
+
+                if (objectKey != null && objectKey.length() > 1) {
+                    return objectKey.substring(1);
+                }
+            } catch (IllegalArgumentException ignored) {
+            }
+        }
+
+        // Doğrudan objectKey string'i ise (örn: ads/2026/08/...jpg)
+        return storageReference;
     }
 
     private void deleteImage(String storageReference) {

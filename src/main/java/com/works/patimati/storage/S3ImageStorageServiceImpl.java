@@ -57,6 +57,17 @@ public class S3ImageStorageServiceImpl implements ImageStorageService {
 
     @Override
     public List<String> uploadImages(List<MultipartFile> images) {
+        return uploadImages(images, "ads");
+    }
+
+    /**
+     * {@link #uploadImages(List)} ile aynı, yalnızca nesne anahtarının ön ekini
+     * seçmeye izin verir (varsayılan {@code "ads"}) -- Instagram medyası
+     * {@code "external"} önekiyle saklanır (bkz. {@link S3ImageStorageService}'in
+     * eşdeğeri).
+     */
+    @Override
+    public List<String> uploadImages(List<MultipartFile> images, String keyPrefix) {
         if (images == null || images.isEmpty()) {
             return List.of();
         }
@@ -71,7 +82,7 @@ public class S3ImageStorageServiceImpl implements ImageStorageService {
 
         try {
             for (MultipartFile image : images) {
-                uploadedReferences.add(uploadImage(image));
+                uploadedReferences.add(uploadImage(image, keyPrefix));
             }
 
             return List.copyOf(uploadedReferences);
@@ -97,6 +108,11 @@ public class S3ImageStorageServiceImpl implements ImageStorageService {
         String cleanDomain = publicDomain.endsWith("/")
                 ? publicDomain.substring(0, publicDomain.length() - 1)
                 : publicDomain;
+
+        if (!cleanDomain.startsWith("http://") && !cleanDomain.startsWith("https://")) {
+            cleanDomain = "https://" + cleanDomain;
+        }
+
         String cleanKey = objectKey.startsWith("/")
                 ? objectKey.substring(1)
                 : objectKey;
@@ -115,9 +131,9 @@ public class S3ImageStorageServiceImpl implements ImageStorageService {
         }
     }
 
-    private String uploadImage(MultipartFile image) {
+    private String uploadImage(MultipartFile image, String keyPrefix) {
         byte[] imageBytes = readAndValidateJpeg(image);
-        String objectKey = createObjectKey();
+        String objectKey = createObjectKey(keyPrefix);
 
         PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                 .bucket(bucketName)
@@ -200,12 +216,13 @@ public class S3ImageStorageServiceImpl implements ImageStorageService {
                 && (imageBytes[2] & 0xFF) == 0xFF;
     }
 
-    private String createObjectKey() {
+    private String createObjectKey(String keyPrefix) {
         LocalDate currentDate = LocalDate.now(ZoneOffset.UTC);
 
         return String.format(
                 Locale.ROOT,
-                "ads/%d/%02d/%s.jpg",
+                "%s/%d/%02d/%s.jpg",
+                keyPrefix,
                 currentDate.getYear(),
                 currentDate.getMonthValue(),
                 UUID.randomUUID()

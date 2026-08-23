@@ -6,10 +6,14 @@ import com.works.patimati.storage.ImageStorageException;
 import com.works.patimati.storage.InvalidImageException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -25,8 +29,22 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ProblemDetail> handleBusiness(
+            BusinessException exception,
+            HttpServletRequest request
+    ) {
+        return problem(
+                HttpStatus.BAD_REQUEST,
+                "İş Kuralı İhlali",
+                exception.getMessage(),
+                request
+        );
+    }
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ProblemDetail> handleNotFound(
@@ -49,6 +67,19 @@ public class GlobalExceptionHandler {
         return problem(
                 HttpStatus.BAD_REQUEST,
                 "Geçersiz parametre",
+                exception.getMessage(),
+                request
+        );
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ProblemDetail> handleAccessDenied(
+            AccessDeniedException exception,
+            HttpServletRequest request
+    ) {
+        return problem(
+                HttpStatus.FORBIDDEN,
+                "Erişim reddedildi",
                 exception.getMessage(),
                 request
         );
@@ -100,12 +131,13 @@ public class GlobalExceptionHandler {
     ) {
         Map<String, String> fieldErrors = new LinkedHashMap<>();
 
-        exception.getBindingResult()
-                .getFieldErrors()
-                .forEach(error -> fieldErrors.putIfAbsent(
-                        error.getField(),
-                        error.getDefaultMessage()
-                ));
+        for (org.springframework.validation.FieldError error : exception.getBindingResult().getFieldErrors()) {
+            String field = error.getField();
+            String message = error.getDefaultMessage();
+            if (!fieldErrors.containsKey(field) || "NotBlank".equals(error.getCode()) || "NotNull".equals(error.getCode()) || "NotEmpty".equals(error.getCode())) {
+                fieldErrors.put(field, message);
+            }
+        }
 
         exception.getBindingResult()
                 .getGlobalErrors()
@@ -132,7 +164,7 @@ public class GlobalExceptionHandler {
             HttpServletRequest request
     ) {
         Map<String, String> fieldErrors = new LinkedHashMap<>();
-        String detailMessage = "Gönderilen JSON verisi korrupt veya okunabilir biçimde değil.";
+        String detailMessage = "İstek gövdesi (JSON) okunamadı veya veri formatı hatalı. Lütfen tarih gibi alanların formatını (yyyy-MM-dd) kontrol edin.";
 
         Throwable mostSpecificCause = exception.getMostSpecificCause();
         if (mostSpecificCause instanceof InvalidFormatException invalidFormatException) {
@@ -142,11 +174,12 @@ public class GlobalExceptionHandler {
             String errorMessage = "Geçersiz değer: '" + invalidFormatException.getValue() + "'";
             if (invalidFormatException.getTargetType() != null && invalidFormatException.getTargetType().isEnum()) {
                 errorMessage = "'" + invalidFormatException.getValue() + "' geçerli bir enum değeri değil.";
+            } else if (invalidFormatException.getTargetType() != null && java.time.temporal.Temporal.class.isAssignableFrom(invalidFormatException.getTargetType())) {
+                errorMessage = "Tarih formatı geçersiz (yyyy-MM-dd bekleniyor): '" + invalidFormatException.getValue() + "'";
             }
             if (!fieldName.isEmpty()) {
                 fieldErrors.put(fieldName, errorMessage);
             }
-            detailMessage = "JSON veri tipi veya alan formatı geçersiz: " + (fieldName.isEmpty() ? errorMessage : fieldName + " -> " + errorMessage);
         } else {
             Throwable current = exception;
             com.fasterxml.jackson.databind.JsonMappingException jsonMappingException = null;
@@ -174,10 +207,6 @@ public class GlobalExceptionHandler {
 
             if (!fieldName.isEmpty() && mostSpecificCause != null && mostSpecificCause.getMessage() != null) {
                 fieldErrors.put(fieldName, mostSpecificCause.getMessage());
-            }
-
-            if (mostSpecificCause != null && mostSpecificCause.getMessage() != null) {
-                detailMessage = mostSpecificCause.getMessage();
             }
         }
 
@@ -253,7 +282,9 @@ public class GlobalExceptionHandler {
             MethodArgumentTypeMismatchException.class,
             MissingServletRequestPartException.class,
             MissingServletRequestParameterException.class,
-            MultipartException.class
+            MultipartException.class,
+            com.fasterxml.jackson.core.JsonProcessingException.class,
+            com.fasterxml.jackson.databind.exc.InvalidDefinitionException.class
     })
     public ResponseEntity<ProblemDetail> handleInvalidRequest(
             Exception exception,
@@ -280,6 +311,61 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ProblemDetail> handleMethodNotSupported(
+            HttpRequestMethodNotSupportedException exception,
+            HttpServletRequest request
+    ) {
+        // Yeni Exception.class catch-all'ının (aşağıda) yakaladığı GERÇEK bir
+        // regresyon: bu istisna için burada özel bir handler YOKTU, o yüzden
+        // önceden Spring'in kendi DefaultHandlerExceptionResolver'ı devreye
+        // girip doğru 405'i üretiyordu. Exception.class handler'ı
+        // ExceptionHandlerExceptionResolver seviyesinde HER istisnayı
+        // yakaladığı için (tip hiyerarşisi bakımdan Exception her şeyin
+        // atasıdır), Spring'in kendi varsayılan çözümleyicisine sıra hiç
+        // gelmiyordu -- AdControllerTest.shouldNotExposeRemovedTestEndpoint
+        // 405 yerine 500 almaya başlayarak bunu yakaladı. Doğru semantiği
+        // burada açıkça geri veriyoruz.
+        return problem(
+                HttpStatus.METHOD_NOT_ALLOWED,
+                "Desteklenmeyen HTTP metodu",
+                exception.getMessage(),
+                request
+        );
+    }
+
+    /**
+     * Veritabanı bütünlük ihlalleri (uzunluk aşımı, tekillik, yabancı anahtar).
+     *
+     * <p>Bu istisnanın {@code getMessage()}'ı ham SQL cümlesini ve sütun listesini
+     * içerir; kullanıcıya aynen gösterilirse hem anlaşılmaz hem de şema sızdırır
+     * (B1 bulgusu: bulundu formunda 255 karakteri aşan açıklama, ekrana
+     * {@code insert into ads (...)} metnini bastırıyordu). Gerçek sebep sunucu
+     * günlüğüne yazılır, istemciye yalnız güvenli bir özet döner.
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ProblemDetail> handleDataIntegrityViolation(
+            DataIntegrityViolationException exception,
+            HttpServletRequest request
+    ) {
+        log.warn("Veri bütünlüğü ihlali: {} {}", request.getMethod(), request.getRequestURI(), exception);
+        return problem(
+                HttpStatus.BAD_REQUEST,
+                "Geçersiz istek",
+                "Gönderilen verilerden biri kaydedilemedi: bir alan izin verilen sınırı aşıyor ya da beklenen biçimde değil.",
+                request
+        );
+    }
+
+    // Son çare: yukarıdaki hiçbir spesifik handler'a uymayan her şey buraya
+    // düşer. Spring, en spesifik eşleşen handler'ı @ExceptionHandler tip
+    // hiyerarşisine göre seçer (dosyadaki sıralamadan bağımsız) -- bu yüzden
+    // burada olması yukarıdaki handler'ların DAVRANIŞINI değiştirmez, yalnızca
+    // önceden hiç yakalanmayan (ör. NullPointerException, beklenmeyen
+    // RuntimeException) istekler artık çıplak 500 + boş gövde yerine tutarlı
+    // bir ProblemDetail alır. İstemciye ham exception.getMessage() DÖNMEZ
+    // (iç sınıf adı/SQL/stack detayı sızdırabilir) -- tam detay yalnızca
+    // sunucu logunda, ERROR seviyesinde.
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ProblemDetail> handleGenericException(
             Exception exception,
@@ -293,10 +379,13 @@ public class GlobalExceptionHandler {
                     request
             );
         }
+        // Beklenmeyen istisnanın mesajı istemciye AKTARILMAZ: içinde SQL, dosya
+        // yolu gibi iç ayrıntılar olabilir. Gerçek sebep günlükte.
+        log.error("Beklenmeyen sunucu hatası: {} {}", request.getMethod(), request.getRequestURI(), exception);
         return problem(
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 "Sunucu Hatası",
-                exception.getMessage() != null ? exception.getMessage() : "Beklenmeyen bir sunucu hatası meydana geldi.",
+                "Beklenmeyen bir sunucu hatası meydana geldi.",
                 request
         );
     }

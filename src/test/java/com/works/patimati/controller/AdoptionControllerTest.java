@@ -3,6 +3,7 @@ package com.works.patimati.controller;
 import com.works.patimati.dto.ad.AdResponse;
 import com.works.patimati.entity.Ad;
 import com.works.patimati.entity.enums.AgeGroup;
+import com.works.patimati.entity.enums.AdResolutionStatus;
 import com.works.patimati.entity.enums.AiStatus;
 import com.works.patimati.entity.enums.CoatPattern;
 import com.works.patimati.entity.enums.EyeColor;
@@ -28,6 +29,7 @@ import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -60,6 +62,7 @@ class AdoptionControllerTest {
                 {
                   "title": "Sahiplendirilecek Sevimli Kedi",
                   "species": "CAT",
+                  "date": "2026-08-20",
                   "latitude": 40.195,
                   "longitude": 29.060
                 }
@@ -103,6 +106,7 @@ class AdoptionControllerTest {
         String requestJson = """
                 {
                   "title": "",
+                  "date": "2026-08-20",
                   "latitude": 40.195,
                   "longitude": 29.060
                 }
@@ -143,7 +147,8 @@ class AdoptionControllerTest {
         String requestJson = """
                 {
                   "title": "Sahiplendirilecek Sevimli Kedi",
-                  "species": "CAT"
+                  "species": "CAT",
+                  "date": "2026-08-20"
                 }
                 """;
 
@@ -176,11 +181,168 @@ class AdoptionControllerTest {
     }
 
     @Test
+    void shouldReturn400BadRequestWhenDateIsMissing() throws Exception {
+        String requestJson = """
+                {
+                  "title": "Sahiplendirilecek Sevimli Kedi",
+                  "species": "CAT",
+                  "latitude": 40.195,
+                  "longitude": 29.060
+                }
+                """;
+
+        MockPart adPart = new MockPart(
+                "ad",
+                "ad",
+                requestJson.getBytes(StandardCharsets.UTF_8)
+        );
+        adPart.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+
+        MockMultipartFile image = new MockMultipartFile(
+                "images",
+                "cat.jpg",
+                MediaType.IMAGE_JPEG_VALUE,
+                new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF}
+        );
+
+        mockMvc.perform(
+                        multipart("/api/adoptions")
+                                .part(adPart)
+                                .file(image)
+                                .principal(authentication())
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.title").value("Doğrulama hatası"))
+                .andExpect(jsonPath("$.invalid_params.date").value("Tarih alanı boş bırakılamaz"))
+                .andExpect(jsonPath("$.validationErrors.date").exists());
+
+        verifyNoInteractions(adoptionService);
+    }
+
+    @Test
+    void shouldReturn400BadRequestWhenDateIsInFuture() throws Exception {
+        String requestJson = """
+                {
+                  "title": "Sahiplendirilecek Sevimli Kedi",
+                  "species": "CAT",
+                  "date": "2099-12-31",
+                  "latitude": 40.195,
+                  "longitude": 29.060
+                }
+                """;
+
+        MockPart adPart = new MockPart(
+                "ad",
+                "ad",
+                requestJson.getBytes(StandardCharsets.UTF_8)
+        );
+        adPart.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+
+        MockMultipartFile image = new MockMultipartFile(
+                "images",
+                "cat.jpg",
+                MediaType.IMAGE_JPEG_VALUE,
+                new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF}
+        );
+
+        when(adoptionService.createAdoptionAd(anyString(), any(), anyList()))
+                .thenThrow(new IllegalArgumentException("Tarih gelecekte bir tarih olamaz"));
+
+        mockMvc.perform(
+                        multipart("/api/adoptions")
+                                .part(adPart)
+                                .file(image)
+                                .principal(authentication())
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.title").value("Geçersiz parametre"))
+                .andExpect(jsonPath("$.detail").value("Tarih gelecekte bir tarih olamaz"));
+    }
+
+    @Test
+    void shouldReturn400BadRequestWhenDateHasInvalidFormat() throws Exception {
+        String requestJson = """
+                {
+                  "title": "Sahiplendirilecek Sevimli Kedi",
+                  "species": "CAT",
+                  "date": "2026/08/20",
+                  "latitude": 40.195,
+                  "longitude": 29.060
+                }
+                """;
+
+        MockPart adPart = new MockPart(
+                "ad",
+                "ad",
+                requestJson.getBytes(StandardCharsets.UTF_8)
+        );
+        adPart.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+
+        MockMultipartFile image = new MockMultipartFile(
+                "images",
+                "cat.jpg",
+                MediaType.IMAGE_JPEG_VALUE,
+                new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF}
+        );
+
+        mockMvc.perform(
+                        multipart("/api/adoptions")
+                                .part(adPart)
+                                .file(image)
+                                .principal(authentication())
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.title").value("Doğrulama hatası"))
+                .andExpect(jsonPath("$.invalid_params.date").value("Tarih formatı yyyy-MM-dd olmalıdır"));
+
+        verifyNoInteractions(adoptionService);
+    }
+
+    @Test
+    void shouldReturn400BadRequestWhenDateIsEmptyString() throws Exception {
+        String requestJson = """
+                {
+                  "title": "Sahiplendirilecek Sevimli Kedi",
+                  "species": "CAT",
+                  "date": "",
+                  "latitude": 40.195,
+                  "longitude": 29.060
+                }
+                """;
+
+        MockPart adPart = new MockPart(
+                "ad",
+                "ad",
+                requestJson.getBytes(StandardCharsets.UTF_8)
+        );
+        adPart.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+
+        MockMultipartFile image = new MockMultipartFile(
+                "images",
+                "cat.jpg",
+                MediaType.IMAGE_JPEG_VALUE,
+                new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF}
+        );
+
+        mockMvc.perform(
+                        multipart("/api/adoptions")
+                                .part(adPart)
+                                .file(image)
+                                .principal(authentication())
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.invalid_params.date").value("Tarih alanı boş bırakılamaz"));
+
+        verifyNoInteractions(adoptionService);
+    }
+
+    @Test
     void shouldReturn400BadRequestWhenImagesPartIsMissing() throws Exception {
         String requestJson = """
                 {
                   "title": "Sahiplendirilecek Sevimli Kedi",
                   "species": "CAT",
+                  "date": "2026-08-20",
                   "latitude": 40.195,
                   "longitude": 29.060
                 }
@@ -228,15 +390,20 @@ class AdoptionControllerTest {
                 List.of("https://example.com/cat.jpg"),
                 40.195,
                 29.060,
+                "Bursa",
+                "Nilüfer",
                 1L,
                 "Owner",
                 true,
+                false,
                 Instant.parse("2026-08-20T10:00:00Z"),
                 Instant.parse("2026-08-20T10:00:00Z"),
                 AiStatus.NOT_APPLICABLE,
                 false,
                 false,
                 false,
+                false,
+                AdResolutionStatus.NONE,
                 false
         );
     }

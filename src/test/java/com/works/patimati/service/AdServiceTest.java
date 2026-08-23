@@ -25,8 +25,10 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.multipart.MultipartFile;
+import com.works.patimati.exception.BusinessException;
 import com.works.patimati.storage.InvalidImageException;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -50,6 +52,8 @@ class AdServiceTest {
     private ImageStorageService imageStorageService;
     private AiAnalysisPublisher aiAnalysisPublisher;
     private RewardService rewardService;
+    private NotificationService notificationService;
+    private ReverseGeocodingService reverseGeocodingService;
     private AdService adService;
 
     @BeforeEach
@@ -64,6 +68,11 @@ class AdServiceTest {
         // tutuyor ve "yayınlandı mı" doğrulaması yapılabilmesini sağlıyor.)
         aiAnalysisPublisher = mock(AiAnalysisPublisher.class);
         rewardService = mock(RewardService.class);
+        notificationService = mock(NotificationService.class);
+
+        reverseGeocodingService = mock(ReverseGeocodingService.class);
+        when(reverseGeocodingService.cozumle(any(), any()))
+                .thenReturn(java.util.Optional.empty());
 
         adService = new AdService(
                 adRepository,
@@ -71,7 +80,10 @@ class AdServiceTest {
                 adMapper,
                 imageStorageService,
                 aiAnalysisPublisher,
-                rewardService
+                rewardService,
+                mock(NotificationService.class),
+                reverseGeocodingService,
+                mock(com.works.patimati.notification.NearbyAlertNotifier.class)
         );
     }
 
@@ -202,13 +214,14 @@ class AdServiceTest {
     }
 
     @Test
-    void shouldUpdateOnlyAnActiveAdOwnedByAuthenticatedUser() {
+    void shouldUpdateOnlyAnActiveAdoptionAdOwnedByAuthenticatedUser() {
         User owner = User.builder()
                 .uid(42L)
                 .email("owner@patimati.com")
                 .build();
         Ad ad = Ad.builder()
                 .id(7L)
+                .adType(Ad.AdType.ADOPTION)
                 .user(owner)
                 .active(true)
                 .build();
@@ -233,6 +246,58 @@ class AdServiceTest {
 
         verify(adMapper).updateEntity(ad, request);
         assertThat(response).isSameAs(expectedResponse);
+    }
+
+    @Test
+    void shouldThrowBusinessExceptionWhenUpdatingLostAd() {
+        User owner = User.builder()
+                .uid(42L)
+                .email("owner@patimati.com")
+                .build();
+        Ad lostAd = Ad.builder()
+                .id(7L)
+                .adType(Ad.AdType.LOST)
+                .user(owner)
+                .active(true)
+                .build();
+        AdUpdateRequest request = mock(AdUpdateRequest.class);
+
+        when(userRepository.findByEmail(owner.getEmail()))
+                .thenReturn(Optional.of(owner));
+        when(adRepository.findByIdAndUser_UidAndActiveTrue(
+                lostAd.getId(),
+                owner.getUid()
+        )).thenReturn(Optional.of(lostAd));
+
+        assertThatThrownBy(() -> adService.updateAd(owner.getEmail(), lostAd.getId(), request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Kayıp ve Bulundu ilanlarında bilgi bütünlüğünü korumak amacıyla temel bilgilerin güncellenmesine izin verilmemektedir.");
+    }
+
+    @Test
+    void shouldThrowBusinessExceptionWhenUpdatingFoundAd() {
+        User owner = User.builder()
+                .uid(42L)
+                .email("owner@patimati.com")
+                .build();
+        Ad foundAd = Ad.builder()
+                .id(8L)
+                .adType(Ad.AdType.FOUND)
+                .user(owner)
+                .active(true)
+                .build();
+        AdUpdateRequest request = mock(AdUpdateRequest.class);
+
+        when(userRepository.findByEmail(owner.getEmail()))
+                .thenReturn(Optional.of(owner));
+        when(adRepository.findByIdAndUser_UidAndActiveTrue(
+                foundAd.getId(),
+                owner.getUid()
+        )).thenReturn(Optional.of(foundAd));
+
+        assertThatThrownBy(() -> adService.updateAd(owner.getEmail(), foundAd.getId(), request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Kayıp ve Bulundu ilanlarında bilgi bütünlüğünü korumak amacıyla temel bilgilerin güncellenmesine izin verilmemektedir.");
     }
 
     @Test
@@ -391,6 +456,73 @@ class AdServiceTest {
         verify(adRepository).findAllByActiveTrueAndSuspendedFalse(pageable);
     }
 
+    /*
+     * B5: public listede arama. Buradaki dört test yalnız DALLANMAYI ölçer
+     * (hangi repo metodu, hangi temizlenmiş terimle) — JPQL'in kendisi gerçek
+     * veritabanında repository/IlanAramaTest ile ölçülür; mock bu katmanı
+     * göremez.
+     */
+
+    @Test
+    void shouldUsePlainPublicQueryWhenSearchIsBlank() {
+        Pageable pageable = PageRequest.of(0, 10);
+        when(adRepository.findAllByActiveTrueAndSuspendedFalse(pageable))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        Page<AdResponse> result = adService.getPublicActiveAds(null, "   ", pageable);
+
+        assertThat(result).isNotNull();
+        verify(adRepository).findAllByActiveTrueAndSuspendedFalse(pageable);
+        verify(adRepository, never()).searchPublicActiveAds(any(), any());
+    }
+
+    @Test
+    void shouldSearchPublicAdsWithSanitizedTerm() {
+        Pageable pageable = PageRequest.of(0, 10);
+        when(adRepository.searchPublicActiveAds("bursa", pageable))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        // Joker karakterler (% _) düz metin aramasına sızmamalı, uçlardaki
+        // boşluk da terime dahil olmamalı.
+        Page<AdResponse> result =
+                adService.getPublicActiveAds(null, " bur%sa_ ", pageable);
+
+        assertThat(result).isNotNull();
+        verify(adRepository).searchPublicActiveAds("bursa", pageable);
+        verify(adRepository, never()).findAllByActiveTrueAndSuspendedFalse(any());
+    }
+
+    @Test
+    void shouldCombineAdTypeFilterWithSearch() {
+        Pageable pageable = PageRequest.of(0, 10);
+        when(adRepository.searchPublicActiveAdsByAdType(Ad.AdType.LOST, "tekir", pageable))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        Page<AdResponse> result =
+                adService.getPublicActiveAds(Ad.AdType.LOST, "tekir", pageable);
+
+        assertThat(result).isNotNull();
+        verify(adRepository).searchPublicActiveAdsByAdType(Ad.AdType.LOST, "tekir", pageable);
+        verify(adRepository, never())
+                .findAllByAdTypeAndActiveTrueAndSuspendedFalse(any(), any());
+    }
+
+    @Test
+    void shouldTreatWildcardOnlySearchAsNoSearch() {
+        Pageable pageable = PageRequest.of(0, 10);
+        when(adRepository.findAllByActiveTrueAndSuspendedFalse(pageable))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        // Temizlik sonrası boş kalan arama ("%%__") daraltma yapmamalı:
+        // boş desenle arama, "hiç ilan yok" gibi yanlış bir sonuç üretirdi.
+        Page<AdResponse> result =
+                adService.getPublicActiveAds(null, "%%__", pageable);
+
+        assertThat(result).isNotNull();
+        verify(adRepository).findAllByActiveTrueAndSuspendedFalse(pageable);
+        verify(adRepository, never()).searchPublicActiveAds(any(), any());
+    }
+
     @Test
     void shouldUsePublicNearbyQueryAndMapCoordinatesCorrectly() {
         /*
@@ -446,6 +578,146 @@ class AdServiceTest {
                 .isEqualTo(40.195);
 
         assertThat(result).containsExactly(expectedResponse);
+    }
+
+    // ------------------------------------------------------------------
+    // Yeniden analiz (reanalyze) — FAILED/PENDING kurtarma yolu
+    // ------------------------------------------------------------------
+
+    private Ad yenidenAnalizIlani(User owner, Ad.AdType tip, com.works.patimati.entity.enums.AiStatus durum) {
+        return Ad.builder()
+                .id(7L)
+                .adType(tip)
+                .user(owner)
+                .active(true)
+                .aiStatus(durum)
+                .photoUrls(new ArrayList<>(List.of("s3://patimati-test/ads/x.jpg")))
+                .build();
+    }
+
+    private User sahip() {
+        return User.builder().uid(42L).email("owner@patimati.com").build();
+    }
+
+    @Test
+    void reanalyzeShouldRequeueFailedAdAndResetStatusToPending() {
+        User owner = sahip();
+        Ad ad = yenidenAnalizIlani(owner, Ad.AdType.LOST,
+                com.works.patimati.entity.enums.AiStatus.FAILED);
+
+        when(userRepository.findByEmail(owner.getEmail())).thenReturn(Optional.of(owner));
+        when(adRepository.findByIdAndUser_UidAndActiveTrue(ad.getId(), owner.getUid()))
+                .thenReturn(Optional.of(ad));
+        when(adRepository.saveAndFlush(ad)).thenReturn(ad);
+        when(adMapper.toResponse(eq(ad), any())).thenReturn(mock(AdResponse.class));
+
+        adService.reanalyzeAd(owner.getEmail(), ad.getId());
+
+        // Durum publish'ten ÖNCE PENDING'e çekilmiş ve kaydedilmiş olmalı —
+        // listener'ın yazacağı DONE/FAILED bu tabandan hareket eder.
+        assertThat(ad.getAiStatus())
+                .isEqualTo(com.works.patimati.entity.enums.AiStatus.PENDING);
+        verify(adRepository).saveAndFlush(ad);
+        verify(aiAnalysisPublisher).publish(ad);
+    }
+
+    @Test
+    void reanalyzeShouldAlsoAcceptStuckPendingAd() {
+        // Kuyruk mesajı kaybolursa ilan PENDING'te takılı kalır (canlıda
+        // yaşandı); bu yol onu da kurtarabilmeli.
+        User owner = sahip();
+        Ad ad = yenidenAnalizIlani(owner, Ad.AdType.FOUND,
+                com.works.patimati.entity.enums.AiStatus.PENDING);
+
+        when(userRepository.findByEmail(owner.getEmail())).thenReturn(Optional.of(owner));
+        when(adRepository.findByIdAndUser_UidAndActiveTrue(ad.getId(), owner.getUid()))
+                .thenReturn(Optional.of(ad));
+        when(adRepository.saveAndFlush(ad)).thenReturn(ad);
+        when(adMapper.toResponse(eq(ad), any())).thenReturn(mock(AdResponse.class));
+
+        adService.reanalyzeAd(owner.getEmail(), ad.getId());
+
+        verify(aiAnalysisPublisher).publish(ad);
+    }
+
+    @Test
+    void reanalyzeShouldRejectAlreadyAnalyzedAd() {
+        // DONE ilanın yeniden analizi bilerek kapalı: aynı çift için ters
+        // yönde ikinci eşleşme satırı ve mükerrer bildirim üretebilir.
+        User owner = sahip();
+        Ad ad = yenidenAnalizIlani(owner, Ad.AdType.LOST,
+                com.works.patimati.entity.enums.AiStatus.DONE);
+
+        when(userRepository.findByEmail(owner.getEmail())).thenReturn(Optional.of(owner));
+        when(adRepository.findByIdAndUser_UidAndActiveTrue(ad.getId(), owner.getUid()))
+                .thenReturn(Optional.of(ad));
+
+        assertThatThrownBy(() -> adService.reanalyzeAd(owner.getEmail(), ad.getId()))
+                .isInstanceOf(BusinessException.class);
+        verify(aiAnalysisPublisher, never()).publish(any());
+    }
+
+    @Test
+    void reanalyzeShouldRejectAdoptionAd() {
+        User owner = sahip();
+        Ad ad = yenidenAnalizIlani(owner, Ad.AdType.ADOPTION,
+                com.works.patimati.entity.enums.AiStatus.FAILED);
+
+        when(userRepository.findByEmail(owner.getEmail())).thenReturn(Optional.of(owner));
+        when(adRepository.findByIdAndUser_UidAndActiveTrue(ad.getId(), owner.getUid()))
+                .thenReturn(Optional.of(ad));
+
+        assertThatThrownBy(() -> adService.reanalyzeAd(owner.getEmail(), ad.getId()))
+                .isInstanceOf(BusinessException.class);
+        verify(aiAnalysisPublisher, never()).publish(any());
+    }
+
+    @Test
+    void reanalyzeShouldRejectPhotolessAdInsteadOfStrandingItInPending() {
+        // Publisher fotoğrafsız ilanı sessizce atlıyor; burada hata
+        // fırlatılmasaydı ilan PENDING'e çekilip kuyruğa hiç yazılmaz,
+        // "takılı PENDING" elle üretilmiş olurdu.
+        User owner = sahip();
+        Ad ad = Ad.builder()
+                .id(7L).adType(Ad.AdType.LOST).user(owner).active(true)
+                .aiStatus(com.works.patimati.entity.enums.AiStatus.FAILED)
+                .photoUrls(new ArrayList<>())
+                .build();
+
+        when(userRepository.findByEmail(owner.getEmail())).thenReturn(Optional.of(owner));
+        when(adRepository.findByIdAndUser_UidAndActiveTrue(ad.getId(), owner.getUid()))
+                .thenReturn(Optional.of(ad));
+
+        assertThatThrownBy(() -> adService.reanalyzeAd(owner.getEmail(), ad.getId()))
+                .isInstanceOf(BusinessException.class);
+        assertThat(ad.getAiStatus())
+                .isEqualTo(com.works.patimati.entity.enums.AiStatus.FAILED);
+        verify(aiAnalysisPublisher, never()).publish(any());
+    }
+
+    @Test
+    void reanalyzeAllFailedShouldSkipIneligibleAdsInsteadOfFailingWholeBatch() {
+        User owner = sahip();
+        Ad uygun = yenidenAnalizIlani(owner, Ad.AdType.LOST,
+                com.works.patimati.entity.enums.AiStatus.FAILED);
+        Ad fotografsiz = Ad.builder()
+                .id(8L).adType(Ad.AdType.LOST).user(owner).active(true)
+                .aiStatus(com.works.patimati.entity.enums.AiStatus.FAILED)
+                .photoUrls(new ArrayList<>())
+                .build();
+
+        when(adRepository.findAllByAiStatusAndActiveTrue(
+                com.works.patimati.entity.enums.AiStatus.FAILED))
+                .thenReturn(List.of(uygun, fotografsiz));
+        when(adRepository.saveAndFlush(any(Ad.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+
+        int kuyruklanan = adService.reanalyzeAllFailed();
+
+        // Fotoğrafsız kayıt tüm kurtarmayı düşürmemeli: atlanır, sayılmaz.
+        assertThat(kuyruklanan).isEqualTo(1);
+        verify(aiAnalysisPublisher).publish(uygun);
+        verify(aiAnalysisPublisher, never()).publish(fotografsiz);
     }
 
     @Test

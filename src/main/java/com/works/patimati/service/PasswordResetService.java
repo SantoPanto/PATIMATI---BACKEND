@@ -7,6 +7,9 @@ import com.works.patimati.entity.User;
 import com.works.patimati.repository.PasswordResetTokenRepository;
 import com.works.patimati.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -14,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -21,15 +25,27 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class PasswordResetService {
 
+    private static final Logger log = LoggerFactory.getLogger(PasswordResetService.class);
+
     private final UserRepository userRepository;
     private final PasswordResetTokenRepository tokenRepository;
     private final PasswordEncoder passwordEncoder;
-
-    // İleride eklenecek:
-    // private final EmailService emailService;
+    private final EmailService emailService;
 
     /**
-     * A. Token Üretme ve E-posta Gönderme Metodu
+     * Sıfırlama bağlantısının açacağı ön yüz adresi. OAuth yönlendirmesiyle
+     * aynı kaynaktan gelir; canlıda {@code FRONTEND_URL=https://patimati.me}.
+     */
+    @Value("${app.frontend.url:http://localhost:5173}")
+    private String frontendUrl;
+
+    /**
+     * A. Token üretme ve e-posta gönderme.
+     *
+     * <p><b>Cevap her koşulda aynıdır</b> — kullanıcı yok, mail sunucusu
+     * yapılandırılmamış ya da gönderim hata vermiş olsa bile. Farklı cevap,
+     * hangi e-postaların kayıtlı olduğunu dışarıya saydırırdı (enumeration).
+     * Gönderim sonucu yalnız günlüğe yazılır.</p>
      */
     @Transactional
     public ResponseEntity<?> processForgotPassword(ForgotPasswordRequest request) {
@@ -51,14 +67,26 @@ public class PasswordResetService {
             // 4. Veritabanına kaydet
             tokenRepository.save(resetToken);
 
-            // 5. E-posta gönderme (Şimdilik yorum satırı, mail altyapısı kurulunca aktif edilecek)
-            // String resetUrl = "http://patimati.com/reset-password?token=" + generatedToken;
-            // emailService.sendResetPasswordEmail(user.getEmail(), resetUrl);
+            // 5. Bağlantıyı e-postayla gönder. Başarısızlık cevabı DEĞİŞTİRMEZ
+            //    (yukarıdaki sınıf sözleşmesi); EmailService zaten fırlatmaz,
+            //    yine de beklenmedik bir istisna 500 olup sözü bozmasın diye
+            //    burada da yutulur.
+            String resetUrl = frontendUrl + "/reset-password?token=" + generatedToken;
+            try {
+                emailService.sendResetPasswordEmail(user.getEmail(), resetUrl);
+            } catch (RuntimeException exception) {
+                log.error("Şifre sıfırlama e-postası akışı beklenmedik hata verdi", exception);
+            }
         }
 
         // Güvenlik gereği: Kullanıcı sistemde olsa da olmasa da hep aynı cevabı dönüyoruz.
         // Bu sayede saldırganlar hangi e-postaların kayıtlı olduğunu tespit edemez.
-        return ResponseEntity.ok("Eğer sistemimizde kayıtlı bir hesabınız varsa, şifre sıfırlama bağlantısı e-posta adresinize gönderilmiştir.");
+        // Gövde JSON: ön yüz request() cevabı response.json() ile okuyor,
+        // düz metin gövde orada null'a düşüyordu.
+        return ResponseEntity.ok(Map.of(
+                "message",
+                "Eğer sistemimizde kayıtlı bir hesabınız varsa, şifre sıfırlama bağlantısı e-posta adresinize gönderilmiştir."
+        ));
     }
 
     /**
@@ -70,7 +98,8 @@ public class PasswordResetService {
         Optional<PasswordResetToken> tokenOptional = tokenRepository.findByToken(request.getToken());
 
         if (tokenOptional.isEmpty()) {
-            return ResponseEntity.badRequest().body("Geçersiz bir şifre sıfırlama bağlantısı.");
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", "Geçersiz bir şifre sıfırlama bağlantısı."));
         }
 
         PasswordResetToken resetToken = tokenOptional.get();
@@ -79,7 +108,8 @@ public class PasswordResetService {
         if (resetToken.getExpiryDate().isBefore(Instant.now())) {
             // Süresi dolmuş token'ı veritabanında tutmaya gerek yok, temizleyelim.
             tokenRepository.delete(resetToken);
-            return ResponseEntity.badRequest().body("Bu şifre sıfırlama bağlantısının süresi dolmuş. Lütfen yeni bir bağlantı talep edin.");
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", "Bu şifre sıfırlama bağlantısının süresi dolmuş. Lütfen yeni bir bağlantı talep edin."));
         }
 
         // 3. Süre dolmamışsa token'a bağlı kullanıcıyı çek
@@ -94,6 +124,9 @@ public class PasswordResetService {
         // 6. ÇOK ÖNEMLİ: Aynı linkle şifrenin tekrar değiştirilememesi için token'ı imha et
         tokenRepository.delete(resetToken);
 
-        return ResponseEntity.ok("Şifreniz başarıyla güncellenmiştir. Yeni şifrenizle giriş yapabilirsiniz.");
+        return ResponseEntity.ok(Map.of(
+                "message",
+                "Şifreniz başarıyla güncellenmiştir. Yeni şifrenizle giriş yapabilirsiniz."
+        ));
     }
 }

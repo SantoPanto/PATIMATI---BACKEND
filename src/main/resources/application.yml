@@ -1,12 +1,13 @@
-#server root seviyesinde olmalı
-server:
-  forward-headers-strategy: native
-
 spring:
   # --- RFC 7807 ProblemDetail Ayarı ---
   mvc:
     problemdetails:
       enabled: true
+
+  # --- Jackson Ayarları ---
+  jackson:
+    deserialization:
+      ACCEPT_EMPTY_STRING_AS_NULL_OBJECT: true
 
   # --- Dosya Yükleme Ayarları ---
   servlet:
@@ -14,9 +15,6 @@ spring:
       enabled: true
       max-file-size: 5MB
       max-request-size: 20MB
-
-
-
 
   datasource:
     # DİKKAT: Kendi veritabanı adını (örn: patimati_db) yazmalısın
@@ -38,6 +36,8 @@ spring:
     # Baseline sürüm numarasını V1 script'imizle eşleştiriyoruz
     baseline-version: 1
     baseline-description: "Init Schema"
+    # main ile feature dalları paralel migration numaraları üretebiliyor
+    out-of-order: true
 
   # OAuth2 Google Giriş Ayarları
   security:
@@ -58,67 +58,90 @@ spring:
     port: ${RABBITMQ_PORT:5672}
     username: ${RABBITMQ_USER:guest}
     password: ${RABBITMQ_PASSWORD:guest}
-    # Bağlantı koptuğunda yeniden denenir; AI ya da broker yeniden başladığında
-    # backend'in elle yeniden başlatılması gerekmesin.
     connection-timeout: 10s
 
 # AI eşleştirme ayarları (entegrasyon sözleşmesi §5)
 ai:
   service:
-    # AI servisinin taban adresi. Kodda da bir varsayılanı vardı ama burada
-    # yazılı olmadığı için hangi değişkenle ezileceği hiçbir yerde görünmüyordu.
     url: ${AI_SERVICE_URL:http://localhost:8000}
-    # AI ile PAYLAŞILAN SIR (sözleşme §10 / A1). Verilirse backend, AI'ya giden
-    # her istekte X-Api-Key başlığını gönderir.
-    #
-    # ⚠ İki taraf birlikte yapılandırılmalı: yalnız AI'da anahtar varsa
-    # çağrılar 401 alır, yalnız burada varsa AI başlığı yok sayar. Değer AI
-    # deposundaki AI_API_KEY ile AYNI olmalı.
-    #
-    # Boş bırakılırsa başlık hiç eklenmez — bugünkü kurulum aynen çalışır.
     api-key: ${AI_API_KEY:}
+    base-url: ${AI_SERVICE_BASE_URL:http://localhost:8000}
+    match-timeout: ${AI_SERVICE_MATCH_TIMEOUT:5s}
   matching:
-    # Aday yarıçapı. Bildirim yarıçapından (5 km) BİLEREK farklı:
-    # kaybolan hayvan yürür, günlerce uzaklaşabilir.
     radius-km: ${AI_MATCHING_RADIUS_KM:25}
-    # Eski ilanlar gürültü yaratır.
     window-days: ${AI_MATCHING_WINDOW_DAYS:90}
-    # Aday başına ~7 KB (768 float); 100 aday ≈ 700 KB mesaj.
     max-candidates: ${AI_MATCHING_MAX_CANDIDATES:100}
+    no-location-candidate-limit: ${AI_MATCHING_NO_LOCATION_LIMIT:30}
+  rabbitmq:
+    result-dlq-enabled: ${AI_RESULT_DLQ_ENABLED:false}
+
+# Instagram ingestion (Faz 2 revize blueprint) — özellik bayrağı.
+instagram:
+  ingestion:
+    enabled: ${INSTAGRAM_INGESTION_ENABLED:false}
+
+# Collector -> Backend medya transferinin paylaşılan sırrı
+internal:
+  ingestion:
+    api-key: ${INTERNAL_INGESTION_API_KEY:}
+
+# PotentialMatch bildirim teslimatı
+potential-match:
+  max-send-attempts: ${POTENTIAL_MATCH_MAX_SEND_ATTEMPTS:5}
+  retry-grace-period: ${POTENTIAL_MATCH_RETRY_GRACE_PERIOD:PT2M}
+  retry-interval: ${POTENTIAL_MATCH_RETRY_INTERVAL:PT2M}
+
+# external_source_posts süpürücüleri
+external:
+  maintenance:
+    stale-grace-period: ${EXTERNAL_STALE_GRACE_PERIOD:PT6H}
+    stage2-retry-max-age: ${EXTERNAL_STAGE2_RETRY_MAX_AGE:P1D}
+    sweep-interval: ${EXTERNAL_SWEEP_INTERVAL:PT15M}
+    stage2-retry-interval: ${EXTERNAL_STAGE2_RETRY_INTERVAL:PT5M}
 
 # JWT Ayarları
 jwt:
   secret-key: ${JWT_SECRET_KEY}
-  expiration: 86400000 # Örnek token süresi # 24 Saat (Milisaniye cinsinden)
+  expiration: 86400000
+
+# --- E-posta (şifre sıfırlama) ---
+spring.mail:
+  port: ${SPRING_MAIL_PORT:587}
+  properties:
+    mail.smtp.auth: true
+    mail.smtp.starttls.enable: true
 
 # Uygulama ve Depolama Ayarları
 app:
   frontend:
     url: ${FRONTEND_URL:http://localhost:5173} # Frontend'in ayağa kalktığı adres (Canlıda FRONTEND_URL=https://patimati.me verilir)
+  mail:
+    from: ${MAIL_FROM:${SPRING_MAIL_USERNAME:}}
+  geocoding:
+    url: ${GEOCODING_URL:https://nominatim.openstreetmap.org/reverse}
+    enabled: ${GEOCODING_ENABLED:true}
+    timeout-ms: ${GEOCODING_TIMEOUT_MS:2500}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:4200,http://localhost:5173,https://patimati.me,https://www.patimati.me}
   storage:
-    # VARSAYILAN = GERÇEK AWS S3. Yerelde MinIO için tek şalter:
-    #   SPRING_PROFILES_ACTIVE=local        (bkz. application-local.yml)
-    # Değişken verilmezse üretim tarafına düşer; yanlışlıkla sunucuda
-    # localhost'a bakma ihtimali böylece yapısal olarak kapanıyor.
     s3:
       bucket: ${S3_BUCKET:patimati-medya-kutusu}
       region: ${S3_REGION:eu-central-1}
-      # Boş ⇒ endpointOverride hiç çağrılmaz, gerçek AWS uçları kullanılır.
       endpoint: ${S3_ENDPOINT:}
-      # AWS'de doğrusu virtual-host adresleme; path-style yalnız MinIO içindir.
       path-style-access: ${S3_PATH_STYLE:false}
-      # access-key / secret-key BİLEREK yok: boş kalınca S3Config
-      # DefaultCredentialsProvider'a düşer (IAM rolü, AWS_ACCESS_KEY_ID vb.).
       max-file-count: 3
       max-file-size: 5MB
       presigned-url-duration: 15m
 
   # WebSocket ve STOMP bağlantı ayarları
   websocket:
-    # Virgülle ayrılmış origin listesi ortam değişkeniyle canlı ortamda değiştirilebilir.
     allowed-origins: ${WEBSOCKET_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:4200,http://localhost:5173,https://patimati.me,https://www.patimati.me}
+
+# Sunucu Yapılandırması (Railway / Canlı ve Yerel Port Desteği)
+server:
+  port: ${PORT:8080}
+  forward-headers-strategy: native
+
 # OpenAPI / Swagger UI Yapılandırması
 springdoc:
   api-docs:
@@ -129,5 +152,3 @@ springdoc:
     path: /swagger-ui.html
     operationsSorter: alpha
     tagsSorter: alpha
-
-

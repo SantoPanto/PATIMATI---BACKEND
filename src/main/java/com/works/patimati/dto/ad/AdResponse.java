@@ -1,6 +1,7 @@
 package com.works.patimati.dto.ad;
 
 import com.works.patimati.entity.Ad;
+import com.works.patimati.entity.enums.AdResolutionStatus;
 import com.works.patimati.entity.enums.AgeGroup;
 import com.works.patimati.entity.enums.AiStatus;
 import com.works.patimati.entity.enums.CoatPattern;
@@ -33,14 +34,38 @@ public record AdResponse(
         PresenceStatus earTagStatus,
         PresenceStatus earNotchStatus,
         boolean microchipped,
-        LocalDate lostDate,
+        String lostDate,
         String distinctiveMarks,
         List<String> photoUrls,
         Double latitude,
         Double longitude,
+        /**
+         * İl/ilçe (V19) — kartlar ham koordinat yerine bunu gösterir.
+         * Eski kayıtlarda backfill koşulana kadar null gelebilir; ön yüz
+         * null'da koordinat göstermeye devam eder.
+         */
+        String city,
+        String district,
         Long ownerId,
         String ownerDisplayName,
         boolean active,
+
+        /*
+         * Yonetici moderasyonu. `active` ile KARISTIRILMAMALI:
+         *   active=false  + suspended=false -> SAHIP kendi ilanini yayindan kaldirdi
+         *   active=false  + suspended=true  -> YONETICI inceleme icin askiya aldi
+         *
+         * Ikisi de `active=false` uretiyor (AdminServiceImpl askiya alirken her
+         * ikisini de yaziyor). Bu alan donmedigi surece arayuz iki durumu
+         * AYIRT EDEMIYOR ve olculdu: askiya alinan ilan sahibin "Yayindan
+         * Kaldirilan" sekmesine dusuyor, yanina "Yeniden Yayinla" dugmesi
+         * ciziliyor, kullanici basiyor ve uc hakli olarak reddediyor. Sahip
+         * ilaninin INCELEMEDE oldugunu hicbir yerden ogrenemiyordu.
+         *
+         * Mahremiyet: yeni bir yuzey acmiyor — bu uc zaten yalniz ilanin
+         * SAHIBINE ve yoneticiye kendi ilanini donduruyor.
+         */
+        boolean suspended,
         Instant createdAt,
         Instant updatedAt,
 
@@ -65,6 +90,19 @@ public record AdResponse(
         Boolean aiIsPet,
         Boolean isPosterAllowed,
         Boolean showEmailOnPoster,
-        Boolean showPhoneOnPoster
+        Boolean showPhoneOnPoster,
+
+        /**
+         * İlanın nasıl kapandığı: NONE (kapanmadı) · FOUND (bulundu) ·
+         * ADOPTED (sahiplendirildi).
+         *
+         * <p><b>Neden gerekiyor:</b> {@code active=false} tek başına
+         * "sahibi yayından kaldırdı" ile "hayvan bulundu" arasını ayırmıyor.
+         * Bu alan olmadan arayüz mutlu sonla kapanmış bir ilanı
+         * <i>"Yayından kaldırıldı"</i> diye gösteriyor ve yanına
+         * <i>"Yeniden yayınla"</i> düğmesi koyuyor — ölçüldü (21.08, canlı).
+         */
+        AdResolutionStatus resolutionStatus,
+        Boolean isMatchRequired
 ) {
 }

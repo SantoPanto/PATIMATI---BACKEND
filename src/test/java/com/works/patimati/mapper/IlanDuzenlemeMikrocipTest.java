@@ -155,7 +155,7 @@ class IlanDuzenlemeMikrocipTest {
                 PresenceStatus.UNKNOWN,
                 PresenceStatus.UNKNOWN,
                 mikrocipNumarasi,
-                LocalDate.of(2026, 8, 1),
+                "2026-08-01",
                 "Sol kulakta çentik",
                 new BigDecimal("40.195000"),
                 new BigDecimal("29.060000"));

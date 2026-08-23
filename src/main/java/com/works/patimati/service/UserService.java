@@ -10,6 +10,7 @@ import com.works.patimati.dto.User.UserResponseDTO;
 import com.works.patimati.entity.User;
 import com.works.patimati.repository.UserRepository;
 import com.works.patimati.security.JwtService;
+import com.works.patimati.security.LoginRateLimiter;
 import lombok.RequiredArgsConstructor;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
@@ -23,7 +24,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.works.patimati.dto.ChangePasswordRequest;
 import com.works.patimati.exception.ResourceNotFoundException;
 
 import java.util.HashMap;
@@ -39,6 +39,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
+    private final LoginRateLimiter loginRateLimiter;
 
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
@@ -79,13 +80,26 @@ public class UserService {
     }
 
     // --- MANUEL GİRİŞ ---
-    public ResponseEntity<?> login(LoginRequest request) {
+    public ResponseEntity<?> login(LoginRequest request, String clientIp) {
+        // IP bazlı brute-force koruması -- bkz. LoginRateLimiter javadoc'u
+        // (bilinçli olarak e-posta/hesap bazlı DEĞİL, hesap-kilitleme DoS'una
+        // açık kapı bırakmamak için). Hiçbir DB sorgusundan/şifre
+        // karşılaştırmasından ÖNCE kontrol edilir.
+        if (loginRateLimiter.isBlocked(clientIp)) {
+            Map<String, Object> errorResponse = Map.of(
+                    "success", false,
+                    "message", "Çok fazla başarısız giriş denemesi. Lütfen bir süre sonra tekrar deneyin."
+            );
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(errorResponse);
+        }
+
         Optional<User> optionalUser = userRepository.findByEmail(request.getEmail());
 
         if (optionalUser.isPresent()) {
             User user = optionalUser.get();
 
             if (!user.isEnabled()) {
+                loginRateLimiter.recordFailure(clientIp);
                 Map<String, Object> errorResponse = Map.of(
                         "success", false,
                         "message", "Hesabınız askıya alınmıştır/engellenmiştir."
@@ -98,12 +112,14 @@ public class UserService {
                 boolean isMatch = passwordEncoder.matches(request.getPassword(), user.getPassword());
 
                 if (isMatch) {
+                    loginRateLimiter.recordSuccess(clientIp);
                     String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
                     return ResponseEntity.ok().body(new AuthResponse(token, convertToUserResponseDTO(user)));
                 }
             }
         }
 
+        loginRateLimiter.recordFailure(clientIp);
         // Güvenlik: User Enumeration zafiyetini önlemek için standart yanıt
         Map<String, Object> errorResponse = Map.of(
                 "success", false,
@@ -111,6 +127,16 @@ public class UserService {
         );
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
     }
+
+    /*
+     * GOOGLE GİRİŞİ (/api/auth/google, googleLogin) KALDIRILDI (D-7 / hesap
+     * devralma) -- develop tarafında zaten silinmişti (bkz. UserController).
+     * Bu daldaki bağımsız düzeltme (idToken'ı doğrulayıp e-postayı gövdeden
+     * değil doğrulanmış payload'dan okumak) artık gereksiz: uç zaten
+     * kullanılmıyordu, gerçek Google girişi processOAuth2User üzerinden
+     * (OAuth2AuthenticationSuccessHandler) yürüyor. GERİ GETİRİLECEKSE bkz.
+     * UserController'daki not ve HesapDevralmaUcuKapaliTest.
+     */
 
     /**
      * Giriş yapmış kullanıcının şifresini güvenli şekilde değiştirme

@@ -112,10 +112,15 @@ public class AdController {
         );
     }
 
+    /**
+     * Kullanıcının kendi ilanları. {@code active} <b>gönderilmezse "hepsi"</b>
+     * demektir — eskiden varsayılanı {@code true}ydu ve ön yüzün "Tümü"
+     * sekmesi alanı göndermediği için sessizce süzülüyordu.
+     */
     @GetMapping("/me")
     public ResponseEntity<Page<AdResponse>> getMyAds(
             Authentication authentication,
-            @RequestParam(defaultValue = "true") boolean active,
+            @RequestParam(required = false) Boolean active,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "20")
             @Min(1) @Max(MAX_PAGE_SIZE) int size
@@ -162,6 +167,21 @@ public class AdController {
     ) {
         return ResponseEntity.ok(
                 adService.republishAd(authentication.getName(), adId)
+        );
+    }
+
+    /**
+     * AI analizi başarısız olmuş (ya da PENDING'te takılı kalmış) ilanı
+     * sahibi yeniden analize gönderir. Analizi bitmiş (DONE) ilanda 400 döner
+     * — gerekçesi AdService.reanalyzeAd üstünde.
+     */
+    @PutMapping("/{adId}/reanalyze")
+    public ResponseEntity<AdResponse> reanalyzeAd(
+            Authentication authentication,
+            @PathVariable @Min(1) Long adId
+    ) {
+        return ResponseEntity.ok(
+                adService.reanalyzeAd(authentication.getName(), adId)
         );
     }
 

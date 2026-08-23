@@ -19,8 +19,24 @@ public class RegisterRequest {
     @Email(message = "Email should be valid")
     private String email;
 
+//    @NotBlank(message = "Password is required")
+//    @Size(min = 6, max = 20, message = "Password must be between 6 and 20 characters")
+//    private String password;
+
+    /**
+     * Kayıt sırasında gönderilen şifrenin frontend ile aynı
+     * güvenlik kurallarını sağlaması gerekir.
+     */
     @NotBlank(message = "Password is required")
-    @Size(min = 6, max = 20, message = "Password must be between 6 and 20 characters")
+    @Size(
+            min = 8,
+            max = 20,
+            message = "The password must be between 8 and 20 characters long"
+    )
+    @Pattern(
+            regexp = "^(?=.*[A-ZÇĞİÖŞÜ])(?=.*[a-zçğıöşü])(?=.*\\d).+$",
+            message = "The password must contain at least one uppercase letter, one lowercase letter, and one number."
+    )
     private String password;
 
     @NotBlank(message = "Telefon numarası boş bırakılamaz")

@@ -16,8 +16,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * AdMatch (Eşleşme) modülünün iş mantığını (Business Logic) yürüten servis katmanı.
@@ -51,9 +54,27 @@ public class AdMatchService {
         Long currentUserId = user.getUid();
         List<AdMatch> matches = adMatchRepository.findByUserIdOrderByTotalScoreDesc(currentUserId);
 
-        return matches.stream()
-                .map(match -> mapToDTO(match, currentUserId))
-                .toList();
+        // Aynı ilan çifti listede BİR KEZ görünür. Yeniden analiz, aynı çifti
+        // ters yönde ikinci bir satırla yazabilir (AdMatchRepository sınıf
+        // notundaki koşul: satır tek yönde yazılır varsayımı, yeniden analizle
+        // bozulur). İki satır da bu kullanıcıya ait olduğundan ikisi birden
+        // dönerdi ve Eşleşmelerim aynı çifti iki kez gösterirdi. Yön bilgisini
+        // silen anahtar (küçük id | büyük id) ikisini tek kayda indirir; liste
+        // skora göre sıralı geldiği için ilk görülen satır — en yüksek skorlu
+        // olan — kazanır.
+        Set<String> gorulenCiftler = new HashSet<>();
+        List<AdMatchResponseDTO> sonuc = new ArrayList<>();
+        for (AdMatch match : matches) {
+            Long sourceId = match.getSourceAd() != null ? match.getSourceAd().getId() : null;
+            Long matchedId = match.getMatchedAd() != null ? match.getMatchedAd().getId() : null;
+            String anahtar = Math.min(sourceId == null ? -1 : sourceId, matchedId == null ? -1 : matchedId)
+                    + "|" + Math.max(sourceId == null ? -1 : sourceId, matchedId == null ? -1 : matchedId);
+            if (!gorulenCiftler.add(anahtar)) {
+                continue;
+            }
+            sonuc.add(mapToDTO(match, currentUserId));
+        }
+        return sonuc;
     }
 
     /**

@@ -29,6 +29,9 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     // Özel mesaj aboneliklerinin dahili basit broker tarafından yönetileceği kanal.
     static final String PRIVATE_QUEUE_PREFIX = "/queue";
 
+    // Genel yayın (Broadcast) aboneliklerinin dahili basit broker tarafından yönetileceği kanal.
+    static final String PUBLIC_TOPIC_PREFIX = "/topic";
+
     private final WebSocketProperties properties;
     private final WebSocketChannelInterceptor webSocketChannelInterceptor;
 
@@ -47,11 +50,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
         /*
-         * /queue ile başlayan hedefleri Spring'in bellek içi broker'ı yönetir.
+         * /queue ve /topic ile başlayan hedefleri Spring'in bellek içi broker'ı yönetir.
          * Faz 2 kapsamındaki kullanıcıya özel mesajlar /user/queue/... adresinden
-         * dinlenecek ve gerçek oturuma özel kuyruğa Spring tarafından çevrilecektir.
+         * dinlenecek ve genel yayınlar /topic/... kanalından sunulacaktır.
          */
-        registry.enableSimpleBroker(PRIVATE_QUEUE_PREFIX);
+        registry.enableSimpleBroker(PRIVATE_QUEUE_PREFIX, PUBLIC_TOPIC_PREFIX);
 
         // /app ile başlayan mesajlar ileride yazılacak @MessageMapping metotlarına gider.
         registry.setApplicationDestinationPrefixes(APPLICATION_DESTINATION_PREFIX);
