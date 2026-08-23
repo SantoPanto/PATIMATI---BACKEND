@@ -32,6 +32,12 @@ class WebSocketConfigTest {
     private MessageBrokerRegistry messageBrokerRegistry;
 
     @Mock
+    private org.springframework.messaging.simp.config.SimpleBrokerRegistration simpleBrokerRegistration;
+
+    @Mock
+    private org.springframework.web.socket.config.annotation.SockJsServiceRegistration sockJsServiceRegistration;
+
+    @Mock
     private StompEndpointRegistry stompEndpointRegistry;
 
     @Mock
@@ -56,6 +62,11 @@ class WebSocketConfigTest {
 
     @Test
     void shouldConfigureApplicationUserAndQueuePrefixes() {
+        when(messageBrokerRegistry.enableSimpleBroker(WebSocketConfig.PRIVATE_QUEUE_PREFIX, WebSocketConfig.PUBLIC_TOPIC_PREFIX))
+                .thenReturn(simpleBrokerRegistration);
+        when(simpleBrokerRegistration.setTaskScheduler(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(simpleBrokerRegistration);
+
         // Mesaj broker yapılandırması çalıştırılır.
         webSocketConfig.configureMessageBroker(messageBrokerRegistry);
 
@@ -84,6 +95,8 @@ class WebSocketConfigTest {
                 .thenReturn(endpointRegistration);
         when(endpointRegistration.setAllowedOrigins(ALLOWED_ORIGINS.toArray(String[]::new)))
                 .thenReturn(endpointRegistration);
+        when(endpointRegistration.withSockJS())
+                .thenReturn(sockJsServiceRegistration);
 
         // WebSocket/SockJS endpoint kaydı çalıştırılır.
         webSocketConfig.registerStompEndpoints(stompEndpointRegistry);
