@@ -23,7 +23,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -68,16 +67,10 @@ public class MessageService {
         MessageResponse response = mapToResponse(savedMessage, sender);
 
         // Anlık İletim (Broadcast) - Hem alıcının hem de gönderenin özel WebSocket kuyruğuna iletiliyor
-        notificationService.createAndSend(
+        notificationService.createOrStackMessageNotification(
                 recipient,
-                "Yeni mesaj",
-                sender.getFirstName() + " size yeni bir mesaj gönderdi.",
-                "MESSAGE",
-                Map.of(
-                        "type", "MESSAGE",
-                        "messageId", String.valueOf(savedMessage.getId()),
-                        "senderId", String.valueOf(sender.getUid())
-                )
+                sender,
+                savedMessage.getId()
         );
 
         messagingTemplate.convertAndSendToUser(

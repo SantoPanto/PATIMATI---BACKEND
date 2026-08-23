@@ -31,6 +31,22 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
             @Param("dedupeKey") String dedupeKey
     );
 
+    @Query(value = """
+            SELECT *
+            FROM notifications
+            WHERE user_id = :userUid
+              AND type = :type
+              AND read = false
+              AND data ->> 'senderId' = :senderId
+            ORDER BY created_at DESC, id DESC
+            LIMIT 1
+            """, nativeQuery = true)
+    Optional<Notification> findLatestUnreadBySender(
+            @Param("userUid") Long userUid,
+            @Param("type") String type,
+            @Param("senderId") String senderId
+    );
+
     @org.springframework.data.jpa.repository.Modifying
     @org.springframework.data.jpa.repository.Query("""
             UPDATE Notification notification
