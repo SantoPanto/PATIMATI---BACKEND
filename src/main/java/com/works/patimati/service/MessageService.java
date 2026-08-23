@@ -22,9 +22,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
+import lombok.extern.slf4j.Slf4j;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MessageService {
@@ -67,6 +69,9 @@ public class MessageService {
         Message savedMessage = messageRepository.save(message);
         MessageResponse response = mapToResponse(savedMessage, sender);
 
+        log.info("[WebSocket Debug] Mesaj kaydedildi id={}. convertAndSendToUser hedefleri: recipientEmail={}, senderEmail={}",
+                savedMessage.getId(), recipient.getEmail(), sender.getEmail());
+
         // Anlık İletim (Broadcast) - Hem alıcının hem de gönderenin özel WebSocket kuyruğuna iletiliyor
         notificationService.createAndSend(
                 recipient,
@@ -82,12 +87,12 @@ public class MessageService {
         );
 
         messagingTemplate.convertAndSendToUser(
-                String.valueOf(response.recipientId()),
+                recipient.getEmail(),
                 "/queue/messages",
                 response
         );
         messagingTemplate.convertAndSendToUser(
-                String.valueOf(response.senderId()),
+                sender.getEmail(),
                 "/queue/messages",
                 response
         );

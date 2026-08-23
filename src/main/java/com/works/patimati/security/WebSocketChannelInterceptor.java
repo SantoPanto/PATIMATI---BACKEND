@@ -15,6 +15,8 @@ import org.springframework.util.StringUtils;
 
 import java.util.List;
 
+import lombok.extern.slf4j.Slf4j;
+
 /**
  * WebSocket istemcisinden gelen STOMP CONNECT paketini JWT ile doğrular.
  *
@@ -26,6 +28,7 @@ import java.util.List;
  * Principal bilgisine atanır. Spring bu kullanıcıyı aynı WebSocket
  * oturumundaki sonraki SEND ve SUBSCRIBE paketleriyle ilişkilendirir.
  */
+@Slf4j
 @Component
 public class WebSocketChannelInterceptor implements ChannelInterceptor {
 
@@ -108,6 +111,7 @@ public class WebSocketChannelInterceptor implements ChannelInterceptor {
          * Bizim Principal ismimiz kullanıcının e-posta adresidir.
          */
         accessor.setUser(authentication);
+        log.info("[WebSocket Debug] WebSocket CONNECT authenticated: user={}", email);
 
         return message;
     }
