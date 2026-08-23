@@ -69,7 +69,7 @@ public class MessageService {
         Message savedMessage = messageRepository.save(message);
         MessageResponse response = mapToResponse(savedMessage, sender);
 
-        log.info("[WebSocket Debug] Mesaj kaydedildi id={}. convertAndSendToUser hedefleri: recipientEmail={}, senderEmail={}",
+        log.info("[WS SEND] [WS TARGET USER] [WS DESTINATION] messageId={} saved to DB. convertAndSendToUser destination=/queue/messages, recipientEmail={}, senderEmail={}",
                 savedMessage.getId(), recipient.getEmail(), sender.getEmail());
 
         // Anlık İletim (Broadcast) - Hem alıcının hem de gönderenin özel WebSocket kuyruğuna iletiliyor

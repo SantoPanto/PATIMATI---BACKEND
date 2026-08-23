@@ -111,7 +111,7 @@ public class WebSocketChannelInterceptor implements ChannelInterceptor {
          * Bizim Principal ismimiz kullanıcının e-posta adresidir.
          */
         accessor.setUser(authentication);
-        log.info("[WebSocket Debug] WebSocket CONNECT authenticated: user={}", email);
+        log.info("[WS CONNECT] [WS PRINCIPAL] sessionId={} authenticated Principal email={}", accessor.getSessionId(), email);
 
         return message;
     }
