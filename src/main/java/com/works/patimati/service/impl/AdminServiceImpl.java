@@ -28,10 +28,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
 import com.works.patimati.dto.admin.AdoptionComplaintAdminResponse;
 import com.works.patimati.entity.AdoptionComplaint;
 import com.works.patimati.repository.AdoptionComplaintRepository;
+import com.works.patimati.specification.AdSpecification;
+import com.works.patimati.specification.ComplaintSpecification;
+import com.works.patimati.specification.UserSpecification;
+import org.springframework.data.jpa.domain.Specification;
 
 @Service
 @RequiredArgsConstructor
@@ -49,8 +52,9 @@ public class AdminServiceImpl implements AdminService {
 
     @Transactional(readOnly = true)
     @Override
-    public Page<UserDetailForAdminDTO> getAllUsers(Pageable pageable) {
-        return userRepository.findAll(pageable)
+    public Page<UserDetailForAdminDTO> getAllUsers(String search, Pageable pageable) {
+        Specification<User> spec = UserSpecification.withSearch(search);
+        return userRepository.findAll(spec, pageable)
                 .map(user -> new UserDetailForAdminDTO(
                         user.getUid(),
                         user.getFirstName(),
@@ -84,8 +88,9 @@ public class AdminServiceImpl implements AdminService {
 
     @Transactional(readOnly = true)
     @Override
-    public Page<AdResponse> getAllAds(Pageable pageable) {
-        return adRepository.findAll(pageable)
+    public Page<AdResponse> getAllAds(String search, Pageable pageable) {
+        Specification<Ad> spec = AdSpecification.withSearch(search);
+        return adRepository.findAll(spec, pageable)
                 .map(adService::toResponseWithTemporaryPhotoUrls);
     }
 
@@ -128,8 +133,9 @@ public class AdminServiceImpl implements AdminService {
 
     @Transactional(readOnly = true)
     @Override
-    public Page<AdComplaintAdminResponse> getAdComplaints(Pageable pageable) {
-        Page<AdComplaint> complaints = adComplaintRepository.findAll(pageable);
+    public Page<AdComplaintAdminResponse> getAdComplaints(String search, Pageable pageable) {
+        Specification<AdComplaint> spec = ComplaintSpecification.withAdComplaintSearch(search);
+        Page<AdComplaint> complaints = adComplaintRepository.findAll(spec, pageable);
 
         return complaints.map(complaint -> {
             Optional<User> reporterOpt = userRepository.findById(complaint.getReporterId());
@@ -164,8 +170,9 @@ public class AdminServiceImpl implements AdminService {
 
     @Transactional(readOnly = true)
     @Override
-    public Page<UserComplaintAdminResponse> getUserComplaints(Pageable pageable) {
-        Page<UserComplaint> complaints = userComplaintRepository.findAll(pageable);
+    public Page<UserComplaintAdminResponse> getUserComplaints(String search, Pageable pageable) {
+        Specification<UserComplaint> spec = ComplaintSpecification.withUserComplaintSearch(search);
+        Page<UserComplaint> complaints = userComplaintRepository.findAll(spec, pageable);
 
         return complaints.map(complaint -> {
             Optional<User> reporterOpt = userRepository.findById(complaint.getReporterId());
@@ -198,8 +205,9 @@ public class AdminServiceImpl implements AdminService {
 
     @Transactional(readOnly = true)
     @Override
-    public Page<AdoptionComplaintAdminResponse> getAdoptionComplaints(Pageable pageable) {
-        Page<AdoptionComplaint> complaints = adoptionComplaintRepository.findAll(pageable);
+    public Page<AdoptionComplaintAdminResponse> getAdoptionComplaints(String search, Pageable pageable) {
+        Specification<AdoptionComplaint> spec = ComplaintSpecification.withAdoptionComplaintSearch(search);
+        Page<AdoptionComplaint> complaints = adoptionComplaintRepository.findAll(spec, pageable);
 
         return complaints.map(complaint -> {
             Optional<User> reporterOpt = userRepository.findById(complaint.getReporterId());

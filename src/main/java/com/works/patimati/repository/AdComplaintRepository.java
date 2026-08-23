@@ -3,6 +3,7 @@ package com.works.patimati.repository;
 import com.works.patimati.entity.AdComplaint;
 import com.works.patimati.entity.enums.ComplaintStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
@@ -12,7 +13,7 @@ import java.util.List;
  * İlan Şikayetleri Spring Data JPA Repository arayüzü.
  */
 @Repository
-public interface AdComplaintRepository extends JpaRepository<AdComplaint, Long> {
+public interface AdComplaintRepository extends JpaRepository<AdComplaint, Long>, JpaSpecificationExecutor<AdComplaint> {
 
     /**
      * Bir kullanıcının aynı ilan için belirtilen aktif statülerde şikayet kaydının olup olmadığını kontrol eder.

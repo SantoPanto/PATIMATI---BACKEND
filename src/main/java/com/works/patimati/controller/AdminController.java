@@ -2,17 +2,18 @@ package com.works.patimati.controller;
 
 import com.works.patimati.dto.ad.AdResponse;
 import com.works.patimati.dto.admin.AdComplaintAdminResponse;
+import com.works.patimati.dto.admin.AdoptionComplaintAdminResponse;
 import com.works.patimati.dto.admin.UserComplaintAdminResponse;
 import com.works.patimati.dto.admin.UserDetailForAdminDTO;
 import com.works.patimati.service.AdminService;
-import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.StringUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,19 +25,19 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AdminController {
 
-    private static final int MAX_PAGE_SIZE = 100;
     private final AdminService adminService;
 
     /**
-     * Sistemdeki tüm kullanıcıları detaylı şekilde listeler.
+     * Sistemdeki tüm kullanıcıları detaylı ve filtreli şekilde listeler.
      */
     @GetMapping("/users")
     public ResponseEntity<Page<UserDetailForAdminDTO>> getAllUsers(
-            @RequestParam(defaultValue = "0") @Min(0) int page,
-            @RequestParam(defaultValue = "20") @Min(1) @Max(MAX_PAGE_SIZE) int size
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String keyword,
+            @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        return ResponseEntity.ok(adminService.getAllUsers(pageable));
+        String queryTerm = StringUtils.hasText(search) ? search : keyword;
+        return ResponseEntity.ok(adminService.getAllUsers(queryTerm, pageable));
     }
 
     /**
@@ -58,15 +59,16 @@ public class AdminController {
     }
 
     /**
-     * Sistemdeki tüm ilanları sayfalı olarak listeler.
+     * Sistemdeki tüm ilanları sayfalı ve filtreli olarak listeler.
      */
     @GetMapping("/ads")
     public ResponseEntity<Page<AdResponse>> getAllAds(
-            @RequestParam(defaultValue = "0") @Min(0) int page,
-            @RequestParam(defaultValue = "20") @Min(1) @Max(MAX_PAGE_SIZE) int size
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String keyword,
+            @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        return ResponseEntity.ok(adminService.getAllAds(pageable));
+        String queryTerm = StringUtils.hasText(search) ? search : keyword;
+        return ResponseEntity.ok(adminService.getAllAds(queryTerm, pageable));
     }
 
     /**
@@ -111,39 +113,42 @@ public class AdminController {
     }
 
     /**
-     * İlan şikayetlerini incelemek için bağlam bilgileriyle listeler.
+     * İlan şikayetlerini incelemek için bağlam bilgileriyle sayfalı ve filtreli listeler.
      */
     @GetMapping("/complaints/ads")
     public ResponseEntity<Page<AdComplaintAdminResponse>> getAdComplaints(
-            @RequestParam(defaultValue = "0") @Min(0) int page,
-            @RequestParam(defaultValue = "20") @Min(1) @Max(MAX_PAGE_SIZE) int size
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String keyword,
+            @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        return ResponseEntity.ok(adminService.getAdComplaints(pageable));
+        String queryTerm = StringUtils.hasText(search) ? search : keyword;
+        return ResponseEntity.ok(adminService.getAdComplaints(queryTerm, pageable));
     }
 
     /**
-     * Kullanıcı profili şikayetlerini bağlam bilgileriyle listeler.
+     * Kullanıcı profili şikayetlerini bağlam bilgileriyle sayfalı ve filtreli listeler.
      */
     @GetMapping("/complaints/users")
     public ResponseEntity<Page<UserComplaintAdminResponse>> getUserComplaints(
-            @RequestParam(defaultValue = "0") @Min(0) int page,
-            @RequestParam(defaultValue = "20") @Min(1) @Max(MAX_PAGE_SIZE) int size
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String keyword,
+            @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        return ResponseEntity.ok(adminService.getUserComplaints(pageable));
+        String queryTerm = StringUtils.hasText(search) ? search : keyword;
+        return ResponseEntity.ok(adminService.getUserComplaints(queryTerm, pageable));
     }
 
     /**
-     * Sahiplendirme ilanı şikayetlerini bağlam bilgileriyle listeler.
+     * Sahiplendirme ilanı şikayetlerini bağlam bilgileriyle sayfalı ve filtreli listeler.
      */
     @GetMapping("/complaints/adoptions")
-    public ResponseEntity<Page<com.works.patimati.dto.admin.AdoptionComplaintAdminResponse>> getAdoptionComplaints(
-            @RequestParam(defaultValue = "0") @Min(0) int page,
-            @RequestParam(defaultValue = "20") @Min(1) @Max(MAX_PAGE_SIZE) int size
+    public ResponseEntity<Page<AdoptionComplaintAdminResponse>> getAdoptionComplaints(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String keyword,
+            @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        return ResponseEntity.ok(adminService.getAdoptionComplaints(pageable));
+        String queryTerm = StringUtils.hasText(search) ? search : keyword;
+        return ResponseEntity.ok(adminService.getAdoptionComplaints(queryTerm, pageable));
     }
 
     /**

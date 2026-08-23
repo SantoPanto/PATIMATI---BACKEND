@@ -14,9 +14,13 @@ import org.springframework.data.domain.Pageable;
 public interface AdminService {
 
     /**
-     * Sistemdeki tüm kullanıcıları detay DTO formatında sayfalı olarak listeler.
+     * Sistemdeki tüm kullanıcıları detay DTO formatında sayfalı ve filtreli olarak listeler.
      */
-    Page<UserDetailForAdminDTO> getAllUsers(Pageable pageable);
+    Page<UserDetailForAdminDTO> getAllUsers(String search, Pageable pageable);
+
+    default Page<UserDetailForAdminDTO> getAllUsers(Pageable pageable) {
+        return getAllUsers(null, pageable);
+    }
 
     /**
      * Belirtilen kullanıcıyı engeller / hesabını dondurur.
@@ -29,9 +33,13 @@ public interface AdminService {
     void unbanUser(Long userId);
 
     /**
-     * Sistemdeki tüm ilanları sayfalı olarak listeler.
+     * Sistemdeki tüm ilanları sayfalı ve filtreli olarak listeler.
      */
-    Page<AdResponse> getAllAds(Pageable pageable);
+    Page<AdResponse> getAllAds(String search, Pageable pageable);
+
+    default Page<AdResponse> getAllAds(Pageable pageable) {
+        return getAllAds(null, pageable);
+    }
 
     /**
      * Şikayet inceleme sürecinde ilanı geçici olarak gizler (askıya alır).
@@ -55,19 +63,31 @@ public interface AdminService {
     int reanalyzeFailedAds();
 
     /**
-     * İlan şikayetlerini bağlam bilgileriyle (ilan başlığı, sahibi, şikayet eden) sayfalı listeler.
+     * İlan şikayetlerini bağlam bilgileriyle (ilan başlığı, sahibi, şikayet eden) sayfalı ve filtreli listeler.
      */
-    Page<AdComplaintAdminResponse> getAdComplaints(Pageable pageable);
+    Page<AdComplaintAdminResponse> getAdComplaints(String search, Pageable pageable);
+
+    default Page<AdComplaintAdminResponse> getAdComplaints(Pageable pageable) {
+        return getAdComplaints(null, pageable);
+    }
 
     /**
-     * Kullanıcı profili şikayetlerini bağlam bilgileriyle sayfalı listeler.
+     * Kullanıcı profili şikayetlerini bağlam bilgileriyle sayfalı ve filtreli listeler.
      */
-    Page<UserComplaintAdminResponse> getUserComplaints(Pageable pageable);
+    Page<UserComplaintAdminResponse> getUserComplaints(String search, Pageable pageable);
+
+    default Page<UserComplaintAdminResponse> getUserComplaints(Pageable pageable) {
+        return getUserComplaints(null, pageable);
+    }
 
     /**
-     * Sahiplendirme ilanı şikayetlerini bağlam bilgileriyle sayfalı listeler.
+     * Sahiplendirme ilanı şikayetlerini bağlam bilgileriyle sayfalı ve filtreli listeler.
      */
-    Page<AdoptionComplaintAdminResponse> getAdoptionComplaints(Pageable pageable);
+    Page<AdoptionComplaintAdminResponse> getAdoptionComplaints(String search, Pageable pageable);
+
+    default Page<AdoptionComplaintAdminResponse> getAdoptionComplaints(Pageable pageable) {
+        return getAdoptionComplaints(null, pageable);
+    }
 
     /**
      * V19 öncesi ilanların il/ilçesini koordinattan doldurur (bir defalık,
