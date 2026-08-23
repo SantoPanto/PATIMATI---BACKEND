@@ -57,7 +57,7 @@ class AiMatchServiceTest {
         when(restTemplateBuilder.setReadTimeout(any(Duration.class))).thenReturn(restTemplateBuilder);
         when(restTemplateBuilder.build()).thenReturn(restTemplate);
 
-        aiMatchService = new AiMatchService(adRepository, adService, restTemplateBuilder);
+        aiMatchService = new AiMatchService(adRepository, adService, restTemplateBuilder, new com.works.patimati.mapper.AiAnalyzeMapper());
         ReflectionTestUtils.setField(aiMatchService, "aiServiceUrl", "http://localhost:8000");
         // @Value alanları düz kurulumda 0 kalır; 0'lık maxCandidates her listeyi
         // boşaltır ve test yanlış sebepten geçer/kalır — üretim varsayılanları.
