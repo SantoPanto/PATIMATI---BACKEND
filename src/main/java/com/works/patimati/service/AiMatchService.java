@@ -5,6 +5,8 @@ import com.works.patimati.ai.AiCandidateRow;
 import com.works.patimati.dto.match.MatchedAdResponseDTO;
 import com.works.patimati.entity.Ad;
 import com.works.patimati.repository.AdRepository;
+import com.works.patimati.dto.ai.AiAnalyzeResponse;
+import com.works.patimati.mapper.AiAnalyzeMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
@@ -35,10 +37,19 @@ public class AiMatchService {
     private final AdRepository adRepository;
     private final AdService adService;
     private final RestTemplate restTemplate;
+    private final AiAnalyzeMapper aiAnalyzeMapper;
 
-    public AiMatchService(AdRepository adRepository, AdService adService, org.springframework.boot.web.client.RestTemplateBuilder restTemplateBuilder) {
+    public AiMatchService(AdRepository adRepository, AdService adService,
+                          org.springframework.boot.web.client.RestTemplateBuilder restTemplateBuilder) {
+        this(adRepository, adService, restTemplateBuilder, new AiAnalyzeMapper());
+    }
+
+    public AiMatchService(AdRepository adRepository, AdService adService,
+                          org.springframework.boot.web.client.RestTemplateBuilder restTemplateBuilder,
+                          AiAnalyzeMapper aiAnalyzeMapper) {
         this.adRepository = adRepository;
         this.adService = adService;
+        this.aiAnalyzeMapper = aiAnalyzeMapper;
         this.restTemplate = restTemplateBuilder
                 .setConnectTimeout(java.time.Duration.ofSeconds(10))
                 .setReadTimeout(java.time.Duration.ofSeconds(30))
@@ -113,6 +124,17 @@ public class AiMatchService {
         );
 
         return response.getStatusCode().is2xxSuccessful() ? response.getBody() : null;
+    }
+
+    /**
+     * İlan oluşturma ekranı için AI analiz sonucunu frontend sözleşmesine dönüştürerek döner.
+     */
+    public AiAnalyzeResponse analyzeImageForFrontend(MultipartFile file) throws IOException {
+        Map<String, Object> raw = analyzeImage(file);
+        if (raw == null) {
+            return null;
+        }
+        return aiAnalyzeMapper.toResponse(raw);
     }
 
     /**
