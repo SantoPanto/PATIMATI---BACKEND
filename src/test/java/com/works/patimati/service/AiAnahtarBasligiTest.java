@@ -15,7 +15,6 @@ import org.springframework.test.web.client.MockRestServiceServer;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -94,7 +93,7 @@ class AiAnahtarBasligiTest {
                 .andExpect(header("X-Api-Key", ANAHTAR))
                 .andRespond(withSuccess("{\"matches\":[]}", MediaType.APPLICATION_JSON));
 
-        servis.matchImages(List.of(fotograf()), "LOST");
+        servis.matchImages(List.of(fotograf()), "LOST", null, null);
 
         // İkinci beklenti hiç karşılanmasaydı (akış /match'e varmadan dönseydi)
         // yukarıdaki başlık iddiası sınanmamış olurdu; verify() onu yakalar.
@@ -114,7 +113,9 @@ class AiAnahtarBasligiTest {
                 .aiLabels(List.of("cat"))
                 .aiModelVersion("siglip2-animal/v2")
                 .build();
-        when(adRepository.findById(7L)).thenReturn(Optional.of(aday));
+        // N+1 fix: aday hidrasyonu artık her satır için ayrı findById DEĞİL,
+        // tek seferde findAllById çağırıyor.
+        when(adRepository.findAllById(any())).thenReturn(List.of(aday));
     }
 
     private AiMatchService servis(MockServerRestTemplateCustomizer duzenek, String anahtar) {

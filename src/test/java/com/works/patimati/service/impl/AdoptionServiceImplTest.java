@@ -1,5 +1,6 @@
 package com.works.patimati.service.impl;
 
+import com.works.patimati.ai.AiAnalysisPublisher;
 import com.works.patimati.dto.ad.AdResponse;
 import com.works.patimati.dto.ad.AdoptionAdUpdateRequest;
 import com.works.patimati.entity.Ad;
@@ -34,6 +35,7 @@ class AdoptionServiceImplTest {
     private ImageStorageService imageStorageService;
     private AdService adService;
     private RewardService rewardService;
+    private AiAnalysisPublisher aiAnalysisPublisher;
     private AdoptionServiceImpl adoptionService;
 
     @BeforeEach
@@ -44,6 +46,7 @@ class AdoptionServiceImplTest {
         imageStorageService = mock(ImageStorageService.class);
         adService = mock(AdService.class);
         rewardService = mock(RewardService.class);
+        aiAnalysisPublisher = mock(AiAnalysisPublisher.class);
 
         adoptionService = new AdoptionServiceImpl(
                 adRepository,
@@ -51,7 +54,8 @@ class AdoptionServiceImplTest {
                 adoptionComplaintRepository,
                 imageStorageService,
                 adService,
-                rewardService
+                rewardService,
+                aiAnalysisPublisher
         );
     }
 
@@ -111,6 +115,7 @@ class AdoptionServiceImplTest {
                 "2026-08-20",
                 BigDecimal.valueOf(41.0),
                 BigDecimal.valueOf(29.0),
+                null,
                 null,
                 null
         );

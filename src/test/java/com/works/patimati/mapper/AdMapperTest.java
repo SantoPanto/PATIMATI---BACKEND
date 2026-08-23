@@ -57,10 +57,13 @@ class AdMapperTest {
                 new BigDecimal("40.195000"),
                 new BigDecimal("29.060000"),
                 null,
+                null,
                 null
         );
 
         Ad ad = adMapper.toEntity(request);
+
+        assertThat(ad.getIsMatchRequired()).isTrue();
 
         assertThat(ad.getTitle()).isEqualTo("Lost tabby cat");
         assertThat(ad.getDescription()).isNull();

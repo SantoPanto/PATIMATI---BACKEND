@@ -22,6 +22,10 @@ import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
 import com.works.patimati.entity.Ad;
 import com.works.patimati.entity.User;
+import com.works.patimati.entity.enums.AgeGroup;
+import com.works.patimati.entity.enums.PetColor;
+import com.works.patimati.entity.enums.PetGender;
+import com.works.patimati.entity.enums.Species;
 import com.works.patimati.exception.ResourceNotFoundException;
 import com.works.patimati.repository.AdRepository;
 import com.works.patimati.service.PosterService;
@@ -137,14 +141,16 @@ public class PosterServiceImpl implements PosterService {
                 table.setFont(turkishFont);
             }
 
-            addTableRow(table, "İlan Tipi:", ad.getAdType() != null ? ad.getAdType().name() : "-", turkishFont, turkishBoldFont);
-            addTableRow(table, "Tür:", ad.getSpecies() != null ? ad.getSpecies().name() : "-", turkishFont, turkishBoldFont);
-            addTableRow(table, "Irk:", ad.getBreed() != null ? ad.getBreed() : "-", turkishFont, turkishBoldFont);
-            addTableRow(table, "Cinsiyet:", ad.getGender() != null ? ad.getGender().name() : "-", turkishFont, turkishBoldFont);
-            addTableRow(table, "Yaş Grubu:", ad.getAgeGroup() != null ? ad.getAgeGroup().name() : "-", turkishFont, turkishBoldFont);
+            // PDF kullanıcıya iniyor: ham enum adı ("CAT", "LOST") basılmaz.
+            // Etiketler ön yüzdeki utils/adPresentation ile birebir aynı.
+            addTableRow(table, "İlan Tipi:", ad.getAdType() != null ? turkceAdTipi(ad.getAdType()) : "-", turkishFont, turkishBoldFont);
+            addTableRow(table, "Tür:", ad.getSpecies() != null ? turkceTur(ad.getSpecies()) : "-", turkishFont, turkishBoldFont);
+            addTableRow(table, "Irk:", turkceIrk(ad.getBreed()), turkishFont, turkishBoldFont);
+            addTableRow(table, "Cinsiyet:", ad.getGender() != null ? turkceCinsiyet(ad.getGender()) : "-", turkishFont, turkishBoldFont);
+            addTableRow(table, "Yaş Grubu:", ad.getAgeGroup() != null ? turkceYasGrubu(ad.getAgeGroup()) : "-", turkishFont, turkishBoldFont);
 
             if (ad.getColors() != null && !ad.getColors().isEmpty()) {
-                String colorStr = ad.getColors().stream().map(Enum::name).collect(Collectors.joining(", "));
+                String colorStr = ad.getColors().stream().map(PosterServiceImpl::turkceRenk).collect(Collectors.joining(", "));
                 addTableRow(table, "Renkler:", colorStr, turkishFont, turkishBoldFont);
             }
 
@@ -338,5 +344,71 @@ public class PosterServiceImpl implements PosterService {
             ImageIO.write(bufferedImage, "PNG", baos);
             return baos.toByteArray();
         }
+    }
+
+    /*
+     * Afiş etiketleri — ön yüzdeki utils/adPresentation.ts ile birebir aynı
+     * Türkçe karşılıklar. Bilinmeyen/yeni enum değeri gelirse ham ad yerine
+     * "Belirtilmemiş" düşer; PDF kullanıcıya indiği için ham enum sızdırılmaz.
+     */
+    private static String turkceAdTipi(Ad.AdType adType) {
+        switch (adType) {
+            case LOST: return "Kayıp";
+            case FOUND: return "Bulundu";
+            case ADOPTION: return "Sahiplendirme";
+            default: return "İlan";
+        }
+    }
+
+    private static String turkceTur(Species species) {
+        switch (species) {
+            case CAT: return "Kedi";
+            case DOG: return "Köpek";
+            default: return "Belirtilmemiş";
+        }
+    }
+
+    private static String turkceCinsiyet(PetGender gender) {
+        switch (gender) {
+            case FEMALE: return "Dişi";
+            case MALE: return "Erkek";
+            default: return "Belirtilmemiş";
+        }
+    }
+
+    private static String turkceYasGrubu(AgeGroup ageGroup) {
+        switch (ageGroup) {
+            case BABY: return "Yavru";
+            case YOUNG: return "Genç";
+            case ADULT: return "Yetişkin";
+            case SENIOR: return "Yaşlı";
+            default: return "Belirtilmemiş";
+        }
+    }
+
+    private static String turkceRenk(PetColor color) {
+        switch (color) {
+            case BLACK: return "Siyah";
+            case WHITE: return "Beyaz";
+            case GRAY: return "Gri";
+            case BROWN: return "Kahverengi";
+            case ORANGE: return "Turuncu";
+            case CREAM: return "Krem";
+            case GOLDEN: return "Altın";
+            case BEIGE: return "Bej";
+            default: return "Diğer";
+        }
+    }
+
+    /** Irk serbest metin ama ham enum değeri de taşıyabiliyor (ör. kartlardaki
+     *  "MIXED_OR_UNKNOWN" sızıntısının PDF karşılığı). Boşsa tablo boş işareti. */
+    private static String turkceIrk(String breed) {
+        if (breed == null || breed.isBlank()) {
+            return "-";
+        }
+        if ("MIXED_OR_UNKNOWN".equals(breed) || "UNKNOWN".equals(breed)) {
+            return "Cins belirtilmemiş";
+        }
+        return breed;
     }
 }

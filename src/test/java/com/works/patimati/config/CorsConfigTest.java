@@ -1,5 +1,6 @@
 package com.works.patimati.config;
 
+import com.works.patimati.security.InternalServiceAuthFilter;
 import com.works.patimati.security.JwtAuthFilter;
 import com.works.patimati.security.OAuth2AuthenticationSuccessHandler;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,11 +27,14 @@ class CorsConfigTest {
     @Mock
     private OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
 
+    @Mock
+    private InternalServiceAuthFilter internalServiceAuthFilter;
+
     private SecurityConfig securityConfig;
 
     @BeforeEach
     void setUp() {
-        securityConfig = new SecurityConfig(jwtAuthFilter, oAuth2AuthenticationSuccessHandler);
+        securityConfig = new SecurityConfig(jwtAuthFilter, oAuth2AuthenticationSuccessHandler, internalServiceAuthFilter);
     }
 
     @Test

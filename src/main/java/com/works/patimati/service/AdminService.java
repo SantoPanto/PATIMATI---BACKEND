@@ -3,6 +3,7 @@ package com.works.patimati.service;
 import com.works.patimati.dto.ad.AdResponse;
 import com.works.patimati.dto.admin.AdComplaintAdminResponse;
 import com.works.patimati.dto.admin.AdoptionComplaintAdminResponse;
+import com.works.patimati.dto.admin.ExternalPostAdminResponse;
 import com.works.patimati.dto.admin.UserComplaintAdminResponse;
 import com.works.patimati.dto.admin.UserDetailForAdminDTO;
 import org.springframework.data.domain.Page;
@@ -49,6 +50,12 @@ public interface AdminService {
     void deleteAdAsAdmin(Long adId);
 
     /**
+     * FAILED durumundaki tüm aktif ilanları yeniden analize gönderir;
+     * kuyruğa yazılan ilan sayısını döner.
+     */
+    int reanalyzeFailedAds();
+
+    /**
      * İlan şikayetlerini bağlam bilgileriyle (ilan başlığı, sahibi, şikayet eden) sayfalı listeler.
      */
     Page<AdComplaintAdminResponse> getAdComplaints(Pageable pageable);
@@ -62,6 +69,12 @@ public interface AdminService {
      * Sahiplendirme ilanı şikayetlerini bağlam bilgileriyle sayfalı listeler.
      */
     Page<AdoptionComplaintAdminResponse> getAdoptionComplaints(Pageable pageable);
+
+    /**
+     * Collector'ın topladığı tüm Instagram gönderilerini (eşleşsin eşleşmesin)
+     * en yeniden eskiye sayfalı listeler.
+     */
+    Page<ExternalPostAdminResponse> getExternalPosts(Pageable pageable);
 
     /**
      * V19 öncesi ilanların il/ilçesini koordinattan doldurur (bir defalık,

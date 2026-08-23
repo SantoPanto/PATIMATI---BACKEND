@@ -170,6 +170,21 @@ public class AdController {
         );
     }
 
+    /**
+     * AI analizi başarısız olmuş (ya da PENDING'te takılı kalmış) ilanı
+     * sahibi yeniden analize gönderir. Analizi bitmiş (DONE) ilanda 400 döner
+     * — gerekçesi AdService.reanalyzeAd üstünde.
+     */
+    @PutMapping("/{adId}/reanalyze")
+    public ResponseEntity<AdResponse> reanalyzeAd(
+            Authentication authentication,
+            @PathVariable @Min(1) Long adId
+    ) {
+        return ResponseEntity.ok(
+                adService.reanalyzeAd(authentication.getName(), adId)
+        );
+    }
+
     @DeleteMapping("/{adId}")
     public ResponseEntity<Void> deactivateAd(
             Authentication authentication,

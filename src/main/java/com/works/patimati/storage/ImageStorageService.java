@@ -13,6 +13,15 @@ public interface ImageStorageService {
     List<String> uploadImages(List<MultipartFile> images);
 
     /**
+     * {@link #uploadImages(List)} ile aynı, yalnızca S3 nesne anahtarının
+     * ön ekini seçmeye izin verir (varsayılan {@code "ads"}). EKLENDİ — Faz 2
+     * revize blueprint §7: Instagram medyası {@code "external"} önekiyle
+     * saklanır, aynı doğrulama/geri alma (rollback) mantığı üzerinden.
+     * Var olan {@code uploadImages(List)} çağıranları için davranış DEĞİŞMEZ.
+     */
+    List<String> uploadImages(List<MultipartFile> images, String keyPrefix);
+
+    /**
      * Kalıcı bir depolama referansı için geçici HTTP indirme adresi üretir.
      */
     String createTemporaryReadUrl(String storageReference);

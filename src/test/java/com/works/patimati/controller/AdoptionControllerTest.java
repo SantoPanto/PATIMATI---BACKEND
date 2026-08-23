@@ -403,7 +403,8 @@ class AdoptionControllerTest {
                 false,
                 false,
                 false,
-                AdResolutionStatus.NONE
+                AdResolutionStatus.NONE,
+                false
         );
     }
 
