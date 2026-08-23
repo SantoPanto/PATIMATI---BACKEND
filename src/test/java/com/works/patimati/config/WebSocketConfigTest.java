@@ -59,9 +59,9 @@ class WebSocketConfigTest {
         // Mesaj broker yapılandırması çalıştırılır.
         webSocketConfig.configureMessageBroker(messageBrokerRegistry);
 
-        // /queue hedeflerinin Spring'in dahili broker'ına yönlendirildiğini doğrular.
+        // /queue ve /topic hedeflerinin Spring'in dahili broker'ına yönlendirildiğini doğrular.
         verify(messageBrokerRegistry)
-                .enableSimpleBroker(WebSocketConfig.PRIVATE_QUEUE_PREFIX);
+                .enableSimpleBroker(WebSocketConfig.PRIVATE_QUEUE_PREFIX, WebSocketConfig.PUBLIC_TOPIC_PREFIX);
 
         // /app hedeflerinin ileride yazılacak @MessageMapping metotlarına gideceğini doğrular.
         verify(messageBrokerRegistry)
