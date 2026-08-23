@@ -42,7 +42,6 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
                 message.sender.uid = :secondUserId
                 AND message.recipient.uid = :firstUserId
             )
-            ORDER BY message.timestamp ASC, message.id ASC
             """)
     Page<Message> findChatHistory(
             @Param("firstUserId") Long firstUserId,
