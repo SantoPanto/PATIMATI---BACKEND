@@ -15,9 +15,9 @@ import org.springframework.data.domain.Pageable;
 public interface AdminService {
 
     /**
-     * Sistemdeki tüm kullanıcıları detay DTO formatında sayfalı olarak listeler.
+     * Sistemdeki tüm kullanıcıları detay DTO formatında sayfalı ve arama filtreli olarak listeler.
      */
-    Page<UserDetailForAdminDTO> getAllUsers(Pageable pageable);
+    Page<UserDetailForAdminDTO> getAllUsers(String search, Pageable pageable);
 
     /**
      * Belirtilen kullanıcıyı engeller / hesabını dondurur.
@@ -30,9 +30,9 @@ public interface AdminService {
     void unbanUser(Long userId);
 
     /**
-     * Sistemdeki tüm ilanları sayfalı olarak listeler.
+     * Sistemdeki tüm ilanları sayfalı ve arama filtreli olarak listeler.
      */
-    Page<AdResponse> getAllAds(Pageable pageable);
+    Page<AdResponse> getAllAds(String search, Pageable pageable);
 
     /**
      * Şikayet inceleme sürecinde ilanı geçici olarak gizler (askıya alır).
@@ -56,19 +56,19 @@ public interface AdminService {
     int reanalyzeFailedAds();
 
     /**
-     * İlan şikayetlerini bağlam bilgileriyle (ilan başlığı, sahibi, şikayet eden) sayfalı listeler.
+     * İlan şikayetlerini bağlam bilgileriyle (ilan başlığı, sahibi, şikayet eden) sayfalı ve arama filtreli listeler.
      */
-    Page<AdComplaintAdminResponse> getAdComplaints(Pageable pageable);
+    Page<AdComplaintAdminResponse> getAdComplaints(String search, Pageable pageable);
 
     /**
-     * Kullanıcı profili şikayetlerini bağlam bilgileriyle sayfalı listeler.
+     * Kullanıcı profili şikayetlerini bağlam bilgileriyle sayfalı ve arama filtreli listeler.
      */
-    Page<UserComplaintAdminResponse> getUserComplaints(Pageable pageable);
+    Page<UserComplaintAdminResponse> getUserComplaints(String search, Pageable pageable);
 
     /**
-     * Sahiplendirme ilanı şikayetlerini bağlam bilgileriyle sayfalı listeler.
+     * Sahiplendirme ilanı şikayetlerini bağlam bilgileriyle sayfalı ve arama filtreli listeler.
      */
-    Page<AdoptionComplaintAdminResponse> getAdoptionComplaints(Pageable pageable);
+    Page<AdoptionComplaintAdminResponse> getAdoptionComplaints(String search, Pageable pageable);
 
     /**
      * Collector'ın topladığı tüm Instagram gönderilerini (eşleşsin eşleşmesin)

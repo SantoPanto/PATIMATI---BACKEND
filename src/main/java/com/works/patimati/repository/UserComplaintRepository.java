@@ -3,6 +3,7 @@ package com.works.patimati.repository;
 import com.works.patimati.entity.UserComplaint;
 import com.works.patimati.entity.enums.ComplaintStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
@@ -12,7 +13,7 @@ import java.util.List;
  * Kullanıcı Profil Şikayetleri Spring Data JPA Repository arayüzü.
  */
 @Repository
-public interface UserComplaintRepository extends JpaRepository<UserComplaint, Long> {
+public interface UserComplaintRepository extends JpaRepository<UserComplaint, Long>, JpaSpecificationExecutor<UserComplaint> {
 
     /**
      * Bir kullanıcının başka bir kullanıcı için belirtilen aktif statülerde şikayet kaydının olup olmadığını kontrol eder.
