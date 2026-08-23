@@ -6,10 +6,14 @@ import com.works.patimati.storage.ImageStorageException;
 import com.works.patimati.storage.InvalidImageException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -25,6 +29,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -62,6 +67,19 @@ public class GlobalExceptionHandler {
         return problem(
                 HttpStatus.BAD_REQUEST,
                 "Geçersiz parametre",
+                exception.getMessage(),
+                request
+        );
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ProblemDetail> handleAccessDenied(
+            AccessDeniedException exception,
+            HttpServletRequest request
+    ) {
+        return problem(
+                HttpStatus.FORBIDDEN,
+                "Erişim reddedildi",
                 exception.getMessage(),
                 request
         );
@@ -293,6 +311,61 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ProblemDetail> handleMethodNotSupported(
+            HttpRequestMethodNotSupportedException exception,
+            HttpServletRequest request
+    ) {
+        // Yeni Exception.class catch-all'ının (aşağıda) yakaladığı GERÇEK bir
+        // regresyon: bu istisna için burada özel bir handler YOKTU, o yüzden
+        // önceden Spring'in kendi DefaultHandlerExceptionResolver'ı devreye
+        // girip doğru 405'i üretiyordu. Exception.class handler'ı
+        // ExceptionHandlerExceptionResolver seviyesinde HER istisnayı
+        // yakaladığı için (tip hiyerarşisi bakımdan Exception her şeyin
+        // atasıdır), Spring'in kendi varsayılan çözümleyicisine sıra hiç
+        // gelmiyordu -- AdControllerTest.shouldNotExposeRemovedTestEndpoint
+        // 405 yerine 500 almaya başlayarak bunu yakaladı. Doğru semantiği
+        // burada açıkça geri veriyoruz.
+        return problem(
+                HttpStatus.METHOD_NOT_ALLOWED,
+                "Desteklenmeyen HTTP metodu",
+                exception.getMessage(),
+                request
+        );
+    }
+
+    /**
+     * Veritabanı bütünlük ihlalleri (uzunluk aşımı, tekillik, yabancı anahtar).
+     *
+     * <p>Bu istisnanın {@code getMessage()}'ı ham SQL cümlesini ve sütun listesini
+     * içerir; kullanıcıya aynen gösterilirse hem anlaşılmaz hem de şema sızdırır
+     * (B1 bulgusu: bulundu formunda 255 karakteri aşan açıklama, ekrana
+     * {@code insert into ads (...)} metnini bastırıyordu). Gerçek sebep sunucu
+     * günlüğüne yazılır, istemciye yalnız güvenli bir özet döner.
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ProblemDetail> handleDataIntegrityViolation(
+            DataIntegrityViolationException exception,
+            HttpServletRequest request
+    ) {
+        log.warn("Veri bütünlüğü ihlali: {} {}", request.getMethod(), request.getRequestURI(), exception);
+        return problem(
+                HttpStatus.BAD_REQUEST,
+                "Geçersiz istek",
+                "Gönderilen verilerden biri kaydedilemedi: bir alan izin verilen sınırı aşıyor ya da beklenen biçimde değil.",
+                request
+        );
+    }
+
+    // Son çare: yukarıdaki hiçbir spesifik handler'a uymayan her şey buraya
+    // düşer. Spring, en spesifik eşleşen handler'ı @ExceptionHandler tip
+    // hiyerarşisine göre seçer (dosyadaki sıralamadan bağımsız) -- bu yüzden
+    // burada olması yukarıdaki handler'ların DAVRANIŞINI değiştirmez, yalnızca
+    // önceden hiç yakalanmayan (ör. NullPointerException, beklenmeyen
+    // RuntimeException) istekler artık çıplak 500 + boş gövde yerine tutarlı
+    // bir ProblemDetail alır. İstemciye ham exception.getMessage() DÖNMEZ
+    // (iç sınıf adı/SQL/stack detayı sızdırabilir) -- tam detay yalnızca
+    // sunucu logunda, ERROR seviyesinde.
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ProblemDetail> handleGenericException(
             Exception exception,
@@ -306,10 +379,13 @@ public class GlobalExceptionHandler {
                     request
             );
         }
+        // Beklenmeyen istisnanın mesajı istemciye AKTARILMAZ: içinde SQL, dosya
+        // yolu gibi iç ayrıntılar olabilir. Gerçek sebep günlükte.
+        log.error("Beklenmeyen sunucu hatası: {} {}", request.getMethod(), request.getRequestURI(), exception);
         return problem(
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 "Sunucu Hatası",
-                exception.getMessage() != null ? exception.getMessage() : "Beklenmeyen bir sunucu hatası meydana geldi.",
+                "Beklenmeyen bir sunucu hatası meydana geldi.",
                 request
         );
     }

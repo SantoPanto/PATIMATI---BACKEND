@@ -8,6 +8,7 @@ public record NotificationResponse(
         String title,
         String body,
         String type,
+        String referenceId,
         Map<String, String> data,
         boolean read,
         OffsetDateTime createdAt

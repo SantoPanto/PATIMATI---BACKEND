@@ -22,8 +22,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
+import lombok.extern.slf4j.Slf4j;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MessageService {
@@ -66,6 +68,9 @@ public class MessageService {
         Message savedMessage = messageRepository.save(message);
         MessageResponse response = mapToResponse(savedMessage, sender);
 
+        log.info("[WS SEND] [WS TARGET USER] [WS DESTINATION] messageId={} saved to DB. convertAndSendToUser destination=/queue/messages, recipientEmail={}, senderEmail={}",
+                savedMessage.getId(), recipient.getEmail(), sender.getEmail());
+
         // Anlık İletim (Broadcast) - Hem alıcının hem de gönderenin özel WebSocket kuyruğuna iletiliyor
         notificationService.createOrStackMessageNotification(
                 recipient,
@@ -74,12 +79,12 @@ public class MessageService {
         );
 
         messagingTemplate.convertAndSendToUser(
-                String.valueOf(response.recipientId()),
+                recipient.getEmail(),
                 "/queue/messages",
                 response
         );
         messagingTemplate.convertAndSendToUser(
-                String.valueOf(response.senderId()),
+                sender.getEmail(),
                 "/queue/messages",
                 response
         );
@@ -212,17 +217,17 @@ public class MessageService {
             throw new IllegalArgumentException("Kullanıcı kendisi ile sohbet geçmişi sorgulayamaz.");
         }
 
-        // Son mesajları almak için DESC sorgulanır
-        Pageable descPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(Sort.Direction.DESC, "timestamp", "id"));
+        Pageable descPageable = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                Sort.by(
+                        Sort.Order.desc("timestamp"),
+                        Sort.Order.desc("id")
+                )
+        );
         Page<Message> messagePage = messageRepository.findChatHistory(currentUser.getUid(), otherUserId, descPageable);
 
-        // Kronolojik sırayla (ASC - Eskiden Yeniye, yeni mesaj en altta) sunmak için liste çevrilir
-        List<MessageResponse> list = new ArrayList<>(messagePage.getContent().stream()
-                .map(message -> mapToResponse(message, currentUser))
-                .toList());
-        Collections.reverse(list);
-
-        return new PageImpl<>(list, pageable, messagePage.getTotalElements());
+        return messagePage.map(message -> mapToResponse(message, currentUser));
     }
 
     @Transactional

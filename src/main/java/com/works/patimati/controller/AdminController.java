@@ -2,6 +2,7 @@ package com.works.patimati.controller;
 
 import com.works.patimati.dto.ad.AdResponse;
 import com.works.patimati.dto.admin.AdComplaintAdminResponse;
+import com.works.patimati.dto.admin.ExternalPostAdminResponse;
 import com.works.patimati.dto.admin.UserComplaintAdminResponse;
 import com.works.patimati.dto.admin.UserDetailForAdminDTO;
 import com.works.patimati.service.AdminService;
@@ -12,6 +13,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -32,11 +34,10 @@ public class AdminController {
      */
     @GetMapping("/users")
     public ResponseEntity<Page<UserDetailForAdminDTO>> getAllUsers(
-            @RequestParam(defaultValue = "0") @Min(0) int page,
-            @RequestParam(defaultValue = "20") @Min(1) @Max(MAX_PAGE_SIZE) int size
+            @RequestParam(required = false) String search,
+            @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        return ResponseEntity.ok(adminService.getAllUsers(pageable));
+        return ResponseEntity.ok(adminService.getAllUsers(search, pageable));
     }
 
     /**
@@ -62,11 +63,10 @@ public class AdminController {
      */
     @GetMapping("/ads")
     public ResponseEntity<Page<AdResponse>> getAllAds(
-            @RequestParam(defaultValue = "0") @Min(0) int page,
-            @RequestParam(defaultValue = "20") @Min(1) @Max(MAX_PAGE_SIZE) int size
+            @RequestParam(required = false) String search,
+            @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        return ResponseEntity.ok(adminService.getAllAds(pageable));
+        return ResponseEntity.ok(adminService.getAllAds(search, pageable));
     }
 
     /**
@@ -97,15 +97,28 @@ public class AdminController {
     }
 
     /**
+     * FAILED durumundaki tüm aktif ilanları topluca yeniden analize gönderir.
+     * AI servisi arızası düzeltildikten sonra takılı kalan ilanları kurtarmak
+     * için: arıza sırasında açılan her ilan FAILED kalıyor ve kendiliğinden
+     * bir daha analiz edilmiyordu.
+     */
+    @PostMapping("/ads/reanalyze-failed")
+    public ResponseEntity<Map<String, Object>> reanalyzeFailedAds() {
+        int kuyruklanan = adminService.reanalyzeFailedAds();
+        return ResponseEntity.ok(Map.of(
+                "queued", kuyruklanan,
+                "message", kuyruklanan + " ilan yeniden analize gönderildi."));
+    }
+
+    /**
      * İlan şikayetlerini incelemek için bağlam bilgileriyle listeler.
      */
     @GetMapping("/complaints/ads")
     public ResponseEntity<Page<AdComplaintAdminResponse>> getAdComplaints(
-            @RequestParam(defaultValue = "0") @Min(0) int page,
-            @RequestParam(defaultValue = "20") @Min(1) @Max(MAX_PAGE_SIZE) int size
+            @RequestParam(required = false) String search,
+            @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        return ResponseEntity.ok(adminService.getAdComplaints(pageable));
+        return ResponseEntity.ok(adminService.getAdComplaints(search, pageable));
     }
 
     /**
@@ -113,11 +126,10 @@ public class AdminController {
      */
     @GetMapping("/complaints/users")
     public ResponseEntity<Page<UserComplaintAdminResponse>> getUserComplaints(
-            @RequestParam(defaultValue = "0") @Min(0) int page,
-            @RequestParam(defaultValue = "20") @Min(1) @Max(MAX_PAGE_SIZE) int size
+            @RequestParam(required = false) String search,
+            @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        return ResponseEntity.ok(adminService.getUserComplaints(pageable));
+        return ResponseEntity.ok(adminService.getUserComplaints(search, pageable));
     }
 
     /**
@@ -125,11 +137,22 @@ public class AdminController {
      */
     @GetMapping("/complaints/adoptions")
     public ResponseEntity<Page<com.works.patimati.dto.admin.AdoptionComplaintAdminResponse>> getAdoptionComplaints(
+            @RequestParam(required = false) String search,
+            @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        return ResponseEntity.ok(adminService.getAdoptionComplaints(search, pageable));
+    }
+
+    /**
+     * Collector'ın topladığı tüm Instagram gönderilerini (eşleşsin eşleşmesin) listeler.
+     */
+    @GetMapping("/external-posts")
+    public ResponseEntity<Page<ExternalPostAdminResponse>> getExternalPosts(
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "20") @Min(1) @Max(MAX_PAGE_SIZE) int size
     ) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        return ResponseEntity.ok(adminService.getAdoptionComplaints(pageable));
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "detectedAt"));
+        return ResponseEntity.ok(adminService.getExternalPosts(pageable));
     }
 
     /**

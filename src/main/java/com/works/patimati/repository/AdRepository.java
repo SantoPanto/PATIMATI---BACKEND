@@ -3,10 +3,12 @@ package com.works.patimati.repository;
 import com.works.patimati.ai.AiCandidateRow;
 import com.works.patimati.entity.Ad;
 import com.works.patimati.entity.enums.AdResolutionStatus;
+import com.works.patimati.entity.enums.AiStatus;
 import org.locationtech.jts.geom.Point;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -17,7 +19,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface AdRepository extends JpaRepository<Ad, Long> {
+public interface AdRepository extends JpaRepository<Ad, Long>, JpaSpecificationExecutor<Ad> {
 
     /**
      * V19 backfill'i: il'i hiç yazılmamış ama koordinatı olan ilanlar.
@@ -40,6 +42,13 @@ public interface AdRepository extends JpaRepository<Ad, Long> {
     // pasif ilana dokunmak imkânsızdı. Başka yerlerde bunu kullanmayın; aktif
     // ilan bekleyen akışlar aktifliği sorgunun kendisinde şart koşmalı.
     Optional<Ad> findByIdAndUser_Uid(Long adId, Long userId);
+
+    /**
+     * Belirli AI durumundaki aktif ilanlar — toplu yeniden analiz bunun
+     * üzerinden FAILED kalanları toplar. Pasif ilan bilerek dışarıda: sahibi
+     * yayından kaldırdığı ilanın analizini de istemiyordur.
+     */
+    List<Ad> findAllByAiStatusAndActiveTrue(AiStatus aiStatus);
 
     // İlanları aktiflik durumuna göre sayfalı biçimde listeler.
     Page<Ad> findAllByActive(
@@ -72,6 +81,41 @@ public interface AdRepository extends JpaRepository<Ad, Long> {
     // Halka açık aktif ve askıda olmayan ilanları türüne göre listeler.
     Page<Ad> findAllByAdTypeAndActiveTrueAndSuspendedFalse(
             Ad.AdType adType,
+            Pageable pageable
+    );
+
+    // Halka açık listede metin araması: başlık + ırk + açıklama.
+    // Açıklama bilerek dahil — şehir/semt bilgisi ayrı bir sütunda YOK;
+    // bulundu ve sahiplendirme formları Nominatim adresini açıklamaya kattığı
+    // için "Bursa" gibi bir yer araması ancak açıklama üzerinden tutabiliyor.
+    // LOWER iki tarafta da veritabanının kendi katlamasıyla çalışır: ASCII
+    // güvenli, Türkçe İ/ı kenarında (ör. "izmir" ↔ "İzmir") kaçırma olabilir.
+    @Query("""
+            SELECT a FROM Ad a
+            WHERE a.active = TRUE AND a.suspended = FALSE
+              AND (LOWER(a.title) LIKE LOWER(CONCAT('%', :search, '%'))
+                   OR LOWER(a.breed) LIKE LOWER(CONCAT('%', :search, '%'))
+                   OR LOWER(a.description) LIKE LOWER(CONCAT('%', :search, '%')))
+            """)
+    Page<Ad> searchPublicActiveAds(
+            @Param("search") String search,
+            Pageable pageable
+    );
+
+    // Aynı arama, ilan türü süzgeciyle. Tür null olamaz; null tür için üstteki
+    // kullanılır (null parametreli tek sorgu, enum bağlamada tip belirsizliğine
+    // düşebildiği için bilerek iki ayrı metot — mevcut listeleme çifti gibi).
+    @Query("""
+            SELECT a FROM Ad a
+            WHERE a.active = TRUE AND a.suspended = FALSE
+              AND a.adType = :adType
+              AND (LOWER(a.title) LIKE LOWER(CONCAT('%', :search, '%'))
+                   OR LOWER(a.breed) LIKE LOWER(CONCAT('%', :search, '%'))
+                   OR LOWER(a.description) LIKE LOWER(CONCAT('%', :search, '%')))
+            """)
+    Page<Ad> searchPublicActiveAdsByAdType(
+            @Param("adType") Ad.AdType adType,
+            @Param("search") String search,
             Pageable pageable
     );
 
@@ -183,6 +227,76 @@ public interface AdRepository extends JpaRepository<Ad, Long> {
             @Param("origin") Point origin,
             @Param("radiusMeters") double radiusMeters,
             @Param("since") Instant since);
+
+    /**
+     * {@link #findAiCandidates} ile aynı kurallar, tek fark: sorgunun
+     * konusu bir ilan değil bir external_pet_records kaydıdır, bu yüzden
+     * hariç tutulacak "kendisi" yoktur (farklı kimlik uzayı, çakışma
+     * imkânsız). Faz 2 revize blueprint §31/§32 — Flow A'nın candidate
+     * gathering tarafı.
+     */
+    @Query(value = """
+            SELECT a.id AS adId,
+                   ST_Distance(a.location::geography, CAST(:origin AS geography)) / 1000.0 AS distanceKm
+              FROM ads a
+             WHERE a.active = TRUE
+               AND a.ad_type = :compatibleAdType
+               AND a.ai_status = 'DONE'
+               AND a.ai_embeddings IS NOT NULL
+               AND a.created_at >= :since
+               AND a.location IS NOT NULL
+               AND ST_DWithin(a.location::geography, CAST(:origin AS geography), :radiusMeters)
+             ORDER BY a.location <-> :origin
+            """, nativeQuery = true)
+    List<AiCandidateRow> findAiCandidatesForExternalSubject(
+            @Param("compatibleAdType") String compatibleAdType,
+            @Param("origin") Point origin,
+            @Param("radiusMeters") double radiusMeters,
+            @Param("since") Instant since);
+
+    /**
+     * Konumsuz external kayıt için sınırlı, mesafesiz fallback — aynı
+     * gerekçe {@code ExternalPetRecordRepository.findFallbackCandidateIds}
+     * ile. Species null ise filtrelenmez.
+     */
+    @Query(value = """
+            SELECT a.id
+              FROM ads a
+             WHERE a.active = TRUE
+               AND a.ad_type = :compatibleAdType
+               AND a.ai_status = 'DONE'
+               AND a.ai_embeddings IS NOT NULL
+               AND a.created_at >= :since
+               AND (:species IS NULL OR LOWER(a.species::text) = LOWER(:species) OR LOWER(a.ai_species) = LOWER(:species))
+             ORDER BY a.created_at DESC
+             LIMIT :maxResults
+            """, nativeQuery = true)
+    List<Long> findFallbackCandidateIdsForExternalSubject(
+            @Param("compatibleAdType") String compatibleAdType,
+            @Param("since") Instant since,
+            @Param("species") String species,
+            @Param("maxResults") int maxResults);
+
+    /** {@link #findAiCandidates} konumsuz karşılığı — AD subject, AD adayları. */
+    @Query(value = """
+            SELECT a.id
+              FROM ads a
+             WHERE a.active = TRUE
+               AND a.id <> :selfAdId
+               AND a.ad_type = :oppositeAdType
+               AND a.ai_status = 'DONE'
+               AND a.ai_embeddings IS NOT NULL
+               AND a.created_at >= :since
+               AND (:species IS NULL OR LOWER(a.species::text) = LOWER(:species) OR LOWER(a.ai_species) = LOWER(:species))
+             ORDER BY a.created_at DESC
+             LIMIT :maxResults
+            """, nativeQuery = true)
+    List<Long> findFallbackCandidateIds(
+            @Param("selfAdId") Long selfAdId,
+            @Param("oppositeAdType") String oppositeAdType,
+            @Param("since") Instant since,
+            @Param("species") String species,
+            @Param("maxResults") int maxResults);
 
     @Query(value = """
              SELECT a.id AS adId, 0.0 AS distanceKm

@@ -3,7 +3,12 @@ package com.works.patimati.ai;
 import com.works.patimati.ai.dto.AiAnalysisResult;
 import com.works.patimati.entity.Ad;
 import com.works.patimati.entity.enums.AiStatus;
+import com.works.patimati.external.ExternalMatchingService;
 import com.works.patimati.repository.AdRepository;
+import com.works.patimati.repository.external.ExternalPetRecordRepository;
+import com.works.patimati.repository.external.ExternalSourceMediaRepository;
+import com.works.patimati.repository.external.ExternalSourcePostRepository;
+import com.works.patimati.service.PotentialMatchService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.amqp.core.Message;
@@ -133,7 +138,15 @@ class AiIsPetPersistedTest {
         when(repo.findById(42L)).thenReturn(Optional.of(ad));
         when(repo.save(any(Ad.class))).thenAnswer(cagri -> cagri.getArgument(0));
 
-        new AiAnalysisListener(repo, mock(AiMatchNotifier.class)).onResult(sonuc);
+        new AiAnalysisListener(
+                repo,
+                mock(ExternalPetRecordRepository.class),
+                mock(ExternalSourcePostRepository.class),
+                mock(ExternalSourceMediaRepository.class),
+                mock(PotentialMatchService.class),
+                mock(ExternalMatchingService.class),
+                mock(AiMatchNotifier.class)
+        ).onResult(sonuc);
         return ad;
     }
 }

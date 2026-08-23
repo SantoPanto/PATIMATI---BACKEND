@@ -1,5 +1,6 @@
 package com.works.patimati.service.impl;
 
+import com.works.patimati.ai.AiAnalysisPublisher;
 import com.works.patimati.dto.ad.AdResponse;
 import java.time.LocalDate;
 import com.works.patimati.dto.ad.AdoptionAdCreateRequest;
@@ -53,6 +54,7 @@ public class AdoptionServiceImpl implements AdoptionService {
     private final ImageStorageService imageStorageService;
     private final AdService adService;
     private final RewardService rewardService;
+    private final AiAnalysisPublisher aiAnalysisPublisher;
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), WGS_84_SRID);
 
     @Transactional
@@ -79,6 +81,10 @@ public class AdoptionServiceImpl implements AdoptionService {
             );
         }
 
+        Boolean matchRequired = request.isMatchRequired() != null
+                ? request.isMatchRequired()
+                : Boolean.FALSE;
+
         Ad ad = Ad.builder()
                 .title(request.title().trim())
                 .description(request.description() != null ? request.description().trim() : null)
@@ -88,16 +94,6 @@ public class AdoptionServiceImpl implements AdoptionService {
                 .gender(request.gender())
                 .ageGroup(request.ageGroup())
                 .colors(request.colors() != null ? request.colors() : Set.of())
-                /*
-                 * coatPattern ve eyeColor isteğe bağlı alanlar (DTO'da @NotNull yok)
-                 * ama ads tablosunda NOT NULL. Ad entity'sinde @Builder.Default ile
-                 * UNKNOWN tanımlı; ancak builder metodunu null ile ÇAĞIRMAK bu
-                 * varsayılanı ezer. Bu yüzden alan gönderilmediğinde insert
-                 * "null value in column coat_pattern violates not-null constraint"
-                 * ile düşüyordu ve sahiplendirme ilanı hiç oluşturulamıyordu.
-                 * (AdService bu builder metotlarını hiç çağırmadığı için orada
-                 * varsayılanlar çalışıyor.)
-                 */
                 .coatPattern(request.coatPattern() != null
                         ? request.coatPattern()
                         : CoatPattern.UNKNOWN)
@@ -111,13 +107,17 @@ public class AdoptionServiceImpl implements AdoptionService {
                 .user(owner)
                 .active(true)
                 .suspended(false)
-                .aiStatus(AiStatus.NOT_APPLICABLE) // AI işlemine girmeyecek
+                .isMatchRequired(matchRequired)
+                .aiStatus(AiStatus.PENDING)
                 .build();
 
         adService.konumBilgisiniDoldur(ad, request.city(), request.district());
 
         Ad savedAd = adRepository.save(ad);
-        log.info("Sahiplendirme ilanı oluşturuldu. adId={}, owner={}", savedAd.getId(), ownerEmail);
+        log.info("Sahiplendirme ilanı oluşturuldu. adId={}, owner={}, isMatchRequired={}",
+                savedAd.getId(), ownerEmail, matchRequired);
+
+        aiAnalysisPublisher.publish(savedAd);
 
         return adService.toResponseWithTemporaryPhotoUrls(savedAd);
     }

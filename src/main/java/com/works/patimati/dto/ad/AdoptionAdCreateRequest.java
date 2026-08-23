@@ -84,8 +84,16 @@ public record AdoptionAdCreateRequest(
         String city,
 
         @Size(max = 100, message = "İlçe en fazla 100 karakter olabilir")
-        String district
+        String district,
+
+        Boolean isMatchRequired
 ) {
+    public AdoptionAdCreateRequest {
+        if (isMatchRequired == null) {
+            isMatchRequired = Boolean.FALSE;
+        }
+    }
+
     @JsonIgnore
     @AssertTrue(message = "Tür kedi (CAT) veya köpek (DOG) olmalıdır")
     public boolean isSupportedSpecies() {

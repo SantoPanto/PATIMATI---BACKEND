@@ -302,11 +302,17 @@ public class NotificationService {
     }
 
     private NotificationResponse toResponse(Notification notification) {
+        String referenceId = null;
+        if (notification.getData() != null) {
+            referenceId = notification.getData().getOrDefault("referenceId", notification.getData().get("senderId"));
+        }
+
         return new NotificationResponse(
                 notification.getId(),
                 notification.getTitle(),
                 notification.getBody(),
                 notification.getType(),
+                referenceId,
                 notification.getData(),
                 notification.isRead(),
                 notification.getCreatedAt()

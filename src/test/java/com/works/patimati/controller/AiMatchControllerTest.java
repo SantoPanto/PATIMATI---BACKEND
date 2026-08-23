@@ -43,10 +43,10 @@ class AiMatchControllerTest {
                 .build();
         List<MatchedAdResponseDTO> mockServiceResponse = List.of(mockResult);
 
-        when(aiMatchService.matchImages(any(), eq("LOST"))).thenReturn(mockServiceResponse);
+        when(aiMatchService.matchImages(any(), eq("LOST"), any(), any())).thenReturn(mockServiceResponse);
 
         // Act
-        ResponseEntity<?> response = aiMatchController.matchAd(List.of(mockFile), "LOST");
+        ResponseEntity<?> response = aiMatchController.matchAd(List.of(mockFile), "LOST", null, null);
 
         // Assert
         assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -56,10 +56,10 @@ class AiMatchControllerTest {
     @Test
     void matchAd_Exception_ReturnsInternalServerError() throws Exception {
         // Arrange
-        when(aiMatchService.matchImages(any(), eq("LOST"))).thenThrow(new RuntimeException("AI down"));
+        when(aiMatchService.matchImages(any(), eq("LOST"), any(), any())).thenThrow(new RuntimeException("AI down"));
 
         // Act
-        ResponseEntity<?> response = aiMatchController.matchAd(List.of(mockFile), "LOST");
+        ResponseEntity<?> response = aiMatchController.matchAd(List.of(mockFile), "LOST", null, null);
 
         // Assert
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());

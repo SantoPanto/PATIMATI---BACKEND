@@ -5,6 +5,10 @@ import com.works.patimati.dto.ad.AdCountersResponse;
 import com.works.patimati.service.AdService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -82,5 +86,44 @@ class PublicAdControllerTest {
                 .andExpect(jsonPath("$.happyEndings").value(7));
 
         verify(adService).getAdCounters();
+    }
+
+    @Test
+    void shouldPassSearchParamToServiceOnPublicListing() throws Exception {
+        /*
+         * B5: İlanlar sayfasındaki arama kutusu bu paramla geliyor.
+         * Controller'ın görevi terimi servise DEĞİŞTİRMEDEN iletmek;
+         * temizlik (joker ayıklama, trim) servis katmanının işi.
+         */
+        Pageable beklenen = varsayilanSayfa();
+
+        when(adService.getPublicActiveAds(null, "bursa", beklenen))
+                .thenReturn(Page.empty(beklenen));
+
+        mockMvc.perform(get("/api/public/ads").param("search", "bursa"))
+                .andExpect(status().isOk());
+
+        verify(adService).getPublicActiveAds(null, "bursa", beklenen);
+    }
+
+    @Test
+    void shouldListPublicAdsWithoutSearchParam() throws Exception {
+        Pageable beklenen = varsayilanSayfa();
+
+        when(adService.getPublicActiveAds(null, null, beklenen))
+                .thenReturn(Page.empty(beklenen));
+
+        mockMvc.perform(get("/api/public/ads"))
+                .andExpect(status().isOk());
+
+        verify(adService).getPublicActiveAds(null, null, beklenen);
+    }
+
+    private static Pageable varsayilanSayfa() {
+        return PageRequest.of(
+                0,
+                20,
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
     }
 }

@@ -89,7 +89,7 @@ class NotificationServiceTest {
         notification.setTitle("Başlık");
         notification.setBody("Gövde");
         notification.setType("MESSAGE");
-        notification.setData(Map.of("type", "MESSAGE"));
+        notification.setData(Map.of("type", "MESSAGE", "senderId", "42", "referenceId", "42"));
 
         when(userRepository.findByEmail(recipient.getEmail()))
                 .thenReturn(Optional.of(recipient));
@@ -101,6 +101,7 @@ class NotificationServiceTest {
                 .first()
                 .satisfies(response -> {
                     assertThat(response.title()).isEqualTo("Başlık");
+                    assertThat(response.referenceId()).isEqualTo("42");
                     assertThat(response.data()).containsEntry("type", "MESSAGE");
                 });
 
