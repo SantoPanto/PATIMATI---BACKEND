@@ -39,7 +39,8 @@ public class AiMatchClient {
 
     public AiMatchClient(
             @Value("${ai.service.base-url:http://localhost:8000}") String baseUrl,
-            @Value("${ai.service.match-timeout:5s}") Duration timeout) {
+            @Value("${ai.service.match-timeout:5s}") Duration timeout,
+            @Value("${ai.service.api-key:}") String apiKey) {
 
         ObjectMapper matchMapper = new ObjectMapper()
                 .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
@@ -54,14 +55,24 @@ public class AiMatchClient {
         requestFactory.setConnectTimeout(timeoutMillis);
         requestFactory.setReadTimeout(timeoutMillis);
 
-        this.restClient = RestClient.builder()
+        // DUZELTME: AI servisi /match'i anahtari_dogrula ile korur (bkz.
+        // PATIMATI-AI deposu app/main.py) ve anahtar yapilandirilmamissa
+        // TUM istekleri 401 ile reddeder -- bu istemci hicbir zaman
+        // X-Api-Key gondermiyordu, yani Asama 2 (eslestirme) her zaman
+        // basarisiz oluyordu. AI tarafinin kendi yorumu zaten bu basligin
+        // buradan gonderildigini varsayiyordu (bkz. anahtari_dogrula
+        // docstring'i), koddan eksikti.
+        RestClient.Builder builder = RestClient.builder()
                 .baseUrl(baseUrl)
                 .requestFactory(requestFactory)
                 .messageConverters(converters -> {
                     converters.clear();
                     converters.add(converter);
-                })
-                .build();
+                });
+        if (apiKey != null && !apiKey.isBlank()) {
+            builder = builder.defaultHeader("X-Api-Key", apiKey);
+        }
+        this.restClient = builder.build();
     }
 
     /** @throws RuntimeException herhangi bir ağ/HTTP hatasında — bilinçli olarak yutulmaz, çağıran karar versin. */

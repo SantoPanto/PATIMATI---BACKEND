@@ -85,6 +85,9 @@ ai:
     # blueprint §1/§5).
     base-url: ${AI_SERVICE_BASE_URL:http://localhost:8000}
     match-timeout: ${AI_SERVICE_MATCH_TIMEOUT:5s}
+    # AI servisinin /match ucunu koruyan paylasilan sir (bkz. AiMatchClient,
+    # PATIMATI-AI deposundaki AI_API_KEY ile AYNI olmali).
+    api-key: ${AI_SERVICE_API_KEY:}
   rabbitmq:
     # ai.analysis.result kuyruğuna x-dead-letter-exchange argümanı eklemek
     # KAPALI varsayılan: bu kuyruk broker'da bu argüman OLMADAN zaten canlı
