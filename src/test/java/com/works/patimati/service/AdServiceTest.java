@@ -2,10 +2,12 @@ package com.works.patimati.service;
 
 import com.works.patimati.ai.AiAnalysisPublisher;
 import com.works.patimati.dto.ad.AdCreateRequest;
+import com.works.patimati.dto.ad.AdCountersResponse;
 import com.works.patimati.dto.ad.AdResponse;
 import com.works.patimati.dto.ad.AdUpdateRequest;
 import com.works.patimati.entity.Ad;
 import com.works.patimati.entity.User;
+import com.works.patimati.entity.enums.AdResolutionStatus;
 import com.works.patimati.mapper.AdMapper;
 import com.works.patimati.repository.AdRepository;
 import com.works.patimati.repository.UserRepository;
@@ -23,6 +25,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.multipart.MultipartFile;
+import com.works.patimati.exception.BusinessException;
+import com.works.patimati.storage.InvalidImageException;
 
 import java.util.List;
 import java.util.Optional;
@@ -31,9 +35,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import org.locationtech.jts.geom.Point;
+import static org.mockito.ArgumentMatchers.eq;
+
 
 class AdServiceTest {
 
@@ -43,6 +51,8 @@ class AdServiceTest {
     private ImageStorageService imageStorageService;
     private AiAnalysisPublisher aiAnalysisPublisher;
     private RewardService rewardService;
+    private NotificationService notificationService;
+    private ReverseGeocodingService reverseGeocodingService;
     private AdService adService;
 
     @BeforeEach
@@ -57,6 +67,11 @@ class AdServiceTest {
         // tutuyor ve "yayınlandı mı" doğrulaması yapılabilmesini sağlıyor.)
         aiAnalysisPublisher = mock(AiAnalysisPublisher.class);
         rewardService = mock(RewardService.class);
+        notificationService = mock(NotificationService.class);
+
+        reverseGeocodingService = mock(ReverseGeocodingService.class);
+        when(reverseGeocodingService.cozumle(any(), any()))
+                .thenReturn(java.util.Optional.empty());
 
         adService = new AdService(
                 adRepository,
@@ -64,7 +79,9 @@ class AdServiceTest {
                 adMapper,
                 imageStorageService,
                 aiAnalysisPublisher,
-                rewardService
+                rewardService,
+                mock(NotificationService.class),
+                reverseGeocodingService
         );
     }
 
@@ -113,6 +130,53 @@ class AdServiceTest {
     }
 
     @Test
+    void shouldRejectAdCreationWhenImagesAreMissing() {
+        AdCreateRequest request = mock(AdCreateRequest.class);
+
+        /*
+         * Service doğrudan çağrıldığında fotoğraf listesinin null olması
+         * da iş kuralını aşmamalıdır.
+         */
+        assertThatThrownBy(
+                () -> adService.createAd(
+                        "owner@patimati.com",
+                        request,
+                        null
+                )
+        )
+                .isInstanceOf(InvalidImageException.class)
+                .hasMessageContaining("en az bir fotoğraf");
+
+        /*
+         * Boş bir fotoğraf listesi gönderildiğinde de aynı iş kuralının
+         * uygulanması gerekir.
+         */
+        assertThatThrownBy(
+                () -> adService.createAd(
+                        "owner@patimati.com",
+                        request,
+                        List.of()
+                )
+        )
+                .isInstanceOf(InvalidImageException.class)
+                .hasMessageContaining("en az bir fotoğraf");
+
+        /*
+         * Fotoğraf kontrolü metodun en başında yapıldığı için kullanıcı
+         * sorgusu, dosya yükleme, veritabanı kaydı ve AI kuyruğu gibi
+         * hiçbir yan etki oluşmamalıdır.
+         */
+        verifyNoInteractions(
+                userRepository,
+                imageStorageService,
+                adMapper,
+                adRepository,
+                aiAnalysisPublisher,
+                rewardService
+        );
+    }
+
+    @Test
     void shouldDeleteUploadedImagesWhenDatabaseSaveFails() {
         User owner = User.builder()
                 .uid(42L)
@@ -148,13 +212,14 @@ class AdServiceTest {
     }
 
     @Test
-    void shouldUpdateOnlyAnActiveAdOwnedByAuthenticatedUser() {
+    void shouldUpdateOnlyAnActiveAdoptionAdOwnedByAuthenticatedUser() {
         User owner = User.builder()
                 .uid(42L)
                 .email("owner@patimati.com")
                 .build();
         Ad ad = Ad.builder()
                 .id(7L)
+                .adType(Ad.AdType.ADOPTION)
                 .user(owner)
                 .active(true)
                 .build();
@@ -182,6 +247,58 @@ class AdServiceTest {
     }
 
     @Test
+    void shouldThrowBusinessExceptionWhenUpdatingLostAd() {
+        User owner = User.builder()
+                .uid(42L)
+                .email("owner@patimati.com")
+                .build();
+        Ad lostAd = Ad.builder()
+                .id(7L)
+                .adType(Ad.AdType.LOST)
+                .user(owner)
+                .active(true)
+                .build();
+        AdUpdateRequest request = mock(AdUpdateRequest.class);
+
+        when(userRepository.findByEmail(owner.getEmail()))
+                .thenReturn(Optional.of(owner));
+        when(adRepository.findByIdAndUser_UidAndActiveTrue(
+                lostAd.getId(),
+                owner.getUid()
+        )).thenReturn(Optional.of(lostAd));
+
+        assertThatThrownBy(() -> adService.updateAd(owner.getEmail(), lostAd.getId(), request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Kayıp ve Bulundu ilanlarında bilgi bütünlüğünü korumak amacıyla temel bilgilerin güncellenmesine izin verilmemektedir.");
+    }
+
+    @Test
+    void shouldThrowBusinessExceptionWhenUpdatingFoundAd() {
+        User owner = User.builder()
+                .uid(42L)
+                .email("owner@patimati.com")
+                .build();
+        Ad foundAd = Ad.builder()
+                .id(8L)
+                .adType(Ad.AdType.FOUND)
+                .user(owner)
+                .active(true)
+                .build();
+        AdUpdateRequest request = mock(AdUpdateRequest.class);
+
+        when(userRepository.findByEmail(owner.getEmail()))
+                .thenReturn(Optional.of(owner));
+        when(adRepository.findByIdAndUser_UidAndActiveTrue(
+                foundAd.getId(),
+                owner.getUid()
+        )).thenReturn(Optional.of(foundAd));
+
+        assertThatThrownBy(() -> adService.updateAd(owner.getEmail(), foundAd.getId(), request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Kayıp ve Bulundu ilanlarında bilgi bütünlüğünü korumak amacıyla temel bilgilerin güncellenmesine izin verilmemektedir.");
+    }
+
+    @Test
     void shouldSoftDeleteOnlyAnActiveAdOwnedByAuthenticatedUser() {
         User owner = User.builder()
                 .uid(42L)
@@ -206,6 +323,20 @@ class AdServiceTest {
         assertThat(ad.isActive()).isFalse();
         verify(adRepository).saveAndFlush(ad);
         verify(imageStorageService, never()).deleteImages(any());
+    }
+
+    @Test
+    void shouldReturnPublicActiveAndHappyEndingCounters() {
+        when(adRepository.countByActiveTrueAndSuspendedFalse()).thenReturn(12L);
+        when(adRepository.countByResolutionStatusIn(List.of(
+                AdResolutionStatus.FOUND,
+                AdResolutionStatus.ADOPTED
+        ))).thenReturn(7L);
+
+        AdCountersResponse result = adService.getAdCounters();
+
+        assertThat(result.activeAds()).isEqualTo(12L);
+        assertThat(result.happyEndings()).isEqualTo(7L);
     }
 
     @AfterEach
@@ -321,5 +452,84 @@ class AdServiceTest {
 
         assertThat(result).isNotNull();
         verify(adRepository).findAllByActiveTrueAndSuspendedFalse(pageable);
+    }
+
+    @Test
+    void shouldUsePublicNearbyQueryAndMapCoordinatesCorrectly() {
+        /*
+         * Public haritada gösterilebilecek örnek bir ilan hazırlanır.
+         */
+        Ad ad = Ad.builder()
+                .id(7L)
+                .active(true)
+                .suspended(false)
+                .build();
+
+        AdResponse expectedResponse = mock(AdResponse.class);
+
+        /*
+         * Repository'nin public harita sorgusu bir ilan döndürecek
+         * şekilde taklit edilir.
+         */
+        when(adRepository.findPublicNearbyAds(
+                any(Point.class),
+                eq(5000.0)
+        )).thenReturn(List.of(ad));
+
+        /*
+         * Entity'nin güvenli response DTO'suna dönüştürülmesi taklit edilir.
+         */
+        when(adMapper.toResponse(ad, List.of()))
+                .thenReturn(expectedResponse);
+
+        List<AdResponse> result = adService.findPublicNearbyAds(
+                40.195,
+                29.060,
+                5000.0
+        );
+
+        /*
+         * Repository'ye gönderilen PostGIS koordinatını yakalıyoruz.
+         * Böylece enlem ve boylamın yanlış sırada kullanılmadığını doğruluyoruz.
+         */
+        ArgumentCaptor<Point> pointCaptor =
+                ArgumentCaptor.forClass(Point.class);
+
+        verify(adRepository).findPublicNearbyAds(
+                pointCaptor.capture(),
+                eq(5000.0)
+        );
+
+        // X değeri boylam olmalıdır.
+        assertThat(pointCaptor.getValue().getX())
+                .isEqualTo(29.060);
+
+        // Y değeri enlem olmalıdır.
+        assertThat(pointCaptor.getValue().getY())
+                .isEqualTo(40.195);
+
+        assertThat(result).containsExactly(expectedResponse);
+    }
+
+    @Test
+    void shouldAlwaysGenerateSignedUrlForEveryPhotoWithoutBypass() {
+        String testReference = "s3://patimati-bucket/ads/test-dummyimage.com/dog.jpg";
+        String mockSignedUrl = "mock_signed_url";
+        Ad ad = Ad.builder()
+                .id(101L)
+                .photoUrls(List.of(testReference))
+                .build();
+
+        AdResponse expectedResponse = mock(AdResponse.class);
+
+        when(imageStorageService.createTemporaryReadUrl(testReference))
+                .thenReturn(mockSignedUrl);
+        when(adMapper.toResponse(ad, List.of(mockSignedUrl)))
+                .thenReturn(expectedResponse);
+
+        AdResponse response = adService.toResponseWithTemporaryPhotoUrls(ad);
+
+        assertThat(response).isSameAs(expectedResponse);
+        verify(imageStorageService).createTemporaryReadUrl(testReference);
     }
 }

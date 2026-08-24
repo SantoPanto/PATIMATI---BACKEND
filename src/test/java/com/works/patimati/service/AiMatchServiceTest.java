@@ -1,28 +1,35 @@
 package com.works.patimati.service;
 
 import com.works.patimati.ai.AiCandidateRow;
+import com.works.patimati.dto.ad.AdResponse;
+import com.works.patimati.dto.match.MatchedAdResponseDTO;
 import com.works.patimati.entity.Ad;
 import com.works.patimati.entity.enums.Species;
 import com.works.patimati.repository.AdRepository;
-import com.works.patimati.storage.ImageStorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.mock.http.client.MockClientHttpResponse;
+import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -30,101 +37,94 @@ import static org.mockito.Mockito.when;
 
 /**
  * matchImages'in dört nokta-atışı düzeltmesini (N+1 x2, null ad_id, geçersiz
- * listingType) sınar.
+ * listingType) ve boş-aday davranışını sınar.
  *
- * <p>AI servisi gerçekten çağrılmıyor. {@code AiMatchService} kendi
- * {@code RestTemplate}'ini constructor içinde {@code RestTemplateBuilder}'dan
- * kurduğu için (bkz. AiMatchService), dışarıdan bir mock RestTemplate/
- * MockRestServiceServer bağlamanın temiz bir yolu yok -- bunun yerine
- * builder'a bir {@link org.springframework.http.client.ClientHttpRequestInterceptor}
- * eklenip AI çağrıları burada yakalanıyor. Bu, mevcut dört noktasal
- * düzeltmenin kapsamı dışında AiMatchService'in HTTP kurulumunu YENİDEN
- * YAZMADAN test etmenin tek yolu.
+ * <p>AI servisi gerçekten çağrılmıyor -- {@code RestTemplate} mock'lanıyor
+ * (constructor'daki {@code RestTemplateBuilder} de mock'lanarak).
  */
+@ExtendWith(MockitoExtension.class)
+@org.mockito.junit.jupiter.MockitoSettings(strictness = org.mockito.quality.Strictness.LENIENT)
 class AiMatchServiceTest {
 
+    @Mock
     private AdRepository adRepository;
-    private ImageStorageService imageStorageService;
-    private List<String> cagrilanYollar;
+
+    @Mock
+    private AdService adService;
+
+    @Mock
+    private RestTemplateBuilder restTemplateBuilder;
+
+    @Mock
+    private RestTemplate restTemplate;
+
     private AiMatchService service;
 
-    private static final String ANALYZE_YANITI =
-            "{\"embedding\":[0.1,0.2,0.3],\"labels\":[\"cat\"],\"species\":\"cat\"}";
+    private static final Map<String, Object> ANALYZE_YANITI = Map.of(
+            "embedding", List.of(0.1, 0.2, 0.3),
+            "labels", List.of("cat"),
+            "species", "cat"
+    );
 
     @BeforeEach
     void setUp() {
-        adRepository = mock(AdRepository.class);
-        imageStorageService = mock(ImageStorageService.class);
-        cagrilanYollar = new ArrayList<>();
-    }
+        when(restTemplateBuilder.setConnectTimeout(any(Duration.class))).thenReturn(restTemplateBuilder);
+        when(restTemplateBuilder.setReadTimeout(any(Duration.class))).thenReturn(restTemplateBuilder);
+        when(restTemplateBuilder.build()).thenReturn(restTemplate);
 
-    /** matchJson null ise /match hiç beklenmiyor demektir -- çağrılırsa 500 döner, test bunu yakalar. */
-    private void servisiKur(String matchJson) {
-        RestTemplateBuilder builder = new RestTemplateBuilder()
-                .additionalInterceptors((request, body, execution) -> {
-                    String yol = request.getURI().getPath();
-                    cagrilanYollar.add(yol);
-                    String govde;
-                    if (yol.endsWith("/analyze")) {
-                        govde = ANALYZE_YANITI;
-                    } else if (yol.endsWith("/match") && matchJson != null) {
-                        govde = matchJson;
-                    } else {
-                        return new MockClientHttpResponse(
-                                ("beklenmeyen istek: " + yol).getBytes(StandardCharsets.UTF_8),
-                                HttpStatus.INTERNAL_SERVER_ERROR);
-                    }
-                    MockClientHttpResponse yanit = new MockClientHttpResponse(
-                            govde.getBytes(StandardCharsets.UTF_8), HttpStatus.OK);
-                    yanit.getHeaders().setContentType(MediaType.APPLICATION_JSON);
-                    return yanit;
-                });
-
-        service = new AiMatchService(adRepository, imageStorageService, builder);
-        // @Value alanları yalnızca Spring context'inde enjekte edilir --
-        // burada context yok, elle veriliyor (standart ReflectionTestUtils deseni).
-        ReflectionTestUtils.setField(service, "aiServiceUrl", "http://ai.test");
+        service = new AiMatchService(adRepository, adService, restTemplateBuilder);
+        ReflectionTestUtils.setField(service, "aiServiceUrl", "http://localhost:8000");
         ReflectionTestUtils.setField(service, "windowDays", 90);
         ReflectionTestUtils.setField(service, "maxCandidates", 100);
+
+        when(restTemplate.postForEntity(eq("http://localhost:8000/analyze"), any(), any(Class.class)))
+                .thenReturn(new ResponseEntity<>(new HashMap<>(ANALYZE_YANITI), HttpStatus.OK));
     }
 
     private List<MultipartFile> tekFotograf() {
         return List.of(new MockMultipartFile("images", "kedi.jpg", "image/jpeg", "sahte-bayt".getBytes()));
     }
 
+    @Test
+    void matchImages_bosAdayHavuzu_bosListeDoner_matchCagrilmaz() throws Exception {
+        when(adRepository.findAiCandidatesWithoutLocation(anyString(), any(Instant.class)))
+                .thenReturn(List.of());
+
+        List<MatchedAdResponseDTO> sonuc = service.matchImages(tekFotograf(), "FOUND");
+
+        assertThat(sonuc).isEmpty();
+        verify(restTemplate, never()).postForEntity(eq("http://localhost:8000/match"), any(), any(Class.class));
+    }
+
     // --- 4) geçersiz listingType -----------------------------------------
 
     @Test
     void gecersizListingType_illegalArgumentException_firlatir_matchCagrilmaz() {
-        servisiKur(null);
-
         assertThatThrownBy(() -> service.matchImages(tekFotograf(), "GARBAGE"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("GARBAGE");
 
-        assertThat(cagrilanYollar).contains("/analyze").doesNotContain("/match");
+        verify(restTemplate, never()).postForEntity(eq("http://localhost:8000/match"), any(), any(Class.class));
     }
 
     @Test
     void adoptionListingType_gecerliAmaKarsitiYok_bosListeDoner_matchCagrilmaz() throws Exception {
-        servisiKur(null);
-
-        List<Map<String, Object>> sonuc = service.matchImages(tekFotograf(), "ADOPTION");
+        List<MatchedAdResponseDTO> sonuc = service.matchImages(tekFotograf(), "ADOPTION");
 
         assertThat(sonuc).isEmpty();
-        assertThat(cagrilanYollar).contains("/analyze").doesNotContain("/match");
+        verify(restTemplate, never()).postForEntity(eq("http://localhost:8000/match"), any(), any(Class.class));
     }
 
     @Test
     void listingTypeKucukHarfVeBosluklaGelirse_yineDeDogruCalisir() throws Exception {
-        adayVeEslesmeKur("{\"matches\":[{\"ad_id\":5,\"score\":0.91}],\"skipped_candidates\":0}");
+        adayVeEslesmeKur(Map.of("matches", List.of(Map.of("ad_id", 5, "score", 0.91)), "skipped_candidates", 0));
 
-        List<Map<String, Object>> sonuc = service.matchImages(tekFotograf(), "  lost  ");
+        List<MatchedAdResponseDTO> sonuc = service.matchImages(tekFotograf(), "  lost  ");
 
         assertThat(sonuc).hasSize(1);
     }
 
-    // --- 1) & 2) N+1 -> findAllById, 2) null ad_id -----------------------
+    // --- 1) & 2) N+1 -> findAllById, 2) null ad_id ------------------------
 
     private Ad ornekIlan(long id) {
         return Ad.builder()
@@ -139,26 +139,31 @@ class AiMatchServiceTest {
                 .build();
     }
 
-    private void adayVeEslesmeKur(String matchJson) {
-        servisiKur(matchJson);
+    @SuppressWarnings("unchecked")
+    private void adayVeEslesmeKur(Map<String, Object> matchYaniti) {
         AiCandidateRow satir = mock(AiCandidateRow.class);
         when(satir.getAdId()).thenReturn(5L);
         when(adRepository.findAiCandidatesWithoutLocation(any(), any())).thenReturn(List.of(satir));
         when(adRepository.findAllById(any())).thenReturn(List.of(ornekIlan(5L)));
+        when(restTemplate.postForEntity(eq("http://localhost:8000/match"), any(), any(Class.class)))
+                .thenReturn(new ResponseEntity<>(new HashMap<>(matchYaniti), HttpStatus.OK));
+
+        AdResponse zenginlestirilmisIlan = mock(AdResponse.class);
+        when(zenginlestirilmisIlan.id()).thenReturn(5L);
+        when(zenginlestirilmisIlan.title()).thenReturn("Kayıp kedi");
+        when(adService.toResponseWithTemporaryPhotoUrls(any(Ad.class))).thenReturn(zenginlestirilmisIlan);
     }
 
     @Test
     void adayToplamaVeYanitZenginlestirme_findAllByIdKullanir_findByIdHicCagrilmaz() throws Exception {
-        adayVeEslesmeKur("{\"matches\":[{\"ad_id\":5,\"score\":0.91}],\"skipped_candidates\":0}");
+        adayVeEslesmeKur(Map.of("matches", List.of(Map.of("ad_id", 5, "score", 0.91)), "skipped_candidates", 0));
 
-        List<Map<String, Object>> sonuc = service.matchImages(tekFotograf(), "LOST");
+        List<MatchedAdResponseDTO> sonuc = service.matchImages(tekFotograf(), "LOST");
 
         assertThat(sonuc).hasSize(1);
-        assertThat(sonuc.get(0).get("score")).isEqualTo(0.91);
-        @SuppressWarnings("unchecked")
-        Map<String, Object> ad = (Map<String, Object>) sonuc.get(0).get("ad");
-        assertThat(ad.get("id")).isEqualTo(5L);
-        assertThat(ad.get("title")).isEqualTo("Kayıp kedi");
+        assertThat(sonuc.get(0).getScore()).isEqualTo(0.91);
+        assertThat(sonuc.get(0).getAd().id()).isEqualTo(5L);
+        assertThat(sonuc.get(0).getAd().title()).isEqualTo("Kayıp kedi");
 
         verify(adRepository, never()).findById(any());
     }
@@ -168,12 +173,16 @@ class AiMatchServiceTest {
         // İkinci eşleşmenin ad_id'si null -- bugün teorik (bu uç yalnızca
         // native aday gönderiyor) ama savunma amaçlı: NPE fırlatmadan
         // sessizce atlanmalı, geçerli olan (id=5) yine dönmeli.
-        adayVeEslesmeKur("{\"matches\":[{\"ad_id\":5,\"score\":0.91},{\"ad_id\":null,\"score\":0.5}],"
-                + "\"skipped_candidates\":0}");
+        Map<String, Object> ikinciEslesme = new HashMap<>();
+        ikinciEslesme.put("ad_id", null);
+        ikinciEslesme.put("score", 0.5);
+        adayVeEslesmeKur(Map.of(
+                "matches", List.of(Map.of("ad_id", 5, "score", 0.91), ikinciEslesme),
+                "skipped_candidates", 0));
 
-        List<Map<String, Object>> sonuc = service.matchImages(tekFotograf(), "LOST");
+        List<MatchedAdResponseDTO> sonuc = service.matchImages(tekFotograf(), "LOST");
 
         assertThat(sonuc).hasSize(1);
-        assertThat(((Map<?, ?>) sonuc.get(0).get("ad")).get("id")).isEqualTo(5L);
+        assertThat(sonuc.get(0).getAd().id()).isEqualTo(5L);
     }
 }

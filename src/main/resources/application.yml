@@ -1,11 +1,42 @@
-# Veritabanı ve Flyway Ayarları
+#server root seviyesinde olmalı
+server:
+  # Üretimde bir ters proxy'nin (Nginx/Cloudflare/ALB/Railway vb.) arkasında
+  # çalışıyoruz -- "native" gömülü Tomcat'in kendi forwarded-header desteğini
+  # (RemoteIpValve muadili) açar, bu da request.getRemoteAddr()'ı gerçekten
+  # YENİDEN YAZAR. BİLİNÇLİ OLARAK "framework" DEĞİL: o strateji Spring'in
+  # ForwardedHeaderFilter'ını kullanır ve yalnızca URL/şema/host yeniden
+  # kurulumunu (redirect'ler, getRequestURL) düzeltir -- getRemoteAddr()'a HİÇ
+  # dokunmaz. LoginRateLimiter (IP bazlı brute-force koruması) tam olarak
+  # getRemoteAddr()'a güvendiği için bu ayrım burada kritik: "framework"
+  # seçilseydi rate limiter hâlâ istemcinin uydurduğu X-Forwarded-For'u
+  # görmeye devam ederdi.
+  # PATIMATI-AI-social'daki AYNI sorunun aynı çözümü (bkz. o reponun
+  # Dockerfile'ındaki "$PORT'u onurlandırma" notu) -- Railway her servise
+  # rastgele bir $PORT atar, sabit 8080'i dinleyen bir uygulamaya trafik hiç
+  # ulaşmaz. ${PORT:8080}: PORT ortam değişkeni varsa onu kullan, yoksa
+  # (yerel geliştirme) 8080'e düş -- kimsenin local kurulumu bozulmuyor.
+  port: ${PORT:8080}
+  forward-headers-strategy: native
+
 spring:
+  # --- RFC 7807 ProblemDetail Ayarı ---
+  mvc:
+    problemdetails:
+      enabled: true
+
+  # --- Jackson Ayarları ---
+  jackson:
+    deserialization:
+      ACCEPT_EMPTY_STRING_AS_NULL_OBJECT: true
+
   # --- Dosya Yükleme Ayarları ---
   servlet:
     multipart:
       enabled: true
       max-file-size: 5MB
       max-request-size: 20MB
+
+
 
 
   datasource:
@@ -19,8 +50,8 @@ spring:
     # Bu satırı ekleyerek Hibernate'e dialect'i manuel veriyoruz
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
-      # ÖNEMLİ: Update yerine validate yapıyoruz
-      ddl-auto: update
+      # Flyway ile uyum için varsayılan olarak validate kullanılır
+      ddl-auto: ${DDL_AUTO:validate}
   flyway:
     enabled: true
     # Mevcut veritabanı boş değilse hata vermek yerine baseline noktasından başlar
@@ -61,6 +92,26 @@ spring:
 
 # AI eşleştirme ayarları (entegrasyon sözleşmesi §5)
 ai:
+  service:
+    # AI servisinin taban adresi. Kodda da bir varsayılanı vardı ama burada
+    # yazılı olmadığı için hangi değişkenle ezileceği hiçbir yerde görünmüyordu.
+    # AiMatchService (native /analyze, /match) bu anahtarı okur.
+    url: ${AI_SERVICE_URL:http://localhost:8000}
+    # AiMatchClient (external/Instagram /match, bkz. ExternalMatchingService)
+    # AYRI bir @Value ile aynı taban adresi okur -- iki istemci de aynı AI
+    # servisine gider, yalnızca property adları farklı tarihlerde eklendi.
+    base-url: ${AI_SERVICE_BASE_URL:http://localhost:8000}
+    match-timeout: ${AI_SERVICE_MATCH_TIMEOUT:5s}
+    # AI ile PAYLAŞILAN SIR (sözleşme §10 / A1). Verilirse backend, AI'ya giden
+    # her istekte X-Api-Key başlığını gönderir -- hem AiMatchService HEM
+    # AiMatchClient AYNI bu değeri okur (tek anahtar, iki istemci).
+    #
+    # ⚠ İki taraf birlikte yapılandırılmalı: yalnız AI'da anahtar varsa
+    # çağrılar 401 alır, yalnız burada varsa AI başlığı yok sayar. Değer AI
+    # deposundaki AI_API_KEY ile AYNI olmalı.
+    #
+    # Boş bırakılırsa başlık hiç eklenmez — bugünkü kurulum aynen çalışır.
+    api-key: ${AI_API_KEY:}
   matching:
     # Aday yarıçapı. Bildirim yarıçapından (5 km) BİLEREK farklı:
     # kaybolan hayvan yürür, günlerce uzaklaşabilir.
@@ -79,15 +130,6 @@ ai:
     # değeri kullanır. 0.80'i Instagram için doğrulanmış kesin bir değer
     # olarak burada HARD-CODE ETMİYORUZ (blueprint §22) — bu yüzden boş
     # string yerine anahtarın kendisi tanımsız bırakılıyor.
-  service:
-    # AiMatchClient'ın senkron çağırdığı AI HTTP ucu (RabbitMQ'nun aksine
-    # bu TEK yeni Java<->Python HTTP bağımlılığıdır — Faz 2 revize
-    # blueprint §1/§5).
-    base-url: ${AI_SERVICE_BASE_URL:http://localhost:8000}
-    match-timeout: ${AI_SERVICE_MATCH_TIMEOUT:5s}
-    # AI servisinin /match ucunu koruyan paylasilan sir (bkz. AiMatchClient,
-    # PATIMATI-AI deposundaki AI_API_KEY ile AYNI olmali).
-    api-key: ${AI_SERVICE_API_KEY:}
   rabbitmq:
     # ai.analysis.result kuyruğuna x-dead-letter-exchange argümanı eklemek
     # KAPALI varsayılan: bu kuyruk broker'da bu argüman OLMADAN zaten canlı
@@ -135,7 +177,18 @@ jwt:
 # Uygulama ve Depolama Ayarları
 app:
   frontend:
-    url: http://localhost:5173 # Frontend'in ayağa kalktığı adres
+    url: ${FRONTEND_URL:http://localhost:5173} # Frontend'in ayağa kalktığı adres
+  geocoding:
+    # Ters geokodlama: koordinat → il/ilçe (V19). Kayıt anında ve
+    # admin backfill ucunda kullanılır. Kapalıyken ya da servis hata
+    # verdiğinde ilan akışı ETKİLENMEZ — alanlar boş kalır.
+    # Nominatim politikası: tanıtıcı User-Agent zorunlu, hız ≤1 istek/sn
+    # (backfill istekler arasında bekler).
+    url: ${GEOCODING_URL:https://nominatim.openstreetmap.org/reverse}
+    enabled: ${GEOCODING_ENABLED:true}
+    timeout-ms: ${GEOCODING_TIMEOUT_MS:2500}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:4200,http://localhost:5173,https://patimati.me}
   storage:
     # VARSAYILAN = GERÇEK AWS S3. Yerelde MinIO için tek şalter:
     #   SPRING_PROFILES_ACTIVE=local        (bkz. application-local.yml)
@@ -159,21 +212,13 @@ app:
     # Virgülle ayrılmış origin listesi ortam değişkeniyle canlı ortamda değiştirilebilir.
     allowed-origins: ${WEBSOCKET_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:4200,http://localhost:5173}
 
-# Üretimde bir ters proxy'nin (Nginx/Cloudflare/ALB/Railway vb.) arkasında
-# çalışıyoruz -- "native" gömülü Tomcat'in kendi forwarded-header desteğini
-# (RemoteIpValve muadili) açar, bu da request.getRemoteAddr()'ı gerçekten
-# YENİDEN YAZAR. BİLİNÇLİ OLARAK "framework" DEĞİL: o strateji Spring'in
-# ForwardedHeaderFilter'ını kullanır ve yalnızca URL/şema/host yeniden
-# kurulumunu (redirect'ler, getRequestURL) düzeltir -- getRemoteAddr()'a HİÇ
-# dokunmaz. LoginRateLimiter (IP bazlı brute-force koruması) tam olarak
-# getRemoteAddr()'a güvendiği için bu ayrım burada kritik: "framework"
-# seçilseydi rate limiter hâlâ istemcinin uydurduğu X-Forwarded-For'u
-# görmeye devam ederdi.
-server:
-  # PATIMATI-AI-social'daki AYNI sorunun aynı çözümü (bkz. o reponun
-  # Dockerfile'ındaki "$PORT'u onurlandırma" notu) -- Railway her servise
-  # rastgele bir $PORT atar, sabit 8080'i dinleyen bir uygulamaya trafik hiç
-  # ulaşmaz. ${PORT:8080}: PORT ortam değişkeni varsa onu kullan, yoksa
-  # (yerel geliştirme) 8080'e düş -- kimsenin local kurulumu bozulmuyor.
-  port: ${PORT:8080}
-  forward-headers-strategy: native
+# OpenAPI / Swagger UI Yapılandırması
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    operationsSorter: alpha
+    tagsSorter: alpha

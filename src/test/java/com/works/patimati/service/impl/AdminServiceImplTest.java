@@ -26,6 +26,7 @@ import com.works.patimati.repository.external.ExternalSourceMediaRepository;
 import com.works.patimati.repository.external.ExternalSourcePostRepository;
 import com.works.patimati.service.AdService;
 import com.works.patimati.storage.ImageStorageService;
+import com.works.patimati.service.ReverseGeocodingService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Page;
@@ -54,6 +55,7 @@ class AdminServiceImplTest {
     private ExternalSourceMediaRepository externalSourceMediaRepository;
     private PotentialMatchRepository potentialMatchRepository;
     private ImageStorageService imageStorageService;
+    private ReverseGeocodingService reverseGeocodingService;
     private AdminServiceImpl adminService;
 
     @BeforeEach
@@ -70,6 +72,8 @@ class AdminServiceImplTest {
         potentialMatchRepository = mock(PotentialMatchRepository.class);
         imageStorageService = mock(ImageStorageService.class);
 
+        reverseGeocodingService = mock(ReverseGeocodingService.class);
+
         adminService = new AdminServiceImpl(
                 userRepository,
                 adRepository,
@@ -81,7 +85,8 @@ class AdminServiceImplTest {
                 externalPetRecordRepository,
                 externalSourceMediaRepository,
                 potentialMatchRepository,
-                imageStorageService
+                imageStorageService,
+                reverseGeocodingService
         );
     }
 

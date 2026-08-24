@@ -1,6 +1,7 @@
 package com.works.patimati.service.impl;
 
 import com.works.patimati.dto.ad.AdResponse;
+import java.time.LocalDate;
 import com.works.patimati.dto.ad.AdoptionAdCreateRequest;
 import com.works.patimati.dto.ad.AdoptionAdUpdateRequest;
 import com.works.patimati.dto.ad.ResolveAdoptionAdRequest;
@@ -10,6 +11,7 @@ import com.works.patimati.entity.Ad;
 import com.works.patimati.entity.AdoptionComplaint;
 import com.works.patimati.entity.User;
 import com.works.patimati.entity.enums.AiStatus;
+import com.works.patimati.entity.enums.AdResolutionStatus;
 import com.works.patimati.entity.enums.CoatPattern;
 import com.works.patimati.entity.enums.ComplaintStatus;
 import com.works.patimati.entity.enums.EyeColor;
@@ -103,6 +105,7 @@ public class AdoptionServiceImpl implements AdoptionService {
                         ? request.eyeColor()
                         : EyeColor.UNKNOWN)
                 .microchipNumber(request.microchipNumber())
+                .lostDate(parseDate(request.date()))
                 .location(location)
                 .photoUrls(photoReferences)
                 .user(owner)
@@ -110,6 +113,8 @@ public class AdoptionServiceImpl implements AdoptionService {
                 .suspended(false)
                 .aiStatus(AiStatus.NOT_APPLICABLE) // AI işlemine girmeyecek
                 .build();
+
+        adService.konumBilgisiniDoldur(ad, request.city(), request.district());
 
         Ad savedAd = adRepository.save(ad);
         log.info("Sahiplendirme ilanı oluşturuldu. adId={}, owner={}", savedAd.getId(), ownerEmail);
@@ -183,6 +188,7 @@ public class AdoptionServiceImpl implements AdoptionService {
         validateAdOwnerAndType(ad, ownerEmail);
 
         ad.setActive(false);
+        ad.setResolutionStatus(AdResolutionStatus.ADOPTED);
         adRepository.save(ad);
 
         Long ownerId = ad.getUser().getUid();
@@ -255,6 +261,38 @@ public class AdoptionServiceImpl implements AdoptionService {
         );
     }
 
+    @Transactional
+    @Override
+    public ComplaintResponse resolveAdoptionComplaint(Long complaintId) {
+        AdoptionComplaint complaint = adoptionComplaintRepository.findById(complaintId)
+                .orElseThrow(() -> new ResourceNotFoundException("Sahiplendirme ilanı şikayeti bulunamadı ID: " + complaintId));
+
+        complaint.setStatus(ComplaintStatus.COZULDU);
+        AdoptionComplaint updatedComplaint = adoptionComplaintRepository.save(complaint);
+        log.info("Sahiplendirme ilanı şikayeti çözüldü. complaintId={}", complaintId);
+
+        String reporterEmail = userRepository.findById(updatedComplaint.getReporterId())
+                .map(User::getEmail)
+                .orElse(null);
+
+        Long adOwnerUid = adRepository.findById(updatedComplaint.getAdId())
+                .filter(ad -> ad.getUser() != null)
+                .map(ad -> ad.getUser().getUid())
+                .orElse(null);
+
+        return new ComplaintResponse(
+                updatedComplaint.getId(),
+                updatedComplaint.getReporterId(),
+                reporterEmail,
+                updatedComplaint.getAdId(),
+                adOwnerUid,
+                updatedComplaint.getReason(),
+                updatedComplaint.getDescription(),
+                updatedComplaint.getStatus(),
+                updatedComplaint.getCreatedAt()
+        );
+    }
+
     private void validateAdOwnerAndType(Ad ad, String ownerEmail) {
         if (ad.getAdType() != Ad.AdType.ADOPTION) {
             throw new IllegalArgumentException("İlan bir sahiplendirme ilanı değildir.");
@@ -262,5 +300,21 @@ public class AdoptionServiceImpl implements AdoptionService {
         if (ad.getUser() == null || !ad.getUser().getEmail().equalsIgnoreCase(ownerEmail)) {
             throw new IllegalStateException("Bu sahiplendirme ilanı üzerinde işlem yapma yetkiniz bulunmamaktadır.");
         }
+    }
+
+    private LocalDate parseDate(String dateStr) {
+        if (dateStr == null || dateStr.isBlank()) {
+            return null;
+        }
+        LocalDate date;
+        try {
+            date = LocalDate.parse(dateStr.trim());
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Tarih formatı yyyy-MM-dd olmalıdır");
+        }
+        if (date.isAfter(LocalDate.now())) {
+            throw new IllegalArgumentException("Tarih gelecekte bir tarih olamaz");
+        }
+        return date;
     }
 }

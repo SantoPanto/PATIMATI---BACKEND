@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS external_source_media (
     media_type              VARCHAR(16) NOT NULL DEFAULT 'IMAGE',
     source_reference        VARCHAR(512),
     storage_key             VARCHAR(512),
-    content_sha256          CHAR(64),
+    content_sha256          VARCHAR(64),
     processing_state        VARCHAR(16) NOT NULL DEFAULT 'PENDING',
     created_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at              TIMESTAMPTZ NOT NULL DEFAULT now(),

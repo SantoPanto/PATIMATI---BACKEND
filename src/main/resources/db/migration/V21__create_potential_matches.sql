@@ -1,4 +1,4 @@
--- V11: potential_matches + potential_match_recipients.
+-- V21: potential_matches + potential_match_recipients.
 -- Karşılığı: Faz 2 revize blueprint §3 (düzeltilmiş iki-tablo tasarımı).
 --
 -- potential_matches yalnızca "hangi çift eşleşti" kimliğidir.

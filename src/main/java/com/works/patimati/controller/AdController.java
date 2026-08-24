@@ -3,6 +3,7 @@ package com.works.patimati.controller;
 import com.works.patimati.dto.ad.AdCreateRequest;
 import com.works.patimati.dto.ad.AdResponse;
 import com.works.patimati.dto.ad.AdUpdateRequest;
+import com.works.patimati.dto.ad.PosterSettingsUpdateRequest;
 import com.works.patimati.dto.ad.ResolveLostAdRequest;
 import com.works.patimati.entity.Ad;
 import com.works.patimati.entity.User;
@@ -26,7 +27,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -37,9 +40,14 @@ import org.springframework.web.bind.annotation.RestController;
 import java.net.URI;
 import java.util.List;
 
+import com.works.patimati.service.PosterService;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+
 @Validated
 @RestController
-@RequestMapping("/api/ads")
+@RequestMapping({"/api/ads", "/api/v1/ads"})
 @RequiredArgsConstructor
 public class AdController {
 
@@ -47,6 +55,7 @@ public class AdController {
 
     private final AdService adService;
     private final UserRepository userRepository;
+    private final PosterService posterService;
 
     /**
      * İlanı fotoğraflarıyla birlikte oluşturur.
@@ -60,7 +69,12 @@ public class AdController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<AdResponse> createAd(
             @Valid @RequestPart("ad") AdCreateRequest request,
-            @RequestPart(value = "images", required = false) List<MultipartFile> images,
+            /*
+             * B-8 görevi
+             * "images" alanı gönderilmezse istek Service'e
+             * ulaşmadan 400 bad request döner.
+             */
+            @RequestPart(value = "images", required = true) List<MultipartFile> images,
             Authentication authentication
     ) {
         AdResponse response = adService.createAd(authentication.getName(), request, images);
@@ -98,10 +112,15 @@ public class AdController {
         );
     }
 
+    /**
+     * Kullanıcının kendi ilanları. {@code active} <b>gönderilmezse "hepsi"</b>
+     * demektir — eskiden varsayılanı {@code true}ydu ve ön yüzün "Tümü"
+     * sekmesi alanı göndermediği için sessizce süzülüyordu.
+     */
     @GetMapping("/me")
     public ResponseEntity<Page<AdResponse>> getMyAds(
             Authentication authentication,
-            @RequestParam(defaultValue = "true") boolean active,
+            @RequestParam(required = false) Boolean active,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "20")
             @Min(1) @Max(MAX_PAGE_SIZE) int size
@@ -133,6 +152,21 @@ public class AdController {
                         adId,
                         request
                 )
+        );
+    }
+
+    /**
+     * Yayından kaldırılmış ilanı sahibi yeniden yayına alır.
+     * DELETE /{adId} ilanı silmiyor, PASİFLEŞTİRİYOR; bu da onun karşılığı.
+     * Askıya alınmış (yönetici kararı) ilanlarda 403 döner.
+     */
+    @PutMapping("/{adId}/republish")
+    public ResponseEntity<AdResponse> republishAd(
+            Authentication authentication,
+            @PathVariable @Min(1) Long adId
+    ) {
+        return ResponseEntity.ok(
+                adService.republishAd(authentication.getName(), adId)
         );
     }
 
@@ -175,5 +209,50 @@ public class AdController {
         return ResponseEntity.ok(
                 adService.findNearbyAds(latitude, longitude, radius)
         );
+    }
+
+    /**
+     * İlan afiş gizlilik ve KVKK ayarlarını günceller. Sadece ilan sahibi erişebilir.
+     * PATCH /api/ads/{adId}/poster-settings
+     * PATCH /api/v1/ads/{adId}/poster-settings
+     */
+    @PatchMapping("/{adId}/poster-settings")
+    public ResponseEntity<AdResponse> updatePosterSettings(
+            @PathVariable @Min(1) Long adId,
+            @RequestBody PosterSettingsUpdateRequest request,
+            Authentication authentication
+    ) {
+        AdResponse response = adService.updatePosterSettings(
+                adId,
+                request,
+                authentication.getName()
+        );
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * İlan afişini PDF olarak üretip döndürür.
+     * GET /api/ads/{adId}/poster
+     * GET /api/v1/ads/{adId}/poster
+     */
+    @GetMapping(value = "/{adId}/poster", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> getAdPoster(
+            @PathVariable @Min(1) Long adId,
+            Authentication authentication
+    ) {
+        String requestingUserEmail = (authentication != null && authentication.isAuthenticated()
+                && !"anonymousUser".equals(authentication.getPrincipal()))
+                ? authentication.getName()
+                : null;
+
+        byte[] pdfBytes = posterService.generateAdPosterPdf(adId, requestingUserEmail);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"poster_" + adId + ".pdf\"");
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(pdfBytes);
     }
 }

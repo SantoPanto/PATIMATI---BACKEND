@@ -1,5 +1,6 @@
 package com.works.patimati.controller;
 
+import com.works.patimati.dto.match.MatchedAdResponseDTO;
 import com.works.patimati.service.AiMatchService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -29,7 +30,7 @@ public class AiMatchController {
             @RequestParam("images") List<MultipartFile> images,
             @RequestParam("listingType") String listingType) {
         try {
-            var results = aiMatchService.matchImages(images, listingType);
+            List<MatchedAdResponseDTO> results = aiMatchService.matchImages(images, listingType);
             return ResponseEntity.ok(results);
         } catch (IllegalArgumentException e) {
             // Ge\u00E7ersiz listingType -- GlobalExceptionHandler bunu zaten
@@ -49,3 +50,4 @@ public class AiMatchController {
         }
     }
 }
+

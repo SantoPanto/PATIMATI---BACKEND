@@ -69,4 +69,10 @@ public interface AdminService {
      * en yeniden eskiye sayfalı listeler.
      */
     Page<ExternalPostAdminResponse> getExternalPosts(Pageable pageable);
+
+    /**
+     * V19 öncesi ilanların il/ilçesini koordinattan doldurur (bir defalık,
+     * dağıtımdan sonra çağrılır). Dönüş: toplam / dolan / cozulemeyen.
+     */
+    java.util.Map<String, Integer> backfillAdLocations();
 }

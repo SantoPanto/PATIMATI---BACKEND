@@ -25,6 +25,7 @@ import com.works.patimati.repository.external.ExternalSourcePostRepository;
 import com.works.patimati.service.AdminService;
 import com.works.patimati.service.AdService;
 import com.works.patimati.storage.ImageStorageService;
+import com.works.patimati.service.ReverseGeocodingService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,6 +35,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -60,6 +62,7 @@ public class AdminServiceImpl implements AdminService {
     private final ExternalSourceMediaRepository externalSourceMediaRepository;
     private final PotentialMatchRepository potentialMatchRepository;
     private final ImageStorageService imageStorageService;
+    private final ReverseGeocodingService reverseGeocodingService;
 
     @Transactional(readOnly = true)
     @Override
@@ -351,6 +354,64 @@ public class AdminServiceImpl implements AdminService {
         } catch (RuntimeException e) {
             log.warn("Admin listesi için fotoğraf adresi üretilemedi ({}): {}", media.getStorageKey(), e.getMessage());
             return null;
+        }
+    }
+
+    /**
+     * V19 backfill'i: il'i boş, koordinatı dolu ilanları koordinattan
+     * çözüp kaydeder. Nominatim hız politikası (≤1 istek/sn) gereği
+     * aramalar arasında bekler — bu yüzden BİLEREK @Transactional değil:
+     * uzun süren tek dev transaction yerine kayıt başına kısa save.
+     * Çözülemeyen ilan (servis hatası / adressiz nokta) atlanır; uç
+     * yeniden çağrılırsa yalnız hâlâ boş olanlar denenir.
+     */
+    @Override
+    public Map<String, Integer> backfillAdLocations() {
+        List<Ad> adaylar = adRepository.findByCityIsNullAndLocationIsNotNull();
+
+        int dolan = 0;
+        int cozulemeyen = 0;
+
+        for (int i = 0; i < adaylar.size(); i++) {
+            Ad ad = adaylar.get(i);
+            var cozum = reverseGeocodingService.cozumle(
+                    ad.getLocation().getY(),
+                    ad.getLocation().getX()
+            );
+
+            if (cozum.isPresent()) {
+                ad.setCity(cozum.get().il());
+                ad.setDistrict(cozum.get().ilce());
+                adRepository.save(ad);
+                dolan++;
+            } else {
+                cozulemeyen++;
+            }
+
+            boolean sonKayit = i == adaylar.size() - 1;
+            if (!sonKayit && !geokodAramalariArasindaBekle()) {
+                break;
+            }
+        }
+
+        log.info("İl/ilçe backfill bitti: toplam={} dolan={} cozulemeyen={}",
+                adaylar.size(), dolan, cozulemeyen);
+
+        Map<String, Integer> sonuc = new LinkedHashMap<>();
+        sonuc.put("toplam", adaylar.size());
+        sonuc.put("dolan", dolan);
+        sonuc.put("cozulemeyen", cozulemeyen);
+        return sonuc;
+    }
+
+    /** @return kesintiye uğradıysa false — döngü erken biter. */
+    private static boolean geokodAramalariArasindaBekle() {
+        try {
+            Thread.sleep(1100);
+            return true;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
         }
     }
 }
