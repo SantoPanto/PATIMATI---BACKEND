@@ -65,6 +65,13 @@ public class PublicPetAnalysisController {
         boolean girisYapmis = authentication != null && authentication.isAuthenticated()
                 && !"anonymousUser".equals(authentication.getPrincipal());
 
+        // Adminler sınırsız -- AdService.isCurrentUserAdmin() ile AYNI kontrol
+        // deseni (ROLE_ADMIN/ADMIN authority taraması). Rate limiter'a hiç
+        // uğranmıyor: ne sayaç kontrolü ne artırma yapılır, kullanıcı kararı.
+        boolean adminMi = girisYapmis && authentication.getAuthorities() != null
+                && authentication.getAuthorities().stream()
+                        .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()) || "ADMIN".equals(a.getAuthority()));
+
         // Giriş yapmışsa e-posta (JwtAuthFilter'ın SecurityContext'e koyduğu
         // principal -- kullanıcı ID'si DEĞİL, ama hesap başına biriciktir,
         // aynı amaca hizmet eder), misafirse IP anahtar olur. IP BİLEREK
@@ -78,13 +85,15 @@ public class PublicPetAnalysisController {
                 ? "user:" + authentication.getName()
                 : "ip:" + httpRequest.getRemoteAddr();
 
-        if (rateLimiter.limitiDoldu(anahtar, girisYapmis)) {
+        if (!adminMi && rateLimiter.limitiDoldu(anahtar, girisYapmis)) {
             String mesaj = girisYapmis
                     ? "Günlük analiz hakkınız doldu. Yarın tekrar deneyebilirsiniz."
                     : "Günlük deneme hakkınız doldu. Giriş yaparak daha fazla analiz yapabilirsiniz.";
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(Map.of("message", mesaj));
         }
-        rateLimiter.istekKaydet(anahtar);
+        if (!adminMi) {
+            rateLimiter.istekKaydet(anahtar);
+        }
 
         try {
             Map<String, Object> sonuc = aiMatchService.analyzePet(file, kullaniciNotu);
