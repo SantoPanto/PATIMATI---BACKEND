@@ -5,6 +5,8 @@ import com.works.patimati.dto.message.MessageResponse;
 import com.works.patimati.dto.message.MessageSendRequest;
 import com.works.patimati.service.MessageService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -13,15 +15,19 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.security.core.Authentication;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
 import java.util.List;
 
+@Validated
 @RestController
 @RequestMapping("/api/messages")
 @RequiredArgsConstructor
 public class ChatController {
+
+    private static final int MAX_PAGE_SIZE = 100;
 
     private final MessageService messageService;
 
@@ -51,8 +57,8 @@ public class ChatController {
     public ResponseEntity<Page<MessageResponse>> getChatHistory(
             Authentication authentication,
             @PathVariable Long otherUserId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(MAX_PAGE_SIZE) int size
     ) {
         Pageable pageable = PageRequest.of(page, size);
         return ResponseEntity.ok(

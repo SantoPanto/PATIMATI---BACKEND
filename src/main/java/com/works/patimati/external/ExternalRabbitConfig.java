@@ -88,6 +88,15 @@ public class ExternalRabbitConfig {
         return new Jackson2JsonMessageConverter(mapper);
     }
 
+    /**
+     * {@code AiRabbitConfig.aiListenerContainerFactory} ile AYNI gerekçe:
+     * {@code defaultRequeueRejected(false)} olmadan, dinleyici
+     * ({@code ExternalIngestionListener.onEvent}) bir istisna fırlattığında
+     * ya da mesaj hiç dönüştürülemediğinde, Spring AMQP'nin varsayılanı
+     * ({@code true}) mesajı DLX'e DEĞİL aynı kuyruğa ({@code requeue=true})
+     * geri gönderir — zehirli mesaj sonsuz döngüye girer,
+     * {@code externalIngestionQueue}'nun DLX'i tek başına bunu önlemez.
+     */
     @Bean
     RabbitListenerContainerFactory<?> externalListenerContainerFactory(
             ConnectionFactory connectionFactory,
@@ -95,6 +104,7 @@ public class ExternalRabbitConfig {
         SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
         factory.setConnectionFactory(connectionFactory);
         factory.setMessageConverter(externalJsonMessageConverter);
+        factory.setDefaultRequeueRejected(false);
         return factory;
     }
 }

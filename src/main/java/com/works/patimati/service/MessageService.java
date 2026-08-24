@@ -16,6 +16,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -237,10 +238,15 @@ public class MessageService {
         User currentUser = findUserByEmail(currentUserEmail);
         Message message = messageRepository.findById(messageId)
                 .orElseThrow(() -> new ResourceNotFoundException("Mesaj bulunamadı: " + messageId));
-        if (message.getRecipient().getUid().equals(currentUser.getUid())) {
-            message.setRead(true);
-            messageRepository.save(message);
+        // Controller sözleşmesi (MessageController#markAsRead) alıcı olmayan
+        // bir kullanıcı için 403 dokümante ediyor -- önceden burada sessizce
+        // hiçbir şey yapılmıyordu, çağıran 200 alıp mesajın gerçekten okundu
+        // işaretlendiğini sanıyordu.
+        if (!message.getRecipient().getUid().equals(currentUser.getUid())) {
+            throw new AccessDeniedException("Bu mesajı okundu işaretleme yetkiniz yok.");
         }
+        message.setRead(true);
+        messageRepository.save(message);
     }
 
     @Transactional(readOnly = true)

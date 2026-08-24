@@ -177,7 +177,7 @@ jwt:
 # Uygulama ve Depolama Ayarları
 app:
   frontend:
-    url: ${FRONTEND_URL:http://localhost:5173} # Frontend'in ayağa kalktığı adres
+    url: ${FRONTEND_URL:http://localhost:3000} # Frontend'in ayağa kalktığı adres (vite.config.ts'te port sabit 3000)
   geocoding:
     # Ters geokodlama: koordinat → il/ilçe (V19). Kayıt anında ve
     # admin backfill ucunda kullanılır. Kapalıyken ya da servis hata

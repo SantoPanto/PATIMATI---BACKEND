@@ -33,7 +33,7 @@ public class SecurityConfig {
     private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
     private final InternalServiceAuthFilter internalServiceAuthFilter;
 
-    @Value("${app.cors.allowed-origins:${app.frontend.url:http://localhost:5173}}")
+    @Value("${app.cors.allowed-origins:${app.frontend.url:http://localhost:3000}}")
     private List<String> allowedOrigins;
 
     // Constructor (Yapıcı Metot) ile Spring'in bu sınıfları otomatik enjekte etmesini sağlıyoruz

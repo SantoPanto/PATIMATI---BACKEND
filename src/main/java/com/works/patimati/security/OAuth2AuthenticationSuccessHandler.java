@@ -20,7 +20,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     private final JwtService jwtService;
     private final UserService userService;
 
-    @Value("${app.frontend.url:http://localhost:5173}")
+    @Value("${app.frontend.url:http://localhost:3000}")
     private String frontendUrl;
 
     public OAuth2AuthenticationSuccessHandler(JwtService jwtService, UserService userService) {
