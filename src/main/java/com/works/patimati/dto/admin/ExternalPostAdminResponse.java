@@ -24,6 +24,7 @@ public record ExternalPostAdminResponse(
         String species,
         String breed,
         Boolean needsReview,
-        boolean hasMatch
+        boolean hasMatch,
+        Long matchedAdId
 ) {
 }

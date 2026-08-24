@@ -37,7 +37,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.works.patimati.dto.admin.AdoptionComplaintAdminResponse;
@@ -288,19 +287,31 @@ public class AdminServiceImpl implements AdminService {
                 .collect(Collectors.groupingBy(m -> m.getPost().getId()));
 
         List<ExternalPetRecord> records = List.copyOf(recordsByPostId.values());
-        Set<Long> matchedRecordIds = records.isEmpty() ? Set.of() : potentialMatchRepository
+        // recordId -> eşleşen ilanın id'si. adA bir LAZY proxy olsa da
+        // getId() FK sütunundan cevaplanır, ekstra sorgu tetiklemez -- bu
+        // yüzden N+1'e düşmeden (yukarıdaki toplu sorgu yorumuyla aynı
+        // gerekçe) admin panelinde "eşleşme -> ilan" linkini kurmaya yeter.
+        // merge fonksiyonu (first, second) -> first: bir external kayıt
+        // teorik olarak birden fazla ilanla eşleşebilir (ad_a_id +
+        // external_record_id birleşik benzersizliği bunu engellemez) --
+        // admin tablosu tek bir bağlantı gösterdiği için ilkini alıyoruz,
+        // Collectors.toMap'in varsayılan davranışı olan "duplicate key"
+        // IllegalStateException'ını burada istemiyoruz.
+        Map<Long, Long> matchedAdIdByRecordId = records.isEmpty() ? Map.of() : potentialMatchRepository
                 .findByCandidateKindAndExternalRecordIn(PotentialMatch.CandidateKind.EXTERNAL, records).stream()
-                .map(pm -> pm.getExternalRecord().getId())
-                .collect(Collectors.toSet());
+                .collect(Collectors.toMap(
+                        pm -> pm.getExternalRecord().getId(),
+                        pm -> pm.getAdA().getId(),
+                        (first, second) -> first));
 
-        return posts.map(post -> toExternalPostAdminResponse(post, recordsByPostId, mediaByPostId, matchedRecordIds));
+        return posts.map(post -> toExternalPostAdminResponse(post, recordsByPostId, mediaByPostId, matchedAdIdByRecordId));
     }
 
     private ExternalPostAdminResponse toExternalPostAdminResponse(
             ExternalSourcePost post,
             Map<Long, ExternalPetRecord> recordsByPostId,
             Map<Long, List<ExternalSourceMedia>> mediaByPostId,
-            Set<Long> matchedRecordIds) {
+            Map<Long, Long> matchedAdIdByRecordId) {
 
         Optional<ExternalPetRecord> recordOpt = Optional.ofNullable(recordsByPostId.get(post.getId()));
 
@@ -310,7 +321,8 @@ public class AdminServiceImpl implements AdminService {
                 .map(this::toTemporaryReadUrl)
                 .orElse(null);
 
-        boolean hasMatch = recordOpt.map(r -> matchedRecordIds.contains(r.getId())).orElse(false);
+        Long matchedAdId = recordOpt.map(r -> matchedAdIdByRecordId.get(r.getId())).orElse(null);
+        boolean hasMatch = matchedAdId != null;
 
         return new ExternalPostAdminResponse(
                 post.getId(),
@@ -328,7 +340,8 @@ public class AdminServiceImpl implements AdminService {
                 recordOpt.map(ExternalPetRecord::getSpecies).orElse(null),
                 recordOpt.map(ExternalPetRecord::getBreed).orElse(null),
                 recordOpt.map(ExternalPetRecord::isNeedsReview).orElse(null),
-                hasMatch
+                hasMatch,
+                matchedAdId
         );
     }
 

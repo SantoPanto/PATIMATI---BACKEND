@@ -99,27 +99,40 @@ public class MatchCandidateGatherer {
     }
 
     public List<AiCandidate> findCandidatesForExternalRecord(ExternalPetRecord record) {
-        String compatibleAdType = oppositeCategory(record.getCategory());
-        if (compatibleAdType == null) {
+        List<String> compatibleAdTypes = compatibleAdTypesForCategory(record.getCategory());
+        if (compatibleAdTypes.isEmpty()) {
             return List.of();
         }
         String species = record.getSpecies();
         Instant since = Instant.now().minus(windowDays, ChronoUnit.DAYS);
-
-        List<AiCandidate> adCandidates;
-        if (record.getLocation() != null) {
-            adCandidates = fromAdRows(
-                    adRepository.findAiCandidatesForExternalSubject(
-                            compatibleAdType, record.getLocation(), radiusKm * 1000.0, since));
-        } else {
+        boolean spatial = record.getLocation() != null;
+        if (!spatial) {
             log.info("External kayıt {} konumsuz — sınırlı, mesafesiz fallback kullanılıyor", record.getId());
-            adCandidates = fromAdIds(
-                    adRepository.findFallbackCandidateIdsForExternalSubject(
-                            compatibleAdType, since, species, noLocationCandidateLimit),
-                    radiusKm);
         }
 
-        return cap(adCandidates, record.getLocation() != null ? maxCandidates : noLocationCandidateLimit);
+        // compatibleAdTypes normalde tek elemanlı (LOST<->FOUND). UNCERTAIN
+        // kategori için İKİ eleman döner (bkz. compatibleAdTypesForCategory)
+        // -- bir Ad'ın adType'ı LOST YA DA FOUND'dır, asla ikisi birden
+        // olamaz, o yüzden bu iki sorgunun sonuçları örtüşmez ve ayrıca
+        // dedup gerekmez.
+        List<AiCandidate> adCandidates = new ArrayList<>();
+        for (String compatibleAdType : compatibleAdTypes) {
+            if (spatial) {
+                adCandidates.addAll(fromAdRows(
+                        adRepository.findAiCandidatesForExternalSubject(
+                                compatibleAdType, record.getLocation(), radiusKm * 1000.0, since)));
+            } else {
+                adCandidates.addAll(fromAdIds(
+                        adRepository.findFallbackCandidateIdsForExternalSubject(
+                                compatibleAdType, since, species, noLocationCandidateLimit),
+                        radiusKm));
+            }
+        }
+        if (spatial) {
+            adCandidates.sort(Comparator.comparingDouble(AiCandidate::distanceKm));
+        }
+
+        return cap(adCandidates, spatial ? maxCandidates : noLocationCandidateLimit);
     }
 
     // ------------------------------------------------------------------
@@ -254,14 +267,37 @@ public class MatchCandidateGatherer {
         };
     }
 
-    private String oppositeCategory(ExternalCategory category) {
+    /**
+     * Bir external kaydın hangi ad_type havuzlarına karşı aranacağını
+     * belirler. LOST/FOUND için tek, KARŞIT tür döner (eskisi gibi).
+     * UNCERTAIN için İKİ tür BİRDEN döner (bkz. AiAnalysisListener'daki
+     * "uncertainButUsable" notu) -- kategori metin/görsel analizinden
+     * belirsiz çıktıysa kaydın kendisinin LOST mu FOUND mu bir ilan olduğunu
+     * bilmiyoruz, dolayısıyla hangi havuzu arayacağımızı da bilemeyiz;
+     * ikisini birden taramak, gerçek bir eşleşmeyi konusu belirsiz diye hiç
+     * aramamaktan iyidir. ADOPTION İÇİN yalnızca LOST havuzu taranır --
+     * "yuva arıyoruz" diye paylaşılan bir hayvan (bulunmuş/sahiplendirilecek)
+     * başka birinin kayıp ilanındaki hayvanıyla aynı olabilir (2026-08-19
+     * kullanıcı raporu, canlı bir örnekle doğrulandı: bkz. commit) -- FOUND
+     * havuzu kasıtlı olarak dahil değil, "ben bunu buldum, sahibi arıyorum"
+     * ile "bu hayvana yuva arıyorum" farklı niyetlerdir, ikisini eşleştirmek
+     * anlamsız olurdu. IRRELEVANT ve null için boş liste (hiç arama).
+     *
+     * NOT: bu yalnızca EXTERNAL (Instagram) kayıtlar için geçerli --
+     * findCandidatesForAd()'daki native ADOPTION ilanları hâlâ hiçbir zaman
+     * eşleştirmeye girmiyor (oppositeAdType, bu metodun ayrı bir dalı),
+     * kasıtlı olarak dokunulmadı.
+     */
+    private List<String> compatibleAdTypesForCategory(ExternalCategory category) {
         if (category == null) {
-            return null;
+            return List.of();
         }
         return switch (category) {
-            case LOST -> Ad.AdType.FOUND.name();
-            case FOUND -> Ad.AdType.LOST.name();
-            default -> null;
+            case LOST -> List.of(Ad.AdType.FOUND.name());
+            case FOUND -> List.of(Ad.AdType.LOST.name());
+            case UNCERTAIN -> List.of(Ad.AdType.LOST.name(), Ad.AdType.FOUND.name());
+            case ADOPTION -> List.of(Ad.AdType.LOST.name());
+            default -> List.of();
         };
     }
 

@@ -69,7 +69,7 @@ class AiAnalysisListenerTest {
     }
 
     @ParameterizedTest(name = "category={0} never reaches Stage 2")
-    @ValueSource(strings = {"ADOPTION", "IRRELEVANT", "UNCERTAIN"})
+    @ValueSource(strings = {"IRRELEVANT"})
     void incompatibleCategoryNeverTriggersStage2(String category) {
         listener.onResult(resultWithCategory(category, false));
 
@@ -79,6 +79,64 @@ class AiAnalysisListenerTest {
         ArgumentCaptor<ExternalSourcePost> captor = ArgumentCaptor.forClass(ExternalSourcePost.class);
         verify(externalSourcePostRepository).save(captor.capture());
         assertThat(captor.getValue().getProcessingStatus()).isEqualTo(ExternalProcessingStatus.COMPLETED);
+    }
+
+    @Test
+    void adoptionCategoryNowTriggersStage2() {
+        // DÜZELTME (2026-08-19, kullanıcı raporu #2): "yuva arıyoruz" diye
+        // paylaşılan bir Instagram gönderisi (ADOPTION), başka birinin LOST
+        // ilanındaki hayvanıyla aynı olabilir -- canlı bir örnekle doğrulandı
+        // (aynı kedi, mazlum kayıp ilanı). Eskiden ADOPTION hiçbir zaman
+        // eşleştirmeye girmiyordu (yalnızca LOST/FOUND kategori-uyumlu
+        // sayılıyordu); artık ADOPTION da (needsReview=false ise) tetikler.
+        // Native ADOPTION ilanları bu değişiklikten ETKİLENMEZ -- ayrı bir
+        // kod yolu (bkz. MatchCandidateGatherer.compatibleAdTypesForCategory'nin
+        // NOT'u).
+        listener.onResult(resultWithCategory("ADOPTION", false));
+
+        verify(externalMatchingService, times(1)).attemptMatching(record);
+        assertThat(record.getCategory().name()).isEqualTo("ADOPTION");
+
+        ArgumentCaptor<ExternalSourcePost> captor = ArgumentCaptor.forClass(ExternalSourcePost.class);
+        verify(externalSourcePostRepository).save(captor.capture());
+        assertThat(captor.getValue().getProcessingStatus()).isEqualTo(ExternalProcessingStatus.ANALYZED);
+    }
+
+    @Test
+    void uncertainCategoryWithRealAnimalPhotoStillTriggersStage2AsSafetyNet() {
+        // DÜZELTME (2026-08-19, kullanıcı raporu): metin analizi kategoriyi
+        // (afiş/poster fotoğrafındaki yazı gibi caption/yorumda olmayan bir
+        // sebeple) UNCERTAIN bıraksa bile, fotoğrafta gerçek bir hayvan
+        // görüldüyse (aiIsPet=true) artık Aşama 2 YİNE tetiklenir --
+        // MatchCandidateGatherer bu durumda LOST/FOUND ikisini birden tarar.
+        // Eski davranışta bu durum eşleştirmeyi SESSİZCE tamamen atlıyordu.
+        listener.onResult(resultWithCategory("UNCERTAIN", false));
+
+        verify(externalMatchingService, times(1)).attemptMatching(record);
+        assertThat(record.getCategory().name()).isEqualTo("UNCERTAIN");
+
+        ArgumentCaptor<ExternalSourcePost> captor = ArgumentCaptor.forClass(ExternalSourcePost.class);
+        verify(externalSourcePostRepository).save(captor.capture());
+        assertThat(captor.getValue().getProcessingStatus()).isEqualTo(ExternalProcessingStatus.ANALYZED);
+    }
+
+    @Test
+    void uncertainCategoryWithoutAnimalPhotoStillNeverTriggersStage2() {
+        // Görselde hayvan bile yoksa (aiIsPet=false) UNCERTAIN'ın yeni
+        // "safety net" yolu da devreye girmemeli -- görsel/embedding
+        // eşleştirmesinin zaten anlamı yok.
+        AiAnalysisResult.Analysis analysis = new AiAnalysisResult.Analysis(
+                List.of(new float[]{0.1f, 0.2f}), "unknown", 0.1, false, null, 0.0, null, List.of(), List.of());
+        AiAnalysisResult.NlpAttributes nlp = new AiAnalysisResult.NlpAttributes(
+                "UNCERTAIN", 0.0, null, null, null, null, null, null, null, null, null, null, null, true);
+        AiAnalysisResult result = new AiAnalysisResult(
+                1, "req", null, "ok", "test/v1", analysis, List.of(), null, null, List.of(),
+                Instant.now(), 10L, nlp);
+
+        listener.onResult(result);
+
+        verifyNoInteractions(externalMatchingService);
+        assertThat(record.getCategory().name()).isEqualTo("UNCERTAIN");
     }
 
     @ParameterizedTest(name = "category={0} triggers Stage 2")

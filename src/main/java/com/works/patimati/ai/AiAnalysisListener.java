@@ -155,9 +155,36 @@ public class AiAnalysisListener {
         record.setAiStatus(AiStatus.DONE);
         externalPetRecordRepository.save(record);
 
-        boolean compatible = (record.getCategory() == ExternalCategory.LOST
-                || record.getCategory() == ExternalCategory.FOUND)
+        // DÜZELTME (2026-08-19, kullanıcı raporu #2): ADOPTION artık da
+        // kategori-uyumlu sayılır -- yalnızca Instagram tarafında (bu
+        // metodun kendisi zaten yalnızca external kayıtlar için çalışıyor).
+        // Native ADOPTION ilanları bu değişiklikten ETKİLENMEZ (ayrı bir kod
+        // yolu, bkz. applyAnalysis/native eşleştirme -- oraya hiç dokunulmadı).
+        // Gerekçe: "yuva arıyoruz" diye paylaşılan bir hayvan (bulunmuş/
+        // sahiplendirilecek), başka birinin LOST ilanındaki hayvanıyla aynı
+        // olabilir -- canlı bir örnekte doğrulandı (bkz. commit). Hangi ad_type
+        // havuzunun aranacağına MatchCandidateGatherer karar verir (ADOPTION
+        // için yalnızca LOST havuzu, bkz. compatibleAdTypesForCategory).
+        boolean categoryConfident = (record.getCategory() == ExternalCategory.LOST
+                || record.getCategory() == ExternalCategory.FOUND
+                || record.getCategory() == ExternalCategory.ADOPTION)
                 && !record.isNeedsReview();
+
+        // DÜZELTME (2026-08-19, kullanıcı raporu): kategori UNCERTAIN kaldığı
+        // zaman (metin analizi caption/yorumdan ve -artık varsa- görselden
+        // bile LOST/FOUND'a karar veremediği durumlar) eskiden Aşama 2 hiç
+        // ÇAĞRILMIYORDU -- sistemde eşleşecek gerçek bir ilan dursa bile hiç
+        // aranmıyordu. UNCERTAIN + gerçek bir hayvan fotoğrafı (aiIsPet=true)
+        // varsa artık matching yine de denenir; MatchCandidateGatherer bu
+        // durumda HANGİ havuzu (LOST mu FOUND mu) arayacağını bilmediği için
+        // ikisini BİRDEN tarar (bkz. oppositeCategory). "metin LOST/FOUND dedi
+        // ama görsel hayvan görmedi" düşürmesi (aşağıda, satır ~230) aiIsPet'i
+        // zaten false yapıp bunu burada da elemeye devam eder -- o güvenlik
+        // önlemi bozulmuyor.
+        boolean uncertainButUsable = record.getCategory() == ExternalCategory.UNCERTAIN
+                && Boolean.TRUE.equals(record.getAiIsPet());
+
+        boolean compatible = categoryConfident || uncertainButUsable;
 
         if (compatible) {
             post.setProcessingStatus(ExternalProcessingStatus.ANALYZED);

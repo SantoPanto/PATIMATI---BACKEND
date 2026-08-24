@@ -223,8 +223,10 @@ class AdminServiceImplTest {
         ExternalPetRecord record1 = ExternalPetRecord.builder().id(50L).post(post1).petIndex((short) 0).species("cat").build();
         ExternalSourceMedia media1 = ExternalSourceMedia.builder().post(post1).ordinal((short) 0).storageKey("external/a1-0.jpg").build();
         ExternalSourceMedia media2 = ExternalSourceMedia.builder().post(post2).ordinal((short) 0).storageKey("external/a2-0.jpg").build();
+        Ad eslesenIlan = Ad.builder().id(77L).build();
         PotentialMatch eslesme = mock(PotentialMatch.class);
         when(eslesme.getExternalRecord()).thenReturn(record1);
+        when(eslesme.getAdA()).thenReturn(eslesenIlan);
 
         Pageable pageable = PageRequest.of(0, 20);
         when(externalSourcePostRepository.findAll(pageable))
@@ -245,10 +247,12 @@ class AdminServiceImplTest {
         ExternalPostAdminResponse r2 = sonuc.getContent().stream().filter(r -> r.id().equals(2L)).findFirst().orElseThrow();
         assertThat(r1.species()).isEqualTo("cat");
         assertThat(r1.hasMatch()).isTrue();
+        assertThat(r1.matchedAdId()).isEqualTo(77L);
         assertThat(r1.photoUrl()).isEqualTo("https://cdn.test/external/a1-0.jpg");
         // post2'nin pet-record'u yok -- eşleşme de yok, ama medyası (dolayısıyla fotoğrafı) var.
         assertThat(r2.species()).isNull();
         assertThat(r2.hasMatch()).isFalse();
+        assertThat(r2.matchedAdId()).isNull();
         assertThat(r2.photoUrl()).isEqualTo("https://cdn.test/external/a2-0.jpg");
 
         verify(externalPetRecordRepository, times(1)).findByPostInAndPetIndex(any(), eq((short) 0));
