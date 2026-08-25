@@ -76,9 +76,30 @@ ai:
     result-dlq-enabled: ${AI_RESULT_DLQ_ENABLED:false}
 
 # Instagram ingestion (Faz 2 revize blueprint) — özellik bayrağı.
+# İlanların PatiMati'nin Instagram hesabında paylaşılması (kuyruk + Graph API)
+# ile AYNI üst anahtar altında, ayrı alt bölümler.
 instagram:
   ingestion:
     enabled: ${INSTAGRAM_INGESTION_ENABLED:false}
+  graph:
+    # Instagram Graph API (Content Publishing) taban adresi -- sürüm numarasını
+    # burada tutmak, Meta'nın sürüm sonlandırmalarında tek satır değişikliği
+    # yeterli kılar. "Instagram API with Instagram business login" kullanılıyor
+    # (Facebook Sayfası GEREKMİYOR) -- bu yüzden varsayılan graph.facebook.com
+    # DEĞİL graph.instagram.com.
+    api-base: ${INSTAGRAM_GRAPH_API_BASE:https://graph.instagram.com/v21.0}
+    # PatiMati'nin KENDİ Instagram Business/Creator hesabına ait uzun ömürlü
+    # erişim token'ı. Yalnızca kendi hesabımıza paylaşım yapıldığı için
+    # (başka kullanıcıların hesabına bağlanma YOK) Meta Business Verification/
+    # App Review gerekmez -- hesap Meta Developer App'e "Tester" rolüyle
+    # eklenip Development Mode'da kullanılır.
+    access-token: ${INSTAGRAM_ACCESS_TOKEN:}
+    # Paylaşım yapılacak Instagram Business hesabının ID'si (ig-user-id).
+    business-account-id: ${INSTAGRAM_BUSINESS_ACCOUNT_ID:}
+  publish:
+    # Varsayılan KAPALI: env ayarlanmadıkça özellik uçtan uca devre dışı --
+    # queueForReview hiçbir satır eklemez, mevcut davranışa dokunulmaz.
+    enabled: ${INSTAGRAM_PUBLISH_ENABLED:false}
 
 # Collector -> Backend medya transferinin paylaşılan sırrı
 internal:

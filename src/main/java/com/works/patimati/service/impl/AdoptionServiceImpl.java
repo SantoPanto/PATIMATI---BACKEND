@@ -24,6 +24,7 @@ import com.works.patimati.repository.AdoptionComplaintRepository;
 import com.works.patimati.repository.UserRepository;
 import com.works.patimati.service.AdService;
 import com.works.patimati.service.AdoptionService;
+import com.works.patimati.service.InstagramPublishService;
 import com.works.patimati.service.RewardService;
 import com.works.patimati.storage.ImageStorageService;
 import com.works.patimati.storage.InvalidImageException;
@@ -57,6 +58,7 @@ public class AdoptionServiceImpl implements AdoptionService {
     private final AdService adService;
     private final RewardService rewardService;
     private final AiAnalysisPublisher aiAnalysisPublisher;
+    private final InstagramPublishService instagramPublishService;
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), WGS_84_SRID);
 
     @Transactional
@@ -132,6 +134,7 @@ public class AdoptionServiceImpl implements AdoptionService {
                 .active(true)
                 .suspended(false)
                 .isMatchRequired(matchRequired)
+                .instagramShareConsent(Boolean.TRUE.equals(request.instagramShareConsent()))
                 .aiStatus(AiStatus.PENDING)
                 .build();
 
@@ -142,6 +145,10 @@ public class AdoptionServiceImpl implements AdoptionService {
                 savedAd.getId(), ownerEmail, matchRequired);
 
         aiAnalysisPublisher.publish(savedAd);
+
+        // AdService.createAd() ile AYNI ilke -- bkz. InstagramPublishService
+        // javadoc'u.
+        instagramPublishService.queueForReview(savedAd);
 
         return adService.toResponseWithTemporaryPhotoUrls(savedAd);
     }

@@ -83,7 +83,8 @@ class AdServiceTest {
                 rewardService,
                 mock(NotificationService.class),
                 reverseGeocodingService,
-                mock(com.works.patimati.notification.NearbyAlertNotifier.class)
+                mock(com.works.patimati.notification.NearbyAlertNotifier.class),
+                mock(InstagramPublishService.class)
         );
     }
 

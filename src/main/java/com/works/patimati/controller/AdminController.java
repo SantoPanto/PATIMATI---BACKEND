@@ -3,9 +3,14 @@ package com.works.patimati.controller;
 import com.works.patimati.dto.ad.AdResponse;
 import com.works.patimati.dto.admin.AdComplaintAdminResponse;
 import com.works.patimati.dto.admin.ExternalPostAdminResponse;
+import com.works.patimati.dto.admin.InstagramPublishQueueAdminResponse;
+import com.works.patimati.dto.admin.InstagramPublishRequest;
 import com.works.patimati.dto.admin.UserComplaintAdminResponse;
 import com.works.patimati.dto.admin.UserDetailForAdminDTO;
+import com.works.patimati.entity.enums.InstagramPublishStatus;
 import com.works.patimati.service.AdminService;
+import com.works.patimati.service.InstagramPublishService;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +20,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,6 +34,7 @@ public class AdminController {
 
     private static final int MAX_PAGE_SIZE = 100;
     private final AdminService adminService;
+    private final InstagramPublishService instagramPublishService;
 
     /**
      * Sistemdeki tüm kullanıcıları detaylı şekilde listeler.
@@ -164,5 +171,54 @@ public class AdminController {
     @org.springframework.web.bind.annotation.PostMapping("/ads/backfill-location")
     public ResponseEntity<java.util.Map<String, Integer>> backfillAdLocations() {
         return ResponseEntity.ok(adminService.backfillAdLocations());
+    }
+
+    /**
+     * İlanların PatiMati'nin Instagram hesabında paylaşılma kuyruğu --
+     * yalnızca izin verilmiş (bkz. Ad.instagramShareConsent) LOST/FOUND/
+     * ADOPTION ilanları burada listelenir.
+     */
+    @GetMapping("/instagram-queue")
+    public ResponseEntity<Page<InstagramPublishQueueAdminResponse>> getInstagramQueue(
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(MAX_PAGE_SIZE) int size,
+            @RequestParam(required = false) InstagramPublishStatus status
+    ) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        return ResponseEntity.ok(instagramPublishService.listQueue(pageable, status));
+    }
+
+    /**
+     * Kuyruktaki bir ilanı Instagram'a yayınlar -- caption admin tarafından
+     * düzenlenmiş olabilir (bkz. InstagramPublishRequest).
+     */
+    @PostMapping("/instagram-queue/{id}/publish")
+    public ResponseEntity<Map<String, String>> publishToInstagram(
+            @PathVariable @Min(1) Long id,
+            @Valid @RequestBody InstagramPublishRequest body,
+            Authentication authentication
+    ) {
+        boolean basarili = instagramPublishService.publish(id, body.caption(), authentication.getName());
+        if (!basarili) {
+            // Kuyruk kaydı YİNE DE FAILED olarak güncellendi (admin panelde
+            // görünür, düzenlenip tekrar denenebilir) -- 502, "isteğin kendisi
+            // reddedildi" değil "aşağı akış (Instagram) başarısız oldu" demek.
+            return ResponseEntity.status(502)
+                    .body(Map.of("message", "İlan Instagram'a gönderilemedi. Kuyrukta 'Başarısız' olarak işaretlendi, tekrar deneyebilirsiniz."));
+        }
+        return ResponseEntity.ok(Map.of("message", "İlan Instagram'a gönderildi."));
+    }
+
+    /**
+     * Admin bu ilanı Instagram'da paylaşmamaya karar verir -- kuyruk
+     * kaydını SKIPPED yapar, ilanı etkilemez.
+     */
+    @PostMapping("/instagram-queue/{id}/skip")
+    public ResponseEntity<Map<String, String>> skipInstagramQueueItem(
+            @PathVariable @Min(1) Long id,
+            Authentication authentication
+    ) {
+        instagramPublishService.skip(id, authentication.getName());
+        return ResponseEntity.ok(Map.of("message", "İlan Instagram kuyruğundan çıkarıldı."));
     }
 }

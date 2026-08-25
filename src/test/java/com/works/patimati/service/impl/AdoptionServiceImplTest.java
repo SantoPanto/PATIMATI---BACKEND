@@ -55,7 +55,8 @@ class AdoptionServiceImplTest {
                 imageStorageService,
                 adService,
                 rewardService,
-                aiAnalysisPublisher
+                aiAnalysisPublisher,
+                mock(com.works.patimati.service.InstagramPublishService.class)
         );
     }
 
@@ -115,6 +116,7 @@ class AdoptionServiceImplTest {
                 "2026-08-20",
                 BigDecimal.valueOf(41.0),
                 BigDecimal.valueOf(29.0),
+                null,
                 null,
                 null,
                 null

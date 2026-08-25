@@ -46,7 +46,8 @@ class KonumBilgisiDoldurmaTest {
                 mock(RewardService.class),
                 mock(NotificationService.class),
                 reverseGeocodingService,
-                mock(com.works.patimati.notification.NearbyAlertNotifier.class)
+                mock(com.works.patimati.notification.NearbyAlertNotifier.class),
+                mock(InstagramPublishService.class)
         );
     }
 

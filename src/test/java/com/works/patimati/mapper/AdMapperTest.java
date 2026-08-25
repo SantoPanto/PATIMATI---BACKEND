@@ -58,6 +58,7 @@ class AdMapperTest {
                 new BigDecimal("29.060000"),
                 null,
                 null,
+                null,
                 null
         );
 
