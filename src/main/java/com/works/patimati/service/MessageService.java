@@ -78,6 +78,16 @@ public class MessageService {
                 savedMessage.getId()
         );
 
+        /*
+         * convertAndSendToUser'ın ilk parametresi, WebSocketChannelInterceptor'ın
+         * STOMP CONNECT sırasında Principal'e verdiği İSİMLE (getName()) birebir
+         * eşleşmelidir -- Spring bu ada göre kullanıcının gerçek oturum kuyruğunu
+         * bulur. O principal e-posta ile kuruluyor (bkz. WebSocketChannelInterceptor
+         * satır ~108: "Principal ismimiz kullanıcının e-posta adresidir"), sayısal
+         * uid ile DEĞİL. Burada uid kullanmak mesajın hiçbir zaman hedef oturuma
+         * ulaşmamasına yol açardı -- Spring, eşleşen kullanıcı bulamayınca mesajı
+         * sessizce yok sayar.
+         */
         messagingTemplate.convertAndSendToUser(
                 recipient.getEmail(),
                 "/queue/messages",

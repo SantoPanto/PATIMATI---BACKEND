@@ -29,6 +29,14 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     // Özel mesaj aboneliklerinin dahili basit broker tarafından yönetileceği kanal.
     static final String PRIVATE_QUEUE_PREFIX = "/queue";
 
+    /*
+     * Herkese açık (kullanıcıya özel olmayan) yayınların kanalı -- ör.
+     * /topic/user-status. enableSimpleBroker'a verilen ön ekler dışındaki
+     * hedefler basit broker tarafından SESSIZCE YOK SAYILIR (ne abonelik
+     * kaydedilir ne de convertAndSend ile gönderilen mesaj dağıtılır);
+     * bu yüzden burada AYRICA listelenmesi gerekiyor -- /queue'nun kapsamına
+     * girmiyor.
+     */
     // Genel yayın (Broadcast) aboneliklerinin dahili basit broker tarafından yönetileceği kanal.
     static final String PUBLIC_TOPIC_PREFIX = "/topic";
 
@@ -49,6 +57,12 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
      */
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
+        /*
+         * /queue ile başlayan hedefleri Spring'in bellek içi broker'ı yönetir.
+         * Faz 2 kapsamındaki kullanıcıya özel mesajlar /user/queue/... adresinden
+         * dinlenecek ve gerçek oturuma özel kuyruğa Spring tarafından çevrilecektir.
+         */
+        registry.enableSimpleBroker(PRIVATE_QUEUE_PREFIX, PUBLIC_TOPIC_PREFIX);
         org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler taskScheduler =
                 new org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler();
         taskScheduler.setPoolSize(1);
