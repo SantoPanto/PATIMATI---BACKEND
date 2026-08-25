@@ -9,6 +9,7 @@ import com.works.patimati.repository.NotificationRepository;
 import com.works.patimati.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
@@ -30,6 +31,7 @@ class NotificationServiceTest {
     private NotificationRepository notificationRepository;
     private UserRepository userRepository;
     private PushNotificationService pushNotificationService;
+    private SimpMessagingTemplate messagingTemplate;
     private NotificationService notificationService;
 
     @BeforeEach
@@ -37,10 +39,12 @@ class NotificationServiceTest {
         notificationRepository = mock(NotificationRepository.class);
         userRepository = mock(UserRepository.class);
         pushNotificationService = mock(PushNotificationService.class);
+        messagingTemplate = mock(SimpMessagingTemplate.class);
         notificationService = new NotificationService(
                 notificationRepository,
                 userRepository,
-                pushNotificationService
+                pushNotificationService,
+                messagingTemplate
         );
     }
 
@@ -71,6 +75,13 @@ class NotificationServiceTest {
 
         assertThat(result).isEqualTo(PushResult.FAILED);
         verify(notificationRepository).saveAndFlush(any(Notification.class));
+        // WebSocket teslimatı FCM'den bağımsızdır -- Firebase başarısız olsa
+        // bile siteye açık kullanıcıya anlık bildirim gönderilmiş olmalı.
+        verify(messagingTemplate).convertAndSendToUser(
+                eq(recipient.getEmail()),
+                eq("/queue/notifications"),
+                any(Object.class)
+        );
         verify(pushNotificationService).send(
                 eq("fcm-token"),
                 eq("Başlık"),

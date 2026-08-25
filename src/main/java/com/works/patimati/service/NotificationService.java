@@ -11,6 +11,7 @@ import com.works.patimati.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +34,9 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
     private final PushNotificationService pushNotificationService;
+    private final SimpMessagingTemplate messagingTemplate;
+
+    private static final String NOTIFICATIONS_QUEUE = "/queue/notifications";
 
     @Transactional(readOnly = true)
     public List<NotificationResponse> getNotifications(String userEmail) {
@@ -90,6 +94,25 @@ public class NotificationService {
                 pushData.putAll(notification.getData());
             }
             pushData.put("notificationId", String.valueOf(notification.getId()));
+
+            /*
+             * WebSocket üzerinden ANLIK teslimat -- FCM'den (push izni,
+             * service worker, kapalı sekme gerektirir) BAĞIMSIZ olarak
+             * çalışır. Kullanıcı siteye açıksa (herhangi bir sayfada) bu
+             * kanal bildirim zilini/rozetini F5 gerekmeden günceller.
+             * FCM gönderimi başarısız olsa bile bu satır çalışmaya devam
+             * eder -- ikisi ayrı, birbirini yedekleyen teslimat yollarıdır.
+             *
+             * Hedef, WebSocketChannelInterceptor'ın STOMP Principal'ine verdiği
+             * isimle (e-posta) eşleşmeli -- bkz. MessageService.sendMessage
+             * üzerindeki aynı konudaki açıklama. Sayısal uid burada da yanlış
+             * olurdu.
+             */
+            messagingTemplate.convertAndSendToUser(
+                    recipient.getEmail(),
+                    NOTIFICATIONS_QUEUE,
+                    toResponse(notification)
+            );
 
             try {
                 PushResult result = pushNotificationService.send(
