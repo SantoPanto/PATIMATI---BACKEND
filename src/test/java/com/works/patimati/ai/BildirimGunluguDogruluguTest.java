@@ -255,11 +255,11 @@ class BildirimGunluguDogruluguTest {
     }
 
     private AiAnalysisResult.Match gucluEslesme() {
-        return new AiAnalysisResult.Match(ESLESEN_ILAN_ID, 0.91, 0.9, 0.8, 1.0, true, 0, 0);
+        return new AiAnalysisResult.Match(ESLESEN_ILAN_ID, 0.91, 0.9, 0.8, 1.0, true, 0, 0, null);
     }
 
     private AiAnalysisResult.Match zayifEslesme() {
-        return new AiAnalysisResult.Match(ESLESEN_ILAN_ID, 0.42, 0.4, 0.3, 1.0, false, 0, 0);
+        return new AiAnalysisResult.Match(ESLESEN_ILAN_ID, 0.42, 0.4, 0.3, 1.0, false, 0, 0, null);
     }
 
     private long seviyeSayisi(Level seviye) {
@@ -286,7 +286,7 @@ class BildirimGunluguDogruluguTest {
         }
 
         @Override
-        public PushResult send(String token, String baslik, String govde, Map<String, String> veri) {
+        public PushResult send(String token, String baslik, String govde, Map<String, String> veri, String collapseKey) {
             cagrilar.add(new Cagri(token, baslik, govde, veri));
             PushResult sonuc = sonuclar.poll();
             if (sonuc == null) {

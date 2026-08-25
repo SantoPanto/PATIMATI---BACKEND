@@ -8,6 +8,7 @@ import org.locationtech.jts.geom.Point;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -18,7 +19,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface AdRepository extends JpaRepository<Ad, Long> {
+public interface AdRepository extends JpaRepository<Ad, Long>, JpaSpecificationExecutor<Ad> {
 
     /**
      * V19 backfill'i: il'i hiç yazılmamış ama koordinatı olan ilanlar.
@@ -226,6 +227,76 @@ public interface AdRepository extends JpaRepository<Ad, Long> {
             @Param("origin") Point origin,
             @Param("radiusMeters") double radiusMeters,
             @Param("since") Instant since);
+
+    /**
+     * {@link #findAiCandidates} ile aynı kurallar, tek fark: sorgunun
+     * konusu bir ilan değil bir external_pet_records kaydıdır, bu yüzden
+     * hariç tutulacak "kendisi" yoktur (farklı kimlik uzayı, çakışma
+     * imkânsız). Faz 2 revize blueprint §31/§32 — Flow A'nın candidate
+     * gathering tarafı.
+     */
+    @Query(value = """
+            SELECT a.id AS adId,
+                   ST_Distance(a.location::geography, CAST(:origin AS geography)) / 1000.0 AS distanceKm
+              FROM ads a
+             WHERE a.active = TRUE
+               AND a.ad_type = :compatibleAdType
+               AND a.ai_status = 'DONE'
+               AND a.ai_embeddings IS NOT NULL
+               AND a.created_at >= :since
+               AND a.location IS NOT NULL
+               AND ST_DWithin(a.location::geography, CAST(:origin AS geography), :radiusMeters)
+             ORDER BY a.location <-> :origin
+            """, nativeQuery = true)
+    List<AiCandidateRow> findAiCandidatesForExternalSubject(
+            @Param("compatibleAdType") String compatibleAdType,
+            @Param("origin") Point origin,
+            @Param("radiusMeters") double radiusMeters,
+            @Param("since") Instant since);
+
+    /**
+     * Konumsuz external kayıt için sınırlı, mesafesiz fallback — aynı
+     * gerekçe {@code ExternalPetRecordRepository.findFallbackCandidateIds}
+     * ile. Species null ise filtrelenmez.
+     */
+    @Query(value = """
+            SELECT a.id
+              FROM ads a
+             WHERE a.active = TRUE
+               AND a.ad_type = :compatibleAdType
+               AND a.ai_status = 'DONE'
+               AND a.ai_embeddings IS NOT NULL
+               AND a.created_at >= :since
+               AND (:species IS NULL OR LOWER(a.species::text) = LOWER(:species) OR LOWER(a.ai_species) = LOWER(:species))
+             ORDER BY a.created_at DESC
+             LIMIT :maxResults
+            """, nativeQuery = true)
+    List<Long> findFallbackCandidateIdsForExternalSubject(
+            @Param("compatibleAdType") String compatibleAdType,
+            @Param("since") Instant since,
+            @Param("species") String species,
+            @Param("maxResults") int maxResults);
+
+    /** {@link #findAiCandidates} konumsuz karşılığı — AD subject, AD adayları. */
+    @Query(value = """
+            SELECT a.id
+              FROM ads a
+             WHERE a.active = TRUE
+               AND a.id <> :selfAdId
+               AND a.ad_type = :oppositeAdType
+               AND a.ai_status = 'DONE'
+               AND a.ai_embeddings IS NOT NULL
+               AND a.created_at >= :since
+               AND (:species IS NULL OR LOWER(a.species::text) = LOWER(:species) OR LOWER(a.ai_species) = LOWER(:species))
+             ORDER BY a.created_at DESC
+             LIMIT :maxResults
+            """, nativeQuery = true)
+    List<Long> findFallbackCandidateIds(
+            @Param("selfAdId") Long selfAdId,
+            @Param("oppositeAdType") String oppositeAdType,
+            @Param("since") Instant since,
+            @Param("species") String species,
+            @Param("maxResults") int maxResults);
 
     @Query(value = """
              SELECT a.id AS adId, 0.0 AS distanceKm

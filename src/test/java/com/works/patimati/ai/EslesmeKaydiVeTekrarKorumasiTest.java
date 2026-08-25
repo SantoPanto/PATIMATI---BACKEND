@@ -11,8 +11,13 @@ import com.works.patimati.entity.Ad;
 import com.works.patimati.entity.User;
 import com.works.patimati.notification.PushNotificationService;
 import com.works.patimati.notification.PushResult;
+import com.works.patimati.external.ExternalMatchingService;
 import com.works.patimati.repository.AdRepository;
+import com.works.patimati.repository.external.ExternalPetRecordRepository;
+import com.works.patimati.repository.external.ExternalSourceMediaRepository;
+import com.works.patimati.repository.external.ExternalSourcePostRepository;
 import com.works.patimati.service.AdMatchService;
+import com.works.patimati.service.PotentialMatchService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -130,7 +135,13 @@ class EslesmeKaydiVeTekrarKorumasiTest {
         push = new SahtePushServisi();
         kayitServisi = new SahteKayitServisi();
 
-        listener = new AiAnalysisListener(adRepository,
+        listener = new AiAnalysisListener(
+                adRepository,
+                mock(ExternalPetRecordRepository.class),
+                mock(ExternalSourcePostRepository.class),
+                mock(ExternalSourceMediaRepository.class),
+                mock(PotentialMatchService.class),
+                mock(ExternalMatchingService.class),
                 new AiMatchNotifier(adRepository, push, kayitServisi.servis()));
 
         LoggerContext ctx = (LoggerContext) LoggerFactory.getILoggerFactory();
@@ -473,7 +484,7 @@ class EslesmeKaydiVeTekrarKorumasiTest {
         }
 
         @Override
-        public PushResult send(String token, String baslik, String govde, Map<String, String> veri) {
+        public PushResult send(String token, String baslik, String govde, Map<String, String> veri, String collapseKey) {
             cagrilar.add(new Cagri(token, baslik, govde, veri));
             if (sonuclar.isEmpty()) {
                 throw new IllegalStateException(

@@ -67,7 +67,8 @@ class IlanYenidenYayinlamaTest {
                 mock(RewardService.class),
                 mock(NotificationService.class),
                 mock(ReverseGeocodingService.class),
-                mock(com.works.patimati.notification.NearbyAlertNotifier.class)
+                mock(com.works.patimati.notification.NearbyAlertNotifier.class),
+                mock(InstagramPublishService.class)
         );
 
         sahip = User.builder().uid(SAHIP_UID).email(SAHIP_EPOSTA).build();

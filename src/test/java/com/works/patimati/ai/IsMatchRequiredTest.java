@@ -8,7 +8,12 @@ import com.works.patimati.entity.Ad;
 import com.works.patimati.entity.enums.AdResolutionStatus;
 import com.works.patimati.entity.enums.PetColor;
 import com.works.patimati.entity.enums.Species;
+import com.works.patimati.external.ExternalMatchingService;
 import com.works.patimati.repository.AdRepository;
+import com.works.patimati.repository.external.ExternalPetRecordRepository;
+import com.works.patimati.repository.external.ExternalSourceMediaRepository;
+import com.works.patimati.repository.external.ExternalSourcePostRepository;
+import com.works.patimati.service.PotentialMatchService;
 import com.works.patimati.storage.ImageStorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -43,8 +48,15 @@ class IsMatchRequiredTest {
         imageStorageService = mock(ImageStorageService.class);
         matchNotifier = mock(AiMatchNotifier.class);
 
-        publisher = new AiAnalysisPublisher(aiRabbitTemplate, adRepository, imageStorageService);
-        listener = new AiAnalysisListener(adRepository, matchNotifier);
+        publisher = new AiAnalysisPublisher(aiRabbitTemplate, adRepository, imageStorageService, mock(MatchCandidateGatherer.class));
+        listener = new AiAnalysisListener(
+                adRepository,
+                mock(ExternalPetRecordRepository.class),
+                mock(ExternalSourcePostRepository.class),
+                mock(ExternalSourceMediaRepository.class),
+                mock(PotentialMatchService.class),
+                mock(ExternalMatchingService.class),
+                matchNotifier);
     }
 
     @Test
@@ -54,7 +66,7 @@ class IsMatchRequiredTest {
                 "Kayıp Kedi", "Açıklama", Ad.AdType.LOST, Species.CAT, "Tekir",
                 Set.of(PetColor.BLACK), null, null, null, null, null, null,
                 null, null, null, null, "2026-08-22", null,
-                new BigDecimal("41.0"), new BigDecimal("29.0"), null, null, null
+                new BigDecimal("41.0"), new BigDecimal("29.0"), null, null, null, null
         );
 
         assertThat(request.isMatchRequired()).isTrue();
@@ -67,7 +79,7 @@ class IsMatchRequiredTest {
                 "Sahiplendirilecek Kedi", "Açıklama", Species.CAT, "Tekir",
                 null, null, Set.of(), null, null, null,
                 "2026-08-22", new BigDecimal("41.0"), new BigDecimal("29.0"),
-                null, null, null
+                null, null, null, null
         );
 
         assertThat(request.isMatchRequired()).isFalse();
@@ -140,7 +152,9 @@ class IsMatchRequiredTest {
                 null,
                 null,
                 List.of(),
-                Instant.now()
+                Instant.now(),
+                null,
+                null
         );
 
         listener.onResult(result);

@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -20,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -98,7 +100,7 @@ class NotificationServiceTest {
         notification.setTitle("Başlık");
         notification.setBody("Gövde");
         notification.setType("MESSAGE");
-        notification.setData(Map.of("type", "MESSAGE"));
+        notification.setData(Map.of("type", "MESSAGE", "senderId", "42", "referenceId", "42"));
 
         when(userRepository.findByEmail(recipient.getEmail()))
                 .thenReturn(Optional.of(recipient));
@@ -110,11 +112,80 @@ class NotificationServiceTest {
                 .first()
                 .satisfies(response -> {
                     assertThat(response.title()).isEqualTo("Başlık");
+                    assertThat(response.referenceId()).isEqualTo("42");
                     assertThat(response.data()).containsEntry("type", "MESSAGE");
                 });
 
         verify(notificationRepository)
                 .findByUser_UidOrderByCreatedAtDescIdDesc(7L);
+    }
+
+    @Test
+    void firstMessageFromSenderCreatesANewNotification() {
+        User recipient = user(7L, "recipient@patimati.com");
+        User sender = User.builder()
+                .uid(9L)
+                .email("sender@patimati.com")
+                .firstName("Ayşe")
+                .lastName("Yılmaz")
+                .build();
+
+        when(notificationRepository.findLatestUnreadBySender(7L, "MESSAGE", "9"))
+                .thenReturn(Optional.empty());
+        when(notificationRepository.saveAndFlush(any(Notification.class)))
+                .thenAnswer(invocation -> {
+                    Notification notification = invocation.getArgument(0);
+                    ReflectionTestUtils.setField(notification, "id", 42L);
+                    return notification;
+                });
+        when(pushNotificationService.send(any(), any(), any(), anyMap()))
+                .thenReturn(PushResult.SENT);
+
+        notificationService.createOrStackMessageNotification(recipient, sender, 100L);
+
+        verify(notificationRepository).saveAndFlush(argThat(notification ->
+                notification.getBody().equals("Ayşe size yeni bir mesaj gönderdi.")
+                        && notification.getData().get("count").equals("1")));
+    }
+
+    @Test
+    void secondUnreadMessageFromSameSenderStacksIntoTheExistingNotification() {
+        User recipient = user(7L, "recipient@patimati.com");
+        User sender = User.builder()
+                .uid(9L)
+                .email("sender@patimati.com")
+                .firstName("Ayşe")
+                .lastName("Yılmaz")
+                .build();
+
+        Notification existing = new Notification();
+        ReflectionTestUtils.setField(existing, "id", 5L);
+        existing.setUser(recipient);
+        existing.setType("MESSAGE");
+        existing.setRead(false);
+        existing.setBody("Ayşe size yeni bir mesaj gönderdi.");
+        existing.setData(new HashMap<>(Map.of(
+                "type", "MESSAGE",
+                "senderId", "9",
+                "messageId", "100",
+                "count", "1"
+        )));
+
+        when(notificationRepository.findLatestUnreadBySender(7L, "MESSAGE", "9"))
+                .thenReturn(Optional.of(existing));
+        when(notificationRepository.saveAndFlush(any(Notification.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(pushNotificationService.send(any(), any(), any(), anyMap()))
+                .thenReturn(PushResult.SENT);
+
+        notificationService.createOrStackMessageNotification(recipient, sender, 101L);
+
+        assertThat(existing.getBody()).isEqualTo("Ayşe size 2 yeni mesaj gönderdi.");
+        assertThat(existing.getData())
+                .containsEntry("count", "2")
+                .containsEntry("messageId", "101");
+        verify(notificationRepository, never()).save(any(Notification.class));
+        verify(notificationRepository).saveAndFlush(existing);
     }
 
     @Test

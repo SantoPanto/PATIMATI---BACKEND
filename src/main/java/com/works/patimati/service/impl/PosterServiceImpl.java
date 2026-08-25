@@ -1,7 +1,9 @@
 package com.works.patimati.service.impl;
 
 import com.google.zxing.BarcodeFormat;
+import com.google.zxing.EncodeHintType;
 import com.google.zxing.qrcode.QRCodeWriter;
+import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 import com.google.zxing.common.BitMatrix;
 import com.itextpdf.io.font.PdfEncodings;
 import com.itextpdf.io.font.constants.StandardFonts;
@@ -32,6 +34,7 @@ import com.works.patimati.service.PosterService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,6 +43,9 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -48,6 +54,9 @@ public class PosterServiceImpl implements PosterService {
 
     private static final Logger log = LoggerFactory.getLogger(PosterServiceImpl.class);
     private final AdRepository adRepository;
+
+    @Value("${app.frontend.url:http://localhost:5173}")
+    private String frontendUrl;
 
     @Transactional(readOnly = true)
     @Override
@@ -141,8 +150,6 @@ public class PosterServiceImpl implements PosterService {
                 table.setFont(turkishFont);
             }
 
-            // PDF kullanıcıya iniyor: ham enum adı ("CAT", "LOST") basılmaz.
-            // Etiketler ön yüzdeki utils/adPresentation ile birebir aynı.
             addTableRow(table, "İlan Tipi:", ad.getAdType() != null ? turkceAdTipi(ad.getAdType()) : "-", turkishFont, turkishBoldFont);
             addTableRow(table, "Tür:", ad.getSpecies() != null ? turkceTur(ad.getSpecies()) : "-", turkishFont, turkishBoldFont);
             addTableRow(table, "Irk:", turkceIrk(ad.getBreed()), turkishFont, turkishBoldFont);
@@ -174,12 +181,10 @@ public class PosterServiceImpl implements PosterService {
                     addTableRow(table, "İletişim Kişisi:", contactName, turkishFont, turkishBoldFont);
                 }
 
-                // Telefon sadece showPhoneOnPoster == true ise eklenir
                 if (Boolean.TRUE.equals(ad.getShowPhoneOnPoster()) && owner.getPhone() != null && !owner.getPhone().isBlank()) {
                     addTableRow(table, "Telefon:", owner.getPhone(), turkishFont, turkishBoldFont);
                 }
 
-                // E-posta sadece showEmailOnPoster == true ise eklenir
                 if (Boolean.TRUE.equals(ad.getShowEmailOnPoster()) && owner.getEmail() != null && !owner.getEmail().isBlank()) {
                     addTableRow(table, "E-posta:", owner.getEmail(), turkishFont, turkishBoldFont);
                 }
@@ -188,10 +193,14 @@ public class PosterServiceImpl implements PosterService {
             doc.add(table);
             doc.add(new Paragraph("\n"));
 
-            // QR Kod Oluşturma
+            // Dinamik Frontend URL ile QR Kod Oluşturma
             try {
-                String qrContent = "https://patimati.com/ads/" + ad.getId();
-                byte[] qrCodeBytes = generateQrCodeImage(qrContent, 150, 150);
+                String baseUrl = (frontendUrl != null && !frontendUrl.isBlank())
+                        ? frontendUrl.replaceAll("/+$", "")
+                        : "http://localhost:5173";
+                String qrContent = baseUrl + "/ads/" + ad.getId();
+
+                byte[] qrCodeBytes = generateQrCodeImage(qrContent, 160, 160);
                 Image qrImage = new Image(ImageDataFactory.create(qrCodeBytes));
                 qrImage.setHorizontalAlignment(com.itextpdf.layout.properties.HorizontalAlignment.CENTER);
 
@@ -331,7 +340,12 @@ public class PosterServiceImpl implements PosterService {
 
     private byte[] generateQrCodeImage(String text, int width, int height) throws Exception {
         QRCodeWriter qrCodeWriter = new QRCodeWriter();
-        BitMatrix bitMatrix = qrCodeWriter.encode(text, BarcodeFormat.QR_CODE, width, height);
+        Map<EncodeHintType, Object> hints = new HashMap<>();
+        hints.put(EncodeHintType.CHARACTER_SET, StandardCharsets.UTF_8.name());
+        hints.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.M);
+        hints.put(EncodeHintType.MARGIN, 1);
+
+        BitMatrix bitMatrix = qrCodeWriter.encode(text, BarcodeFormat.QR_CODE, width, height, hints);
 
         BufferedImage bufferedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
         for (int x = 0; x < width; x++) {
@@ -346,11 +360,6 @@ public class PosterServiceImpl implements PosterService {
         }
     }
 
-    /*
-     * Afiş etiketleri — ön yüzdeki utils/adPresentation.ts ile birebir aynı
-     * Türkçe karşılıklar. Bilinmeyen/yeni enum değeri gelirse ham ad yerine
-     * "Belirtilmemiş" düşer; PDF kullanıcıya indiği için ham enum sızdırılmaz.
-     */
     private static String turkceAdTipi(Ad.AdType adType) {
         switch (adType) {
             case LOST: return "Kayıp";
@@ -400,8 +409,6 @@ public class PosterServiceImpl implements PosterService {
         }
     }
 
-    /** Irk serbest metin ama ham enum değeri de taşıyabiliyor (ör. kartlardaki
-     *  "MIXED_OR_UNKNOWN" sızıntısının PDF karşılığı). Boşsa tablo boş işareti. */
     private static String turkceIrk(String breed) {
         if (breed == null || breed.isBlank()) {
             return "-";

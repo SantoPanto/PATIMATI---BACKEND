@@ -14,6 +14,11 @@ import java.util.List;
  * mesaj şemaya hiç uymasa bile, okunabildiği kadarıyla. Dönmeseydi hangi ilanın
  * başarısız olduğunu bilemez, o ilan sonsuza kadar PENDING kalırdı.
  *
+ * @param externalRecordId EKLENDİ (Faz 2 revize blueprint §5). İstek bir
+ *                         external_pet_records analiziyse yankılanır;
+ *                         {@code AiAnalysisListener} yazma hedefini
+ *                         ({@code Ad} mı {@code ExternalPetRecord} mı) bu
+ *                         alanın varlığına göre seçer.
  * @param matchThreshold sonuç üretilirken AI'da geçerli olan bildirim eşiği.
  *                       <b>Sarmalayıcı {@code Double}, ilkel değil:</b> alan
  *                       gelmezse {@code null} kalır ve "AI söylemedi" ayrı bir
@@ -39,11 +44,17 @@ public record AiAnalysisResult(
         SkippedCandidates skippedCandidates,
         AiError error,
         List<FailedPhoto> failedPhotos,
-        Instant processedAt
+        Instant processedAt,
+        Long externalRecordId,
+        NlpAttributes nlpAttributes
 ) {
 
     public boolean isOk() {
         return "ok".equals(status);
+    }
+
+    public boolean isForExternalRecord() {
+        return externalRecordId != null;
     }
 
     /**
@@ -77,6 +88,31 @@ public record AiAnalysisResult(
     }
 
     /**
+     * Metin analizinin (caption/triggering_comment) yapılandırılmış çıktısı.
+     * EKLENDİ (Faz 2 revize blueprint §17/§28). Yalnızca EXTERNAL isteklerde
+     * doludur; native istekte sözleşme boş nesne döner ({@code {}}).
+     *
+     * <p>Metinde olmayan bilgi asla uydurulmaz — bilinmeyen alanlar null'dur.
+     */
+    public record NlpAttributes(
+            String category,
+            Double categoryConfidence,
+            String species,
+            String breed,
+            List<String> colors,
+            String gender,
+            String ageText,
+            String petName,
+            String locationText,
+            Double locationConfidence,
+            String eventDateText,
+            Boolean eventDateEstimated,
+            String distinguishingFeatures,
+            Boolean needsReview
+    ) {
+    }
+
+    /**
      * Bir aday ilanla karşılaştırma sonucu.
      *
      * <p>{@code match = true}, <b>"kesin aynı hayvan" demek değildir</b>;
@@ -87,6 +123,9 @@ public record AiAnalysisResult(
      *
      * @param photoA hangi fotoğraf çiftinin eşleştiği (0 tabanlı); arayüzde
      *               "bu iki fotoğraf benziyor" diye gösterilebilir
+     * @param externalRecordId EKLENDİ. Aday bir Instagram kaydıysa dolu
+     *                         (Flow B — native ilan artık external adayları
+     *                         da görüyor), native adaysa null.
      */
     public record Match(
             Long adId,
@@ -96,7 +135,8 @@ public record AiAnalysisResult(
             double location,
             boolean match,
             Integer photoA,
-            Integer photoB
+            Integer photoB,
+            Long externalRecordId
     ) {
     }
 

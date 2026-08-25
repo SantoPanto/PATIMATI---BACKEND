@@ -16,9 +16,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Owns notification history and delegates delivery to the existing FCM port.
@@ -143,6 +145,115 @@ public class NotificationService {
         }
     }
 
+    /**
+     * Aynı göndericiden okunmamış birden fazla mesaj geldiğinde her biri için
+     * ayrı bir bildirim satırı açmak yerine, mevcut okunmamış satırı güncelleyip
+     * üstte tutar — bildirimler listesinde tek bir "N yeni mesaj" satırı olarak
+     * yığılır (stack). Satır zaten okunmuşsa (veya hiç yoksa) yeni bir yığın
+     * başlar.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public PushResult createOrStackMessageNotification(
+            User recipient,
+            User sender,
+            Long messageId
+    ) {
+        if (recipient == null || recipient.getUid() == null) {
+            return PushResult.NO_RECIPIENT;
+        }
+
+        try {
+            Notification notification = findOrStackMessageNotification(recipient, sender, messageId);
+
+            Map<String, String> pushData = new HashMap<>();
+            if (notification.getData() != null) {
+                pushData.putAll(notification.getData());
+            }
+            pushData.put("notificationId", String.valueOf(notification.getId()));
+
+            try {
+                PushResult result = pushNotificationService.send(
+                        recipient.getFcmToken(),
+                        notification.getTitle(),
+                        notification.getBody(),
+                        pushData
+                );
+
+                if (!result.gonderildi()) {
+                    log.warn("Bildirim kalıcı olarak kaydedildi ancak push gönderilemedi: "
+                                    + "notificationId={} recipientUid={} reason={}",
+                            notification.getId(), recipient.getUid(), result.aciklama());
+                }
+                return result;
+            } catch (RuntimeException exception) {
+                log.warn("Bildirim kalıcı olarak kaydedildi ancak push gönderimi hata verdi: "
+                                + "notificationId={} recipientUid={}",
+                        notification.getId(), recipient.getUid(), exception);
+                return PushResult.FAILED;
+            }
+        } catch (RuntimeException exception) {
+            log.error("Bildirim kalıcılaştırılamadı: recipientUid={}",
+                    recipient.getUid(), exception);
+            return PushResult.FAILED;
+        }
+    }
+
+    private Notification findOrStackMessageNotification(User recipient, User sender, Long messageId) {
+        String senderId = String.valueOf(sender.getUid());
+
+        Optional<Notification> existing = notificationRepository.findLatestUnreadBySender(
+                recipient.getUid(),
+                "MESSAGE",
+                senderId
+        );
+
+        if (existing.isPresent()) {
+            Notification notification = existing.get();
+            Map<String, String> data = notification.getData() == null
+                    ? new HashMap<>()
+                    : new HashMap<>(notification.getData());
+
+            int count = parseMessageCount(data.get("count")) + 1;
+            data.put("type", "MESSAGE");
+            data.put("senderId", senderId);
+            data.put("messageId", String.valueOf(messageId));
+            data.put("count", String.valueOf(count));
+
+            notification.setBody(sender.getFirstName() + " size " + count + " yeni mesaj gönderdi.");
+            notification.setData(data);
+            notification.setCreatedAt(OffsetDateTime.now());
+
+            return notificationRepository.saveAndFlush(notification);
+        }
+
+        Map<String, String> data = new HashMap<>();
+        data.put("type", "MESSAGE");
+        data.put("senderId", senderId);
+        data.put("messageId", String.valueOf(messageId));
+        data.put("count", "1");
+
+        Notification notification = new Notification();
+        notification.setUser(recipient);
+        notification.setTitle("Yeni mesaj");
+        notification.setBody(sender.getFirstName() + " size yeni bir mesaj gönderdi.");
+        notification.setType("MESSAGE");
+        notification.setData(data);
+        notification.setRead(false);
+
+        return notificationRepository.saveAndFlush(notification);
+    }
+
+    private int parseMessageCount(String value) {
+        if (value == null) {
+            return 1;
+        }
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException exception) {
+            return 1;
+        }
+    }
+
     @Transactional
     public void markAsRead(String userEmail, Long notificationId) {
         User user = findUserByEmail(userEmail);
@@ -214,11 +325,17 @@ public class NotificationService {
     }
 
     private NotificationResponse toResponse(Notification notification) {
+        String referenceId = null;
+        if (notification.getData() != null) {
+            referenceId = notification.getData().getOrDefault("referenceId", notification.getData().get("senderId"));
+        }
+
         return new NotificationResponse(
                 notification.getId(),
                 notification.getTitle(),
                 notification.getBody(),
                 notification.getType(),
+                referenceId,
                 notification.getData(),
                 notification.isRead(),
                 notification.getCreatedAt()

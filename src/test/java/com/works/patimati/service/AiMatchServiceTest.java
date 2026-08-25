@@ -48,13 +48,16 @@ class AiMatchServiceTest {
 
     private AiMatchService aiMatchService;
 
+    /** satir()'ın oluşturduğu ilanlar -- findAllById buradan besleniyor (N+1 fix). */
+    private final List<Ad> stubEdilenIlanlar = new ArrayList<>();
+
     @BeforeEach
     void setUp() {
         when(restTemplateBuilder.setConnectTimeout(any(Duration.class))).thenReturn(restTemplateBuilder);
         when(restTemplateBuilder.setReadTimeout(any(Duration.class))).thenReturn(restTemplateBuilder);
         when(restTemplateBuilder.build()).thenReturn(restTemplate);
 
-        aiMatchService = new AiMatchService(adRepository, adService, restTemplateBuilder);
+        aiMatchService = new AiMatchService(adRepository, adService, restTemplateBuilder, new com.works.patimati.mapper.AiAnalyzeMapper());
         ReflectionTestUtils.setField(aiMatchService, "aiServiceUrl", "http://localhost:8000");
         // @Value alanları düz kurulumda 0 kalır; 0'lık maxCandidates her listeyi
         // boşaltır ve test yanlış sebepten geçer/kalır — üretim varsayılanları.
@@ -83,6 +86,12 @@ class AiMatchServiceTest {
         return analyzeBody;
     }
 
+    /**
+     * Aday satırı üretir VE {@code findAllById}'ı bu ana kadar üretilen tüm
+     * ilanları dönecek şekilde günceller. Üretim kodu artık her aday için ayrı
+     * {@code findById} DEĞİL, tek seferde {@code findAllById} çağırıyor (N+1
+     * fix) -- eski tekil {@code findById} stub'u bu akışta hiç görülmez.
+     */
     private AiCandidateRow satir(long adId, Double mesafeKm) {
         AiCandidateRow row = mock(AiCandidateRow.class);
         when(row.getAdId()).thenReturn(adId);
@@ -90,7 +99,8 @@ class AiMatchServiceTest {
 
         Ad ad = Ad.builder().id(adId).build();
         ad.setAiEmbeddings(List.of(new Ad.AiPhotoVector("s3://k/" + adId + ".jpg", new float[]{0.5f})));
-        when(adRepository.findById(adId)).thenReturn(Optional.of(ad));
+        stubEdilenIlanlar.add(ad);
+        when(adRepository.findAllById(any())).thenReturn(new ArrayList<>(stubEdilenIlanlar));
         return row;
     }
 
@@ -121,6 +131,91 @@ class AiMatchServiceTest {
         assertTrue(results.isEmpty());
         verify(restTemplate, never()).postForEntity(eq("http://localhost:8000/match"), any(), any(Class.class));
     }
+
+    // --- geçersiz / sınır listingType değerleri --------------------------
+
+    @Test
+    void gecersizListingType_illegalArgumentException_firlatir_matchCagrilmaz() throws Exception {
+        MultipartFile file = new MockMultipartFile("file", "test.jpg", "image/jpeg", "dummy".getBytes());
+        analyzeCevabi(tamAnaliz());
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> aiMatchService.matchImages(List.of(file), "GARBAGE", null, null));
+        assertTrue(ex.getMessage().contains("GARBAGE"));
+
+        verify(restTemplate, never()).postForEntity(eq("http://localhost:8000/match"), any(), any(Class.class));
+    }
+
+    @Test
+    void adoptionListingType_gecerliAmaKarsitiYok_bosListeDoner_matchCagrilmaz() throws Exception {
+        MultipartFile file = new MockMultipartFile("file", "test.jpg", "image/jpeg", "dummy".getBytes());
+        analyzeCevabi(tamAnaliz());
+
+        List<MatchedAdResponseDTO> results =
+                aiMatchService.matchImages(List.of(file), "ADOPTION", null, null);
+
+        assertTrue(results.isEmpty());
+        verify(restTemplate, never()).postForEntity(eq("http://localhost:8000/match"), any(), any(Class.class));
+    }
+
+    @Test
+    void listingTypeKucukHarfVeBosluklaGelirse_yineDeDogruCalisir() throws Exception {
+        MultipartFile file = new MockMultipartFile("file", "test.jpg", "image/jpeg", "dummy".getBytes());
+        analyzeCevabi(tamAnaliz());
+
+        List<AiCandidateRow> satirlar = List.of(satir(5L, 0.0));
+        when(adRepository.findAiCandidatesWithoutLocation(anyString(), any(Instant.class)))
+                .thenReturn(satirlar);
+        matchCevabi(List.of(aiEslesme(5, 0.91, Boolean.TRUE)));
+
+        List<MatchedAdResponseDTO> results =
+                aiMatchService.matchImages(List.of(file), "  lost  ", null, null);
+
+        assertEquals(1, results.size());
+    }
+
+    @Test
+    void eslesmedeAdIdNullGelirse_atlanir_npeFirlatmaz() throws Exception {
+        // İkinci eşleşmenin ad_id'si null -- bugün teorik (bu uç yalnızca
+        // native aday gönderiyor) ama savunma amaçlı: NPE fırlatmadan
+        // sessizce atlanmalı, geçerli olan (id=5) yine dönmeli.
+        MultipartFile file = new MockMultipartFile("file", "test.jpg", "image/jpeg", "dummy".getBytes());
+        analyzeCevabi(tamAnaliz());
+
+        List<AiCandidateRow> satirlar = List.of(satir(5L, 0.0));
+        when(adRepository.findAiCandidatesWithoutLocation(anyString(), any(Instant.class)))
+                .thenReturn(satirlar);
+
+        Map<String, Object> nullAdIdEslesme = new HashMap<>();
+        nullAdIdEslesme.put("ad_id", null);
+        nullAdIdEslesme.put("score", 0.5);
+        nullAdIdEslesme.put("match", Boolean.TRUE);
+        matchCevabi(List.of(aiEslesme(5, 0.91, Boolean.TRUE), nullAdIdEslesme));
+
+        List<MatchedAdResponseDTO> results =
+                aiMatchService.matchImages(List.of(file), "FOUND", null, null);
+
+        assertEquals(1, results.size());
+    }
+
+    @Test
+    void adayToplamaVeYanitZenginlestirme_findAllByIdKullanir_findByIdHicCagrilmaz() throws Exception {
+        MultipartFile file = new MockMultipartFile("file", "test.jpg", "image/jpeg", "dummy".getBytes());
+        analyzeCevabi(tamAnaliz());
+
+        List<AiCandidateRow> satirlar = List.of(satir(5L, 0.0));
+        when(adRepository.findAiCandidatesWithoutLocation(anyString(), any(Instant.class)))
+                .thenReturn(satirlar);
+        matchCevabi(List.of(aiEslesme(5, 0.91, Boolean.TRUE)));
+
+        List<MatchedAdResponseDTO> results =
+                aiMatchService.matchImages(List.of(file), "LOST", null, null);
+
+        assertEquals(1, results.size());
+        verify(adRepository, never()).findById(anyLong());
+    }
+
+    // --- B8: eşik ve konum davranışı --------------------------------------
 
     @Test
     @DisplayName("B8: eşik altı adaylar cevaptan elenir — pencere yalnız eşiği geçenleri görür")

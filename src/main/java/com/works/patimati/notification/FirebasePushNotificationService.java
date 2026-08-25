@@ -1,6 +1,7 @@
 package com.works.patimati.notification;
 
 import com.google.firebase.FirebaseApp;
+import com.google.firebase.messaging.AndroidConfig;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.Message;
 import com.google.firebase.messaging.Notification;
@@ -39,7 +40,7 @@ public class FirebasePushNotificationService implements PushNotificationService 
     private static final Logger log = LoggerFactory.getLogger(FirebasePushNotificationService.class);
 
     @Override
-    public PushResult send(String token, String baslik, String govde, Map<String, String> veri) {
+    public PushResult send(String token, String baslik, String govde, Map<String, String> veri, String collapseKey) {
         if (!firebaseHazirMi()) {
             return PushResult.PUSH_DISABLED;
         }
@@ -58,6 +59,11 @@ public class FirebasePushNotificationService implements PushNotificationService 
                             .build());
             if (veri != null) {
                 veri.forEach(builder::putData);
+            }
+            if (collapseKey != null && !collapseKey.isBlank()) {
+                builder.setAndroidConfig(AndroidConfig.builder()
+                        .setCollapseKey(collapseKey)
+                        .build());
             }
             firebaseGonder(builder.build());
             return PushResult.SENT;

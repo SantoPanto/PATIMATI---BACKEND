@@ -1,0 +1,32 @@
+-- CANLIDA ÖLÇÜLDÜ (24.08.2026): ads.description HÂLÂ character varying(255).
+--
+-- V18 tam olarak bunu düzeltmek için yazılmıştı ama canlı şemada ETKİSİ YOK;
+-- Fatih'in canlı veritabanında koşturduğu information_schema sorgusu şunu
+-- döndürdü:
+--     description | character varying | 255 | YES
+-- Aynı sorgunun yerel karşılığı (şema göç dosyalarından kurulu) `text` verir;
+-- yerelde 2900 karakterlik açıklamayla ilan açmak 201 dönüyor.
+--
+-- SONUCU: DTO 3000 karaktere izin veriyor (AdCreateRequest /
+-- AdoptionAdCreateRequest @Size(max = 3000)) ama satır 255'i aşınca INSERT
+-- "value too long for type character varying(255)" ile düşüyor. Bu
+-- DataIntegrityViolationException'a, o da GlobalExceptionHandler:346'daki
+-- şu kullanıcı mesajına dönüşüyor:
+--     "Gönderilen verilerden biri kaydedilemedi: bir alan izin verilen
+--      sınırı aşıyor ya da beklenen biçimde değil."
+-- Sahadan 23.08'de bildirilen sahiplendirme hatası buydu.
+--
+-- NEDEN EN ÇOK SAHİPLENDİRMEDE GÖRÜLÜYOR: AdoptionCreatePage açıklamayı
+-- BİRLEŞTİREREK üretiyor (açıklama + "Adı:" + "Konum:" + "Sağlık:" +
+-- "Sahiplendirme şartları:" + "Renk:"), yani 255'i aşması çok kolay.
+-- Ama kusur forma özgü değil: uzun açıklamalı KAYIP/BULUNDU ilanları da
+-- aynı yere düşer.
+--
+-- NEDEN V18 TUTMADI: kesin sebep flyway_schema_history'den okunacak. En
+-- olası açıklama, canlının o sırada V18'in üstünde bir sürümde olması ve
+-- Flyway'in sıra dışı (out-of-order) göçü atlaması. Bu yüzden düzeltme ESKİ
+-- DOSYA DEĞİŞTİRİLEREK değil YENİ SÜRÜMLE veriliyor — geçmişi değiştirmek
+-- checksum uyuşmazlığı üretir ve zaten koşmuş kurulumlarda açılışı kırar.
+--
+-- Zaten TEXT olan kurulumlarda (yerel, CI) bu ifade no-op'tur.
+ALTER TABLE ads ALTER COLUMN description TYPE TEXT;

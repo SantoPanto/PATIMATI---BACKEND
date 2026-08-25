@@ -32,6 +32,12 @@ class WebSocketConfigTest {
     private MessageBrokerRegistry messageBrokerRegistry;
 
     @Mock
+    private org.springframework.messaging.simp.config.SimpleBrokerRegistration simpleBrokerRegistration;
+
+    @Mock
+    private org.springframework.web.socket.config.annotation.SockJsServiceRegistration sockJsServiceRegistration;
+
+    @Mock
     private StompEndpointRegistry stompEndpointRegistry;
 
     @Mock
@@ -56,15 +62,17 @@ class WebSocketConfigTest {
 
     @Test
     void shouldConfigureApplicationUserAndQueuePrefixes() {
+        when(messageBrokerRegistry.enableSimpleBroker(WebSocketConfig.PRIVATE_QUEUE_PREFIX, WebSocketConfig.PUBLIC_TOPIC_PREFIX))
+                .thenReturn(simpleBrokerRegistration);
+        when(simpleBrokerRegistration.setTaskScheduler(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(simpleBrokerRegistration);
+
         // Mesaj broker yapılandırması çalıştırılır.
         webSocketConfig.configureMessageBroker(messageBrokerRegistry);
 
         // /queue ve /topic hedeflerinin Spring'in dahili broker'ına yönlendirildiğini doğrular.
         verify(messageBrokerRegistry)
-                .enableSimpleBroker(
-                        WebSocketConfig.PRIVATE_QUEUE_PREFIX,
-                        WebSocketConfig.PUBLIC_TOPIC_PREFIX
-                );
+                .enableSimpleBroker(WebSocketConfig.PRIVATE_QUEUE_PREFIX, WebSocketConfig.PUBLIC_TOPIC_PREFIX);
 
         // /app hedeflerinin ileride yazılacak @MessageMapping metotlarına gideceğini doğrular.
         verify(messageBrokerRegistry)
@@ -77,6 +85,50 @@ class WebSocketConfigTest {
                 .setUserDestinationPrefix(WebSocketConfig.USER_DESTINATION_PREFIX);
     }
 
+    /**
+     * "Mesajlar canli gelmiyor, F5 gerekiyor, 1-2 mesaj sonra kesiliyor"
+     * sikayetinin ikinci ayagi — BEKCISI YOKTU.
+     *
+     * <p><b>Olculen arıza (23.08, once canli sonra yerel):</b> sunucunun
+     * CONNECTED cercevesi <b>heart-beat: 0,0</b> diyordu. STOMP'ta kalp atisi
+     * PAZARLIKLIDIR: sunucu 0 derse istemci de gondermez. Iki uctan da trafik
+     * akmayan baglanti "yari acik" kalir; tarayici hâlâ bagli sandigi icin
+     * stompjs yeniden baglanmaz, mesaj gelmez ve kullanici F5 atmak zorunda
+     * kalir. Araya giren Cloudflare/nginx bosta duran WebSocket'i zaten bir
+     * sure sonra kapatir.
+     *
+     * <p><b>Duzeltmeden sonra ayni olcum:</b> heart-beat: 10000,10000 ve
+     * iki gercek STOMP istemcisi arasinda teslimat 0 -> 1.
+     *
+     * <p><b>Neden ayri bir bekci:</b> yukaridaki test zinciri yalnizca
+     * CALISTIRIYOR (setTaskScheduler'i stub'liyor) ama kalp atisi degerinin
+     * verilip verilmedigine BAKMIYOR. Deger silinse hicbir test kizarmaz ve
+     * ariza sessizce geri doner. Ayrica deger tek basina yetmez: TaskScheduler
+     * verilmezse Spring'in SimpleBroker'i atisi GONDEREMEZ — bu yuzden ikisi
+     * birlikte kilitleniyor.
+     */
+    @Test
+    void shouldEnableBrokerHeartbeatWithScheduler() {
+        when(messageBrokerRegistry.enableSimpleBroker(
+                WebSocketConfig.PRIVATE_QUEUE_PREFIX, WebSocketConfig.PUBLIC_TOPIC_PREFIX))
+                .thenReturn(simpleBrokerRegistration);
+        when(simpleBrokerRegistration.setTaskScheduler(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(simpleBrokerRegistration);
+
+        webSocketConfig.configureMessageBroker(messageBrokerRegistry);
+
+        org.mockito.ArgumentCaptor<long[]> atis =
+                org.mockito.ArgumentCaptor.forClass(long[].class);
+        verify(simpleBrokerRegistration).setHeartbeatValue(atis.capture());
+
+        org.assertj.core.api.Assertions.assertThat(atis.getValue()).hasSize(2);
+        org.assertj.core.api.Assertions.assertThat(atis.getValue()[0]).isGreaterThan(0L);
+        org.assertj.core.api.Assertions.assertThat(atis.getValue()[1]).isGreaterThan(0L);
+
+        // Zamanlayici olmadan yukaridaki deger UYGULANMAZ.
+        verify(simpleBrokerRegistration).setTaskScheduler(org.mockito.ArgumentMatchers.any());
+    }
+
     @Test
     void shouldRegisterSockJsEndpointWithConfiguredOrigins() {
         /*
@@ -87,6 +139,8 @@ class WebSocketConfigTest {
                 .thenReturn(endpointRegistration);
         when(endpointRegistration.setAllowedOrigins(ALLOWED_ORIGINS.toArray(String[]::new)))
                 .thenReturn(endpointRegistration);
+        when(endpointRegistration.withSockJS())
+                .thenReturn(sockJsServiceRegistration);
 
         // WebSocket/SockJS endpoint kaydı çalıştırılır.
         webSocketConfig.registerStompEndpoints(stompEndpointRegistry);
