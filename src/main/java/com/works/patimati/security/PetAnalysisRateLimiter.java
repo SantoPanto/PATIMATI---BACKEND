@@ -13,21 +13,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * "Ben Neyim?" (pet raporu) özelliği için istek sayacı -- {@link LoginRateLimiter}
- * ile AYNI desen (bellek-içi, {@code @Scheduled} temizlik), ama iki farkla:
+ * ile AYNI desen (bellek-içi, {@code @Scheduled} temizlik).
  *
- * <ol>
- *   <li>Anahtar giriş durumuna göre değişir: misafirse istemci IP'si, giriş
- *       yapmışsa kullanıcının e-postası (bkz. çağıran, {@code
- *       PublicPetAnalysisController} -- {@code AdController.getAdPoster}'daki
- *       "authentication != null && isAuthenticated() && !anonymousUser"
- *       deseniyle AYNI). Aynı ağdaki iki farklı kullanıcı birbirinin hakkını
- *       yemesin diye.</li>
- *   <li>Limit sabit değil, giriş durumuna göre İKİ farklı tavan var (misafir
- *       çok daha düşük -- her istek gerçek para maliyeti taşıyan bir LLM
- *       çağrısı tetikliyor).</li>
- * </ol>
+ * <p>Anahtar giriş yapmış kullanıcının e-postasıdır (bkz. çağıran, {@code
+ * PublicPetAnalysisController} -- özellik yalnızca girişli kullanıcılara açık,
+ * misafir erişimi controller seviyesinde zaten reddedilir).
  *
- * Başarılı/başarısız ayrımı YOK (LoginRateLimiter'daki recordFailure/
+ * <p>Başarılı/başarısız ayrımı YOK (LoginRateLimiter'daki recordFailure/
  * recordSuccess'in aksine): buradaki maliyet İSTEĞİN KENDİSİ (AI servisine
  * giden her çağrı), sonucun "gecerli" olup olmaması değil -- o yüzden tek bir
  * {@link #istekKaydet(String)} yeterli.
@@ -35,10 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Component
 public class PetAnalysisRateLimiter {
 
-    @Value("${pet.analysis.rate-limit.guest-max-requests:3}")
-    private int misafirMaxIstek;
-
-    @Value("${pet.analysis.rate-limit.user-max-requests:10}")
+    @Value("${pet.analysis.rate-limit.user-max-requests:3}")
     private int kullaniciMaxIstek;
 
     // Varsayılan 1440 dk = 24 saat ("günde" -- kullanıcı kararı).
@@ -51,13 +40,10 @@ public class PetAnalysisRateLimiter {
     }
 
     /**
-     * true ise bu anahtar (IP ya da kullanıcı) şu an limit dolu -- çağıran
-     * isteği AI servisine hiç göndermemeli.
-     *
-     * @param girisYapmis hangi tavanın uygulanacağını belirler (misafir/kullanıcı)
+     * true ise bu anahtar (kullanıcı) şu an limit dolu -- çağıran isteği AI
+     * servisine hiç göndermemeli.
      */
-    public boolean limitiDoldu(String anahtar, boolean girisYapmis) {
-        int maxIstek = girisYapmis ? kullaniciMaxIstek : misafirMaxIstek;
+    public boolean limitiDoldu(String anahtar) {
         Window pencere = denemeler.get(anahtar);
         if (pencere == null) {
             return false;
@@ -66,7 +52,7 @@ public class PetAnalysisRateLimiter {
             denemeler.remove(anahtar, pencere);
             return false;
         }
-        return pencere.sayac().get() >= maxIstek;
+        return pencere.sayac().get() >= kullaniciMaxIstek;
     }
 
     /** Bu anahtarın sayacını bir artırır -- çağrılmadan önce {@link #limitiDoldu} ile kontrol edilmiş olmalı. */
