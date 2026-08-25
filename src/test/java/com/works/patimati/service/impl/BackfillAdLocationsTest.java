@@ -4,10 +4,15 @@ import com.works.patimati.entity.Ad;
 import com.works.patimati.repository.AdComplaintRepository;
 import com.works.patimati.repository.AdRepository;
 import com.works.patimati.repository.AdoptionComplaintRepository;
+import com.works.patimati.repository.PotentialMatchRepository;
 import com.works.patimati.repository.UserComplaintRepository;
 import com.works.patimati.repository.UserRepository;
+import com.works.patimati.repository.external.ExternalPetRecordRepository;
+import com.works.patimati.repository.external.ExternalSourceMediaRepository;
+import com.works.patimati.repository.external.ExternalSourcePostRepository;
 import com.works.patimati.service.AdService;
 import com.works.patimati.service.ReverseGeocodingService;
+import com.works.patimati.storage.ImageStorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.geom.Coordinate;
@@ -53,6 +58,11 @@ class BackfillAdLocationsTest {
                 mock(UserComplaintRepository.class),
                 mock(AdoptionComplaintRepository.class),
                 mock(AdService.class),
+                mock(ExternalSourcePostRepository.class),
+                mock(ExternalPetRecordRepository.class),
+                mock(ExternalSourceMediaRepository.class),
+                mock(PotentialMatchRepository.class),
+                mock(ImageStorageService.class),
                 reverseGeocodingService
         );
     }

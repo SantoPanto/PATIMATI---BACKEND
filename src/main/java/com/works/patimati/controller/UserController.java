@@ -5,6 +5,7 @@ import com.works.patimati.dto.User.UpdateProfileRequest;
 import com.works.patimati.dto.User.UserResponseDTO;
 import com.works.patimati.service.PasswordResetService;
 import com.works.patimati.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -27,8 +28,18 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
-        return authService.login(request);
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
+        // getRemoteAddr() BİLEREK doğrudan okunuyor, X-Forwarded-For BURADA
+        // elle AYRIŞTIRILMIYOR: başlık istemcinin kendisi tarafından
+        // uydurulabilir, elle okumak LoginRateLimiter'ı tamamen atlatılabilir
+        // kılardı (canlı testle doğrulandı). Bunun yerine
+        // application.yml'deki `server.forward-headers-strategy: native`
+        // gömülü Tomcat'e bu işi güvenilir biçimde yaptırıyor -- yalnızca
+        // uygulamaya DOĞRUDAN bağlanan (üretimde: güvenilen ters proxy)
+        // taraf tarafından ayarlanan başlığa göre getRemoteAddr()'ı yeniden
+        // yazar; istemcinin ucundan gelen bir X-Forwarded-For proxy
+        // tarafından zaten üzerine yazılmış/değiştirilmiş olur.
+        return authService.login(request, httpRequest.getRemoteAddr());
     }
 
     /*

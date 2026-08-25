@@ -5,6 +5,8 @@ import com.works.patimati.ai.AiCandidateRow;
 import com.works.patimati.dto.match.MatchedAdResponseDTO;
 import com.works.patimati.entity.Ad;
 import com.works.patimati.repository.AdRepository;
+import com.works.patimati.dto.ai.AiAnalyzeResponse;
+import com.works.patimati.mapper.AiAnalyzeMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
@@ -26,6 +28,7 @@ import java.io.IOException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -35,10 +38,14 @@ public class AiMatchService {
     private final AdService adService;
     private final RestTemplate restTemplate;
     private final RestTemplate petRaporuRestTemplate;
+    private final AiAnalyzeMapper aiAnalyzeMapper;
 
-    public AiMatchService(AdRepository adRepository, AdService adService, org.springframework.boot.web.client.RestTemplateBuilder restTemplateBuilder) {
+    public AiMatchService(AdRepository adRepository, AdService adService,
+                          org.springframework.boot.web.client.RestTemplateBuilder restTemplateBuilder,
+                          AiAnalyzeMapper aiAnalyzeMapper) {
         this.adRepository = adRepository;
         this.adService = adService;
+        this.aiAnalyzeMapper = aiAnalyzeMapper;
         this.restTemplate = restTemplateBuilder
                 .setConnectTimeout(java.time.Duration.ofSeconds(10))
                 .setReadTimeout(java.time.Duration.ofSeconds(30))
@@ -161,6 +168,14 @@ public class AiMatchService {
         );
 
         return response.getStatusCode().is2xxSuccessful() ? response.getBody() : null;
+     * İlan oluşturma ekranı için AI analiz sonucunu frontend sözleşmesine dönüştürerek döner.
+     */
+    public AiAnalyzeResponse analyzeImageForFrontend(MultipartFile file) throws IOException {
+        Map<String, Object> raw = analyzeImage(file);
+        if (raw == null) {
+            return null;
+        }
+        return aiAnalyzeMapper.toResponse(raw);
     }
 
     /**
@@ -228,7 +243,12 @@ public class AiMatchService {
         }
 
         // 2. Fetch candidates
-        String oppositeAdType = "LOST".equalsIgnoreCase(listingType) ? "FOUND" : "LOST";
+        String oppositeAdType = resolveOppositeAdType(listingType);
+        if (oppositeAdType == null) {
+            // Geçerli bir tür (ADOPTION) ama karşıtı yok -- aranacak bir
+            // eşleşme kavramı yok, hata değil.
+            return List.of();
+        }
         Instant since = Instant.now().minus(windowDays, ChronoUnit.DAYS);
 
         List<AiCandidateRow> rows;
@@ -250,13 +270,19 @@ public class AiMatchService {
             rows = rows.subList(0, maxCandidates);
         }
 
+        // findAllById ile tek sorguda çekilip Map'e konuyor -- öncesinde
+        // her satır için ayrı bir findById çağrılıyordu (N+1).
+        List<Long> candidateAdIds = rows.stream().map(AiCandidateRow::getAdId).toList();
+        Map<Long, Ad> candidateAdsById = adRepository.findAllById(candidateAdIds).stream()
+                .collect(Collectors.toMap(Ad::getId, ad -> ad));
+
         List<AiCandidate> candidates = new ArrayList<>();
         for (AiCandidateRow row : rows) {
-            Ad ad = adRepository.findById(row.getAdId()).orElse(null);
+            Ad ad = candidateAdsById.get(row.getAdId());
             if (ad == null || ad.getAiEmbeddings() == null || ad.getAiEmbeddings().isEmpty()) {
                 continue;
             }
-            
+
             List<float[]> candidateEmbeddings = new ArrayList<>();
             for (Ad.AiPhotoVector vector : ad.getAiEmbeddings()) {
                 candidateEmbeddings.add(vector.embedding());
@@ -270,7 +296,8 @@ public class AiMatchService {
                     // Konumlu yolda PostGIS'in gerçek mesafesi; konumsuz yolda
                     // sorgu 0.0 döndürüyor (herkese eşit — sıralamayı bozmaz).
                     row.getDistanceKm() != null ? row.getDistanceKm() : 0.0,
-                    ad.getAiModelVersion()
+                    ad.getAiModelVersion(),
+                    null
             );
             candidates.add(candidate);
         }
@@ -304,6 +331,21 @@ public class AiMatchService {
             
             if (matches == null) return List.of();
 
+            // ad_id null gelebilir (bugün bu uç yalnızca native aday
+            // gönderdiği için teorik, ama savunma amaçlı) -- longValue()'dan
+            // ÖNCE kontrol edilmezse NPE fırlatırdı. findAllById ile tek
+            // sorguda toplu çekiliyor -- öncesinde her eşleşme için ayrı bir
+            // findById çağrılıyordu (N+1).
+            List<Long> matchedAdIds = new ArrayList<>();
+            for (Map<String, Object> match : matches) {
+                Integer adId = (Integer) match.get("ad_id");
+                if (adId != null) {
+                    matchedAdIds.add(adId.longValue());
+                }
+            }
+            Map<Long, Ad> matchedAdsById = adRepository.findAllById(matchedAdIds).stream()
+                    .collect(Collectors.toMap(Ad::getId, ad -> ad));
+
             // Map the matched Ad info along with score into MatchedAdResponseDTO
             List<MatchedAdResponseDTO> result = new ArrayList<>();
             int esikAltiElenen = 0;
@@ -313,10 +355,13 @@ public class AiMatchService {
                     continue;
                 }
                 Integer adId = (Integer) match.get("ad_id");
+                if (adId == null) {
+                    continue;
+                }
                 Object rawScore = match.get("score");
                 Double score = rawScore instanceof Number ? ((Number) rawScore).doubleValue() : null;
 
-                Ad ad = adRepository.findById(adId.longValue()).orElse(null);
+                Ad ad = matchedAdsById.get(adId.longValue());
                 if (ad != null) {
                     MatchedAdResponseDTO dto = MatchedAdResponseDTO.builder()
                             .score(score)
@@ -334,6 +379,33 @@ public class AiMatchService {
         }
 
         return List.of();
+    }
+
+    /**
+     * {@code listingType}'ı {@link Ad.AdType}'a doğrular ve karşıt türünü
+     * döner (LOST&harr;FOUND). ADOPTION geçerli bir tür ama karşıtı yoktur --
+     * {@code null} döner, çağıran bunu boş sonuç olarak ele alır.
+     *
+     * <p>Öncesinde yalnızca {@code "LOST".equalsIgnoreCase(listingType)}
+     * kontrol ediliyordu: "LOST" dışında HER ŞEY (yazım hatası dahil)
+     * sessizce "FOUND"un karşıtı sayılıyor, yanlış adaylarla eşleştiriliyordu.
+     * Artık geçersiz bir değer {@link IllegalArgumentException} fırlatır --
+     * {@code GlobalExceptionHandler} bunu zaten 400'e çeviriyor.
+     */
+    private String resolveOppositeAdType(String listingType) {
+        Ad.AdType type;
+        try {
+            type = Ad.AdType.valueOf(listingType.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException | NullPointerException e) {
+            throw new IllegalArgumentException(
+                    "Geçersiz listingType: '" + listingType + "'. Geçerli değerler: "
+                            + Arrays.toString(Ad.AdType.values()));
+        }
+        return switch (type) {
+            case LOST -> Ad.AdType.FOUND.name();
+            case FOUND -> Ad.AdType.LOST.name();
+            case ADOPTION -> null;
+        };
     }
 
     private String declaredSpecies(Ad ad) {

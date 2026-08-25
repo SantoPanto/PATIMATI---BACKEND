@@ -18,6 +18,9 @@ import org.springframework.web.bind.annotation.*;
 import java.security.Principal;
 import java.util.List;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @RestController
 @RequestMapping("/api/messages")
 @RequiredArgsConstructor
@@ -44,6 +47,8 @@ public class ChatController {
 
     @MessageMapping("/chat")
     public void processMessage(@Payload @Valid MessageSendRequest request, Principal principal) {
+        log.info("[WebSocket Debug] Incoming STOMP /app/chat from principal={}: recipientId={}",
+                principal != null ? principal.getName() : null, request.recipientId());
         messageService.sendMessage(principal.getName(), request);
     }
 
