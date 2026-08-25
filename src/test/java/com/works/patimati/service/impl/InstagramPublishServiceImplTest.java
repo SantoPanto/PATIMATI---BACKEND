@@ -9,6 +9,7 @@ import com.works.patimati.instagram.InstagramCaptionAiClient;
 import com.works.patimati.instagram.InstagramGraphClient;
 import com.works.patimati.instagram.InstagramGraphResult;
 import com.works.patimati.repository.AdInstagramPublicationRepository;
+import com.works.patimati.repository.AdRepository;
 import com.works.patimati.repository.UserRepository;
 import com.works.patimati.storage.ImageStorageService;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,6 +30,7 @@ import static org.mockito.Mockito.when;
 class InstagramPublishServiceImplTest {
 
     private AdInstagramPublicationRepository publicationRepository;
+    private AdRepository adRepository;
     private UserRepository userRepository;
     private ImageStorageService imageStorageService;
     private InstagramCaptionAiClient instagramCaptionAiClient;
@@ -38,13 +40,14 @@ class InstagramPublishServiceImplTest {
     @BeforeEach
     void setUp() {
         publicationRepository = mock(AdInstagramPublicationRepository.class);
+        adRepository = mock(AdRepository.class);
         userRepository = mock(UserRepository.class);
         imageStorageService = mock(ImageStorageService.class);
         instagramCaptionAiClient = mock(InstagramCaptionAiClient.class);
         instagramGraphClient = mock(InstagramGraphClient.class);
 
         service = new InstagramPublishServiceImpl(
-                publicationRepository, userRepository, imageStorageService,
+                publicationRepository, adRepository, userRepository, imageStorageService,
                 instagramCaptionAiClient, instagramGraphClient);
         setEnabled(true);
     }
@@ -122,8 +125,9 @@ class InstagramPublishServiceImplTest {
     void yayinlamaBasarilOlursaPublishedOlarakKaydedilirVeTrueDoner() {
         Ad ad = ilan(true, Ad.AdType.LOST);
         AdInstagramPublication publication = AdInstagramPublication.builder()
-                .id(5L).ad(ad).status(InstagramPublishStatus.PENDING).build();
+                .id(5L).adId(ad.getId()).status(InstagramPublishStatus.PENDING).build();
         when(publicationRepository.findById(5L)).thenReturn(Optional.of(publication));
+        when(adRepository.findById(ad.getId())).thenReturn(Optional.of(ad));
         when(imageStorageService.createTemporaryReadUrl(anyString())).thenReturn("https://cdn.test/1.jpg");
         when(instagramGraphClient.publish(any(), anyString()))
                 .thenReturn(InstagramGraphResult.success("ig123", "https://instagram.com/p/abc"));
@@ -142,8 +146,9 @@ class InstagramPublishServiceImplTest {
     void yayinlamaBasarisizOlursaFailedOlarakKaydedilirVeFalseDoner() {
         Ad ad = ilan(true, Ad.AdType.LOST);
         AdInstagramPublication publication = AdInstagramPublication.builder()
-                .id(6L).ad(ad).status(InstagramPublishStatus.PENDING).build();
+                .id(6L).adId(ad.getId()).status(InstagramPublishStatus.PENDING).build();
         when(publicationRepository.findById(6L)).thenReturn(Optional.of(publication));
+        when(adRepository.findById(ad.getId())).thenReturn(Optional.of(ad));
         when(imageStorageService.createTemporaryReadUrl(anyString())).thenReturn("https://cdn.test/1.jpg");
         when(instagramGraphClient.publish(any(), anyString()))
                 .thenReturn(InstagramGraphResult.failure("Instagram API hatası"));
@@ -159,7 +164,7 @@ class InstagramPublishServiceImplTest {
     void atlamaSkippedOlarakKaydedilir() {
         Ad ad = ilan(true, Ad.AdType.LOST);
         AdInstagramPublication publication = AdInstagramPublication.builder()
-                .id(7L).ad(ad).status(InstagramPublishStatus.PENDING).build();
+                .id(7L).adId(ad.getId()).status(InstagramPublishStatus.PENDING).build();
         when(publicationRepository.findById(7L)).thenReturn(Optional.of(publication));
 
         service.skip(7L, "admin@patimati.me");

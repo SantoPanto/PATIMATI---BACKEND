@@ -11,6 +11,7 @@ import com.works.patimati.exception.ResourceNotFoundException;
 import com.works.patimati.instagram.InstagramGraphClient;
 import com.works.patimati.instagram.InstagramGraphResult;
 import com.works.patimati.repository.AdInstagramPublicationRepository;
+import com.works.patimati.repository.AdRepository;
 import com.works.patimati.repository.UserRepository;
 import com.works.patimati.instagram.InstagramCaptionAiClient;
 import com.works.patimati.service.InstagramPublishService;
@@ -54,6 +55,7 @@ public class InstagramPublishServiceImpl implements InstagramPublishService {
     }
 
     private final AdInstagramPublicationRepository publicationRepository;
+    private final AdRepository adRepository;
     private final UserRepository userRepository;
     private final ImageStorageService imageStorageService;
     private final InstagramCaptionAiClient instagramCaptionAiClient;
@@ -74,7 +76,7 @@ public class InstagramPublishServiceImpl implements InstagramPublishService {
             String caption = onerilenCaptionUret(savedAd);
 
             AdInstagramPublication publication = AdInstagramPublication.builder()
-                    .ad(savedAd)
+                    .adId(savedAd.getId())
                     .status(InstagramPublishStatus.PENDING)
                     .suggestedCaption(caption)
                     .build();
@@ -99,7 +101,17 @@ public class InstagramPublishServiceImpl implements InstagramPublishService {
     }
 
     private InstagramPublishQueueAdminResponse toAdminResponse(AdInstagramPublication publication) {
-        Ad ad = publication.getAd();
+        Ad ad = adRepository.findById(publication.getAdId()).orElse(null);
+        if (ad == null) {
+            // İlan sonradan (admin tarafından) kalıcı silinmiş olabilir --
+            // kuyruk kaydı yine de görünsün, çökmesin.
+            return new InstagramPublishQueueAdminResponse(
+                    publication.getId(), publication.getAdId(), "(İlan silinmiş)",
+                    null, null, null, publication.getSuggestedCaption(),
+                    publication.getStatus(), publication.getFailureReason(),
+                    publication.getCreatedAt());
+        }
+
         String firstPhotoUrl = ad.getPhotoUrls() == null || ad.getPhotoUrls().isEmpty()
                 ? null
                 : imageStorageService.createTemporaryReadUrl(ad.getPhotoUrls().get(0));
@@ -131,8 +143,9 @@ public class InstagramPublishServiceImpl implements InstagramPublishService {
     public boolean publish(Long queueItemId, String finalCaption, String adminEmail) {
         AdInstagramPublication publication = publicationRepository.findById(queueItemId)
                 .orElseThrow(() -> new ResourceNotFoundException("Instagram kuyruk kaydı bulunamadı: " + queueItemId));
+        Ad ad = adRepository.findById(publication.getAdId())
+                .orElseThrow(() -> new ResourceNotFoundException("İlan bulunamadı: " + publication.getAdId()));
 
-        Ad ad = publication.getAd();
         InstagramGraphResult result;
         try {
             List<String> photoUrls = toDownloadableUrls(ad.getPhotoUrls());

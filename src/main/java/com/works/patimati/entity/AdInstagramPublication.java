@@ -18,6 +18,16 @@ import java.time.Instant;
  * denerse yine bu satır güncellenir -- ayrı bir deneme geçmişi tutulmaz,
  * yalnızca son durum (kullanıcı kararı, {@code AdService.reanalyzeAd}'ın
  * "yeniden dene" deseniyle AYNI basitlik).
+ *
+ * <p>{@code adId} bilerek {@code @ManyToOne} DEĞİL, düz kimlik -- {@code
+ * Ad.resolvedByAdId} ile AYNI gerekçe, ama burada asıl sebep FK/ilişki değil
+ * TRANSACTION SINIRI: {@code queueForReview} {@code REQUIRES_NEW} ile AYRI
+ * bir transaction'da çalışır (bkz. InstagramPublishServiceImpl) ve çağrıldığı
+ * anda {@code Ad} satırı henüz COMMIT EDİLMEMİŞTİR -- bir FK constraint bu
+ * ayrı transaction'dan görülemeyen satırı reddeder (canlı testte yakalandı:
+ * "violates foreign key constraint"). Düz {@code Long} bu kontrolü hiç
+ * yapmaz; ilan referansı gerektiğinde ({@code publish}, admin listesi)
+ * {@code AdRepository.findById} ile ayrıca okunur.
  */
 @Entity
 @Table(name = "ad_instagram_publications")
@@ -32,9 +42,8 @@ public class AdInstagramPublication {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ad_id", nullable = false)
-    private Ad ad;
+    @Column(name = "ad_id", nullable = false)
+    private Long adId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
