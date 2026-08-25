@@ -61,6 +61,7 @@ public class AdService {
     private final NotificationService notificationService;
     private final ReverseGeocodingService reverseGeocodingService;
     private final NearbyAlertNotifier nearbyAlertNotifier;
+    private final InstagramPublishService instagramPublishService;
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
     /**
@@ -122,6 +123,10 @@ public class AdService {
         // bekletirdi. Yayınlama hata verse bile ilan kaydedilmiş kalır:
         // ai_status PENDING'de durur ve sonradan yeniden denenebilir.
         aiAnalysisPublisher.publish(savedAd);
+
+        // Instagram kuyruğuna ekleme de AYNI ilkeyle beklenmez/asla fırlatmaz
+        // (bkz. InstagramPublishService.queueForReview javadoc'u).
+        instagramPublishService.queueForReview(savedAd);
 
         return response;
     }

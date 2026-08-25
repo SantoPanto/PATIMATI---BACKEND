@@ -212,6 +212,16 @@ public class Ad {
     @Builder.Default
     private Boolean isMatchRequired = true;
 
+    /**
+     * İlan sahibinin, ilanın PatiMati'nin Instagram hesabında paylaşılmasına
+     * verdiği ayrı onay -- {@code isPosterAllowed} ile AYNI RIZA KAPSAMINDA
+     * DEĞİL: o, ilgilenen tek bir kişiye verilen PDF afiş için; bu, herkese
+     * açık bir sosyal medya gönderisi için. Bu yüzden bilerek ayrı bir alan.
+     */
+    @Column(name = "instagram_share_consent", nullable = false)
+    @Builder.Default
+    private boolean instagramShareConsent = false;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

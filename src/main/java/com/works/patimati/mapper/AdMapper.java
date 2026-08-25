@@ -56,6 +56,7 @@ public class AdMapper {
                 .city(normalizeNullable(request.city()))
                 .district(normalizeNullable(request.district()))
                 .isMatchRequired(request.isMatchRequired() != null ? request.isMatchRequired() : Boolean.TRUE)
+                .instagramShareConsent(Boolean.TRUE.equals(request.instagramShareConsent()))
                 .build();
 
         applyCollarFields(

@@ -93,11 +93,22 @@ public record AdCreateRequest(
         @Size(max = 100, message = "District can contain at most 100 characters")
         String district,
 
-        Boolean isMatchRequired
+        Boolean isMatchRequired,
+
+        /**
+         * İlanın PatiMati'nin Instagram hesabında paylaşılmasına izin --
+         * {@code isPosterAllowed} ile AYNI RIZA KAPSAMINDA DEĞİL (bkz. Ad
+         * entity'sindeki alan javadoc'u). Varsayılan false: sessizce izin
+         * verilmiş sayılmaz.
+         */
+        Boolean instagramShareConsent
 ) {
     public AdCreateRequest {
         if (isMatchRequired == null) {
             isMatchRequired = Boolean.TRUE;
+        }
+        if (instagramShareConsent == null) {
+            instagramShareConsent = Boolean.FALSE;
         }
     }
 

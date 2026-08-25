@@ -86,11 +86,20 @@ public record AdoptionAdCreateRequest(
         @Size(max = 100, message = "İlçe en fazla 100 karakter olabilir")
         String district,
 
-        Boolean isMatchRequired
+        Boolean isMatchRequired,
+
+        /**
+         * İlanın PatiMati'nin Instagram hesabında paylaşılmasına izin --
+         * {@code AdCreateRequest.instagramShareConsent} ile AYNI gerekçe.
+         */
+        Boolean instagramShareConsent
 ) {
     public AdoptionAdCreateRequest {
         if (isMatchRequired == null) {
             isMatchRequired = Boolean.FALSE;
+        }
+        if (instagramShareConsent == null) {
+            instagramShareConsent = Boolean.FALSE;
         }
     }
 
