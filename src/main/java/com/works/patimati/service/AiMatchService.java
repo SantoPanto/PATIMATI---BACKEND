@@ -174,11 +174,19 @@ public class AiMatchService {
      * İlan oluşturma ekranı için AI analiz sonucunu frontend sözleşmesine dönüştürerek döner.
      */
     public AiAnalyzeResponse analyzeImageForFrontend(MultipartFile file) throws IOException {
-        Map<String, Object> raw = analyzeImage(file);
+        return analyzeImageForFrontend(file, null);
+    }
+
+    public AiAnalyzeResponse analyzeImageForFrontend(MultipartFile file, String kullaniciNotu) throws IOException {
+        Map<String, Object> raw = analyzePet(file, kullaniciNotu);
         if (raw == null) {
             return null;
         }
         return aiAnalyzeMapper.toResponse(raw);
+    }
+
+    public Map<String, Object> analyzeImage(MultipartFile file, String kullaniciNotu) throws IOException {
+        return analyzePet(file, kullaniciNotu);
     }
 
     /**
@@ -206,6 +214,10 @@ public class AiMatchService {
      * mesafe 0): ilan formunda analiz düğmesi konum girilmeden de basılabiliyor
      * ve "mesafe bilinmiyor"u ceza gibi işletmek eşleşmeleri saklardı.
      */
+    public List<MatchedAdResponseDTO> matchImages(List<MultipartFile> images, String listingType) throws Exception {
+        return matchImages(images, listingType, null, null);
+    }
+
     public List<MatchedAdResponseDTO> matchImages(List<MultipartFile> images, String listingType,
                                                   Double latitude, Double longitude) throws Exception {
         List<List<Float>> allEmbeddings = new ArrayList<>();
