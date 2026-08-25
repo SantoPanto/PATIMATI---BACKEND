@@ -168,6 +168,9 @@ public class AiMatchService {
         );
 
         return response.getStatusCode().is2xxSuccessful() ? response.getBody() : null;
+    }
+
+    /**
      * İlan oluşturma ekranı için AI analiz sonucunu frontend sözleşmesine dönüştürerek döner.
      */
     public AiAnalyzeResponse analyzeImageForFrontend(MultipartFile file) throws IOException {

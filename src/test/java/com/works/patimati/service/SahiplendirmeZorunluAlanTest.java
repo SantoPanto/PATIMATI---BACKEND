@@ -73,7 +73,8 @@ class SahiplendirmeZorunluAlanTest {
                 imageStorageService,
                 adService,
                 mock(RewardService.class),
-                mock(AiAnalysisPublisher.class)
+                mock(AiAnalysisPublisher.class),
+                mock(InstagramPublishService.class)
         );
 
         User sahip = User.builder().uid(7L).email(SAHIP_EPOSTA)
@@ -104,7 +105,8 @@ class SahiplendirmeZorunluAlanTest {
                 new BigDecimal("26.87"),
                 null,          // city
                 null,          // district
-                Boolean.FALSE
+                Boolean.FALSE,
+                Boolean.FALSE  // instagramShareConsent
         );
     }
 

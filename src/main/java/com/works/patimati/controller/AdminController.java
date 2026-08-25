@@ -2,6 +2,7 @@ package com.works.patimati.controller;
 
 import com.works.patimati.dto.ad.AdResponse;
 import com.works.patimati.dto.admin.AdComplaintAdminResponse;
+import com.works.patimati.dto.admin.CreateVetAccountRequest;
 import com.works.patimati.dto.admin.ExternalPostAdminResponse;
 import com.works.patimati.dto.admin.InstagramPublishQueueAdminResponse;
 import com.works.patimati.dto.admin.InstagramPublishRequest;
@@ -10,6 +11,7 @@ import com.works.patimati.dto.admin.UserDetailForAdminDTO;
 import com.works.patimati.entity.enums.InstagramPublishStatus;
 import com.works.patimati.service.AdminService;
 import com.works.patimati.service.InstagramPublishService;
+import com.works.patimati.service.VetClinicService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -35,6 +37,7 @@ public class AdminController {
     private static final int MAX_PAGE_SIZE = 100;
     private final AdminService adminService;
     private final InstagramPublishService instagramPublishService;
+    private final VetClinicService vetClinicService;
 
     /**
      * Sistemdeki tüm kullanıcıları detaylı şekilde listeler.
@@ -220,5 +223,15 @@ public class AdminController {
     ) {
         instagramPublishService.skip(id, authentication.getName());
         return ResponseEntity.ok(Map.of("message", "İlan Instagram kuyruğundan çıkarıldı."));
+    }
+
+    /**
+     * Bir veteriner hesabı açar (self-servis kayıt YOK) -- vet, bu hesapla
+     * giriş yapıp kendi klinik bilgi kartını {@code /vet/panel}'den oluşturur.
+     */
+    @PostMapping("/vet-accounts")
+    public ResponseEntity<Map<String, String>> createVetAccount(@Valid @RequestBody CreateVetAccountRequest body) {
+        vetClinicService.createVetAccount(body);
+        return ResponseEntity.ok(Map.of("message", "Veteriner hesabı oluşturuldu."));
     }
 }

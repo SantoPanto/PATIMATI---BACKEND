@@ -9,6 +9,8 @@ import com.works.patimati.entity.User;
 import com.works.patimati.entity.enums.ComplaintReason;
 import com.works.patimati.entity.enums.ComplaintStatus;
 import com.works.patimati.service.AdminService;
+import com.works.patimati.service.InstagramPublishService;
+import com.works.patimati.service.VetClinicService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.PageImpl;
@@ -39,7 +41,7 @@ class AdminControllerSearchTest {
         adminService = mock(AdminService.class);
 
         mockMvc = MockMvcBuilders
-                .standaloneSetup(new AdminController(adminService))
+                .standaloneSetup(new AdminController(adminService, mock(InstagramPublishService.class), mock(VetClinicService.class)))
                 .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
                 .build();
     }

@@ -72,6 +72,8 @@ public class SecurityConfig {
                                 "/api/auth/reset-password",
                                 "/api/ads/*/poster",
                                 "/api/v1/ads/*/poster",
+                                "/api/vet-clinics",
+                                "/api/vet-clinics/**",
                                 "/error",
                                 "/oauth2/**",
                                 "/login/oauth2/**",
@@ -87,6 +89,7 @@ public class SecurityConfig {
                                 "/ws-connect/**" // SockJS’in kullandığı alt adresleri kapsar.
                         ).permitAll() // Kayıt, giriş, OAuth2 ve açık uçlara HERKES erişebilsin
                         .requestMatchers("/api/auth/userlist", "/api/admin/**").hasRole("ADMIN") // Yöneticilere özel uç noktalar
+                        .requestMatchers("/api/vet/**").hasRole("VET") // Veteriner kendi klinik kartı uçları
                         // /internal/** normal kullanıcı JWT'si DEĞİL, paylaşılan-sır
                         // başlığı ister (InternalServiceAuthFilter). Burada permitAll
                         // GÖRÜNMÜYOR bilerek: filtre, anahtar tutmazsa isteği zaten
