@@ -2,7 +2,6 @@ package com.works.patimati.controller;
 
 import com.works.patimati.security.PetAnalysisRateLimiter;
 import com.works.patimati.service.AiMatchService;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,20 +20,13 @@ import java.util.Map;
 /**
  * "Ben Neyim?" -- tek bir kedi/köpek fotoğrafından zengin bir pet raporu.
  *
- * <p><b>Girişsiz kullanılabilir (A1'in TERSİ, bilinçli):</b> {@code /api/public/**}
- * altında, {@code SecurityConfig}'te {@code permitAll}. {@link AiAnalyzeController}
- * (ilan oluşturma analizi) girişi ZORUNLU tutar çünkü AI'yı internete açık
- * bırakmamak için tek koruma oydu (bkz. o sınıfın javadoc'u) -- burada aynı
- * korumayı GİRİŞ ZORUNLULUĞU değil, {@link PetAnalysisRateLimiter} sağlıyor:
- * her istek gerçek para maliyeti taşıyan bir LLM çağrısı tetiklediği için
- * kimliksiz erişim, sınırsız erişim ANLAMINA GELMEMELİ.
- *
- * <p><b>Giriş isteğe bağlı, hatası yok:</b> {@code Authentication} parametresi
- * yalnızca (varsa) daha yüksek bir istek tavanı uygulamak için okunur --
- * {@code AdController.getAdPoster}'daki "opsiyonel kimlik" deseninin AYNISI
- * (bkz. oradaki "authentication != null && isAuthenticated() &&
- * !anonymousUser" kontrolü). Oturum yokluğu asla hata değildir, misafir
- * sayılır.
+ * <p><b>Yalnızca girişli kullanıcılar:</b> {@code /api/public/**} altında,
+ * {@code SecurityConfig}'te {@code permitAll} olduğu için istek buraya
+ * misafirken de ulaşır -- ama giriş zorunluluğu burada, uygulama seviyesinde
+ * denetlenir (bkz. {@link #analyze}): misafir isteği 401 ile reddedilir.
+ * Her istek gerçek para maliyeti taşıyan bir LLM çağrısı tetiklediği için
+ * girişli kullanıcı da {@link PetAnalysisRateLimiter} ile günde 3 istekle
+ * sınırlanır (adminler hariç).
  *
  * <p>Cevap AI'dan geldiği gibi aktarılır -- {@link AiAnalyzeController} ile
  * AYNI gerekçe (alanları burada yeniden tanımlamak, AI'ya eklenen her yeni
@@ -55,8 +47,7 @@ public class PublicPetAnalysisController {
     public ResponseEntity<?> analyze(
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "kullanici_notu", required = false) String kullaniciNotu,
-            Authentication authentication,
-            HttpServletRequest httpRequest
+            Authentication authentication
     ) {
         if (file == null || file.isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("message", "Analiz edilecek fotoğraf gerekli."));
@@ -65,31 +56,29 @@ public class PublicPetAnalysisController {
         boolean girisYapmis = authentication != null && authentication.isAuthenticated()
                 && !"anonymousUser".equals(authentication.getPrincipal());
 
+        // Bu özellik yalnızca kayıtlı kullanıcılara açık -- /api/public/**
+        // altında permitAll olsa da (bkz. sınıf javadoc'u) misafir isteği
+        // burada, uygulama seviyesinde reddedilir.
+        if (!girisYapmis) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Bu özelliği kullanmak için giriş yapmalısınız."));
+        }
+
         // Adminler sınırsız -- AdService.isCurrentUserAdmin() ile AYNI kontrol
         // deseni (ROLE_ADMIN/ADMIN authority taraması). Rate limiter'a hiç
         // uğranmıyor: ne sayaç kontrolü ne artırma yapılır, kullanıcı kararı.
-        boolean adminMi = girisYapmis && authentication.getAuthorities() != null
+        boolean adminMi = authentication.getAuthorities() != null
                 && authentication.getAuthorities().stream()
                         .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()) || "ADMIN".equals(a.getAuthority()));
 
-        // Giriş yapmışsa e-posta (JwtAuthFilter'ın SecurityContext'e koyduğu
-        // principal -- kullanıcı ID'si DEĞİL, ama hesap başına biriciktir,
-        // aynı amaca hizmet eder), misafirse IP anahtar olur. IP BİLEREK
-        // getRemoteAddr() ile okunuyor, X-Forwarded-For elle ayrıştırılmıyor
-        // -- UserController.login()'daki AYNI gerekçe: başlık istemci
-        // tarafından uydurulabilir, elle okumak sınırlamayı tamamen
-        // atlatılabilir kılardı. application.yml'deki
-        // server.forward-headers-strategy: native bu işi güvenilir biçimde
-        // gömülü Tomcat'e yaptırıyor.
-        String anahtar = girisYapmis
-                ? "user:" + authentication.getName()
-                : "ip:" + httpRequest.getRemoteAddr();
+        // JwtAuthFilter'ın SecurityContext'e koyduğu principal (e-posta) --
+        // kullanıcı ID'si DEĞİL, ama hesap başına biriciktir, aynı amaca
+        // hizmet eder.
+        String anahtar = "user:" + authentication.getName();
 
-        if (!adminMi && rateLimiter.limitiDoldu(anahtar, girisYapmis)) {
-            String mesaj = girisYapmis
-                    ? "Günlük analiz hakkınız doldu. Yarın tekrar deneyebilirsiniz."
-                    : "Günlük deneme hakkınız doldu. Giriş yaparak daha fazla analiz yapabilirsiniz.";
-            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(Map.of("message", mesaj));
+        if (!adminMi && rateLimiter.limitiDoldu(anahtar)) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(Map.of("message", "Günlük analiz hakkınız doldu. Yarın tekrar deneyebilirsiniz."));
         }
         if (!adminMi) {
             rateLimiter.istekKaydet(anahtar);
