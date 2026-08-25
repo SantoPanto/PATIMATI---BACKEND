@@ -34,14 +34,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AdminControllerSearchTest {
 
     private AdminService adminService;
+    private InstagramPublishService instagramPublishService;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         adminService = mock(AdminService.class);
+        instagramPublishService = mock(InstagramPublishService.class);
 
         mockMvc = MockMvcBuilders
-                .standaloneSetup(new AdminController(adminService, mock(InstagramPublishService.class), mock(VetClinicService.class)))
+                .standaloneSetup(new AdminController(adminService, instagramPublishService, mock(VetClinicService.class)))
                 .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
                 .build();
     }
