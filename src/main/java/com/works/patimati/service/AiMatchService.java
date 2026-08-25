@@ -31,6 +31,7 @@ public class AiMatchService {
     private final AdRepository adRepository;
     private final AdService adService;
     private final RestTemplate restTemplate;
+    private final RestTemplate petRaporuRestTemplate;
 
     public AiMatchService(AdRepository adRepository, AdService adService, org.springframework.boot.web.client.RestTemplateBuilder restTemplateBuilder) {
         this.adRepository = adRepository;
@@ -38,6 +39,19 @@ public class AiMatchService {
         this.restTemplate = restTemplateBuilder
                 .setConnectTimeout(java.time.Duration.ofSeconds(10))
                 .setReadTimeout(java.time.Duration.ofSeconds(30))
+                .build();
+        // /analyze_pet (Gemini + AI tarafındaki retry/backoff dahil) tek bir
+        // CLIP çıkarımından ÇOK daha uzun sürebilir -- AI tarafının kendi
+        // kötü senaryosu (pet_raporu.py: 3 deneme * 25sn zaman aşımı + 1sn +
+        // 2sn backoff) ~78 saniyeye kadar çıkabiliyor. Paylaşılan 30sn'lik
+        // restTemplate'i BÜYÜTMEK yerine (bu, hızlı /analyze/match/compare
+        // çağrılarının da yavaş başarısızlıklarda gereksiz uzun beklemesine
+        // yol açardı) yalnızca bu uç için ayrı, daha uzun zaman aşımlı bir
+        // RestTemplate kullanılıyor. Canlı testte doğrulandı: paylaşılan
+        // 30sn'lik zaman aşımıyla "Read timed out" ile başarısız oluyordu.
+        this.petRaporuRestTemplate = restTemplateBuilder
+                .setConnectTimeout(java.time.Duration.ofSeconds(10))
+                .setReadTimeout(java.time.Duration.ofSeconds(90))
                 .build();
     }
 
@@ -96,6 +110,41 @@ public class AiMatchService {
         @SuppressWarnings("unchecked")
         ResponseEntity<Map<String, Object>> response = restTemplate.postForEntity(
                 aiServiceUrl + "/analyze",
+                requestEntity,
+                (Class<Map<String, Object>>) (Class<?>) Map.class
+        );
+
+        return response.getStatusCode().is2xxSuccessful() ? response.getBody() : null;
+    }
+
+    /**
+     * Tek bir görseli AI'nın "Ben Neyim?" ucuna (pet raporu) gönderir, cevabı
+     * <b>olduğu gibi</b> döner -- {@link #analyzeImage} ile AYNI ilke (bkz.
+     * oradaki javadoc): AI'nın {@code /analyze_pet} cevabı zaten dışarıya
+     * gösterilmek üzere tanımlanmış bir sözleşme, burada yeniden modellenmez.
+     *
+     * @param kullaniciNotu opsiyonel, boşsa AI'ya hiç gönderilmez
+     * @return AI'nın cevabı; AI 2xx dışında bir şey döndürürse {@code null}
+     */
+    public Map<String, Object> analyzePet(MultipartFile file, String kullaniciNotu) throws IOException {
+        HttpHeaders headers = aiBasliklari(MediaType.MULTIPART_FORM_DATA);
+
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("file", new ByteArrayResource(file.getBytes()) {
+            @Override
+            public String getFilename() {
+                return file.getOriginalFilename() != null ? file.getOriginalFilename() : "image.jpg";
+            }
+        });
+        if (kullaniciNotu != null && !kullaniciNotu.isBlank()) {
+            body.add("kullanici_notu", kullaniciNotu);
+        }
+
+        HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
+
+        @SuppressWarnings("unchecked")
+        ResponseEntity<Map<String, Object>> response = petRaporuRestTemplate.postForEntity(
+                aiServiceUrl + "/analyze_pet",
                 requestEntity,
                 (Class<Map<String, Object>>) (Class<?>) Map.class
         );
