@@ -9,6 +9,7 @@ import com.works.patimati.entity.User;
 import com.works.patimati.entity.enums.ComplaintReason;
 import com.works.patimati.entity.enums.ComplaintStatus;
 import com.works.patimati.service.AdminService;
+import com.works.patimati.service.InstagramPublishService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.PageImpl;
@@ -28,27 +29,20 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import com.works.patimati.service.InstagramPublishService;
 
 class AdminControllerSearchTest {
 
     private AdminService adminService;
+    private InstagramPublishService instagramPublishService;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         adminService = mock(AdminService.class);
-
-        InstagramPublishService instagramPublishService =
-                mock(InstagramPublishService.class);
+        instagramPublishService = mock(InstagramPublishService.class);
 
         mockMvc = MockMvcBuilders
-                .standaloneSetup(
-                        new AdminController(
-                                adminService,
-                                instagramPublishService
-                        )
-                )
+                .standaloneSetup(new AdminController(adminService, instagramPublishService))
                 .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
                 .build();
     }

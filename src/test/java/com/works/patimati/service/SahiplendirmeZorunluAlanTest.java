@@ -10,6 +10,7 @@ import com.works.patimati.entity.enums.Species;
 import com.works.patimati.repository.AdRepository;
 import com.works.patimati.repository.AdoptionComplaintRepository;
 import com.works.patimati.repository.UserRepository;
+import com.works.patimati.service.InstagramPublishService;
 import com.works.patimati.service.impl.AdoptionServiceImpl;
 import com.works.patimati.storage.ImageStorageService;
 import org.junit.jupiter.api.BeforeEach;
@@ -105,8 +106,8 @@ class SahiplendirmeZorunluAlanTest {
                 new BigDecimal("26.87"),
                 null,          // city
                 null,          // district
-                Boolean.FALSE,
-                Boolean.FALSE
+                Boolean.FALSE, // isMatchRequired
+                Boolean.FALSE  // instagramShareConsent
         );
     }
 

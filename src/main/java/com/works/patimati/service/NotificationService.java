@@ -61,13 +61,84 @@ public class NotificationService {
             String type,
             Map<String, String> data
     ) {
-        return createAndSend(recipient, title, body, type, data, null);
+        return createAndSend(recipient, title, body, type, data, (String) null);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public PushResult createAndSend(
+            User recipient,
+            String title,
+            String body,
+            String type,
+            Map<String, String> data,
+            Long referenceId
+    ) {
+        return createAndSend(recipient, title, body, type, data, null, referenceId);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public PushResult createAndSend(
+            User recipient,
+            User sender,
+            String title,
+            String body,
+            String type,
+            Map<String, String> data
+    ) {
+        return createAndSend(recipient, sender, title, body, type, data, null);
     }
 
     /**
      * The optional dedupe key is used by retryable AI-match processing. A
      * retry reuses the existing history row and only retries delivery.
      */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public PushResult createAndSend(
+            User recipient,
+            String title,
+            String body,
+            String type,
+            Map<String, String> data,
+            String dedupeKey,
+            String referenceId
+    ) {
+        Map<String, String> mutableData = data == null ? new HashMap<>() : new HashMap<>(data);
+        if (referenceId != null) {
+            mutableData.put("referenceId", referenceId);
+        }
+        return createAndSend(recipient, title, body, type, mutableData, dedupeKey);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public PushResult createAndSend(
+            User recipient,
+            String title,
+            String body,
+            String type,
+            Map<String, String> data,
+            String dedupeKey,
+            Long referenceId
+    ) {
+        return createAndSend(recipient, title, body, type, data, dedupeKey, referenceId != null ? String.valueOf(referenceId) : null);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public PushResult createAndSend(
+            User recipient,
+            User sender,
+            String title,
+            String body,
+            String type,
+            Map<String, String> data,
+            String dedupeKey
+    ) {
+        Map<String, String> mutableData = data == null ? new HashMap<>() : new HashMap<>(data);
+        if (sender != null && sender.getUid() != null) {
+            mutableData.put("senderId", String.valueOf(sender.getUid()));
+        }
+        return createAndSend(recipient, title, body, type, mutableData, dedupeKey);
+    }
+
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public PushResult createAndSend(
             User recipient,

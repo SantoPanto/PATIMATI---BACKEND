@@ -27,7 +27,7 @@ import java.time.Instant;
  * {@code anyRequest().authenticated()}).
  */
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping({"/api/users", "/api/v1/users"})
 @RequiredArgsConstructor
 public class PresenceController {
 
