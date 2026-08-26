@@ -6,12 +6,12 @@ import com.works.patimati.entity.AnimalReport;
 import com.works.patimati.entity.User;
 import com.works.patimati.entity.enums.ReportStatus;
 import com.works.patimati.exception.ResourceNotFoundException;
+import com.works.patimati.municipality.MunicipalityScopeService;
 import com.works.patimati.repository.AnimalReportRepository;
 import com.works.patimati.repository.UserRepository;
 import com.works.patimati.service.AnimalReportService;
-import com.works.patimati.service.GeocodingService;
-import com.works.patimati.service.MunicipalityScopeService;
 import com.works.patimati.service.NotificationService;
+import com.works.patimati.service.ReverseGeocodingService;
 import com.works.patimati.storage.ImageStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,7 +36,7 @@ public class AnimalReportServiceImpl implements AnimalReportService {
     private final AnimalReportRepository animalReportRepository;
     private final UserRepository userRepository;
     private final ImageStorageService imageStorageService;
-    private final GeocodingService geocodingService;
+    private final ReverseGeocodingService reverseGeocodingService;
     private final NotificationService notificationService;
     private final MunicipalityScopeService municipalityScopeService;
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
@@ -46,26 +46,26 @@ public class AnimalReportServiceImpl implements AnimalReportService {
     public AnimalReportResponse createPublicReport(AnimalReportCreateRequest request, MultipartFile photo, String userEmail) {
         String photoReference = null;
 
-        // 1. Fotoğraf Yükleme (Doğrulama ve boyut kontrolü servisin içinde)
         if (photo != null && !photo.isEmpty()) {
             photoReference = imageStorageService.uploadImages(List.of(photo)).get(0);
         }
 
         try {
-            // 2. Nokta (Geometry Point) Üretimi
             Point point = geometryFactory.createPoint(new Coordinate(request.getLongitude(), request.getLatitude()));
 
-            // 3. İlanlardaki Ters Geokodlamanın Aynısı ile İl/İlçe Türetimi
-            String city = geocodingService.extractCity(request.getLatitude(), request.getLongitude());
-            String district = geocodingService.extractDistrict(request.getLatitude(), request.getLongitude());
+            String city = null;
+            String district = null;
+            var cozum = reverseGeocodingService.cozumle(request.getLatitude(), request.getLongitude());
+            if (cozum.isPresent()) {
+                city = cozum.get().il();
+                district = cozum.get().ilce();
+            }
 
-            // 4. Giriş Yapmış Kullanıcı Varsa Bağlama
             User reporter = null;
             if (userEmail != null && !userEmail.isBlank() && !"anonymousUser".equals(userEmail)) {
                 reporter = userRepository.findByEmail(userEmail).orElse(null);
             }
 
-            // 5. İhbar Kaydını Oluşturma
             AnimalReport report = AnimalReport.builder()
                     .reporter(reporter)
                     .reporterContact(request.getReporterContact())
@@ -81,13 +81,13 @@ public class AnimalReportServiceImpl implements AnimalReportService {
             AnimalReport saved = animalReportRepository.save(report);
             log.info("Yeni ihbar kaydedildi. id={}, district={}", saved.getId(), district);
 
-            // 6. Belediyeye Asenkron Bildirim Gönderme
-            notificationService.notifyMunicipality(district, "Yeni bir hayvan ihbarı alındı: " + request.getType());
+            if (district != null) {
+                notificationService.notifyMunicipality(district, "Yeni bir hayvan ihbarı alındı: " + request.getType());
+            }
 
             return mapToResponse(saved);
 
         } catch (Exception ex) {
-            // Hata durumunda depoda sahipsiz dosya kalmaması için güvenli silme
             deletePhotoSafely(photoReference);
             log.error("İhbar kaydedilirken hata oluştu, yüklenen fotoğraf temizlendi: {}", photoReference, ex);
             throw ex;
