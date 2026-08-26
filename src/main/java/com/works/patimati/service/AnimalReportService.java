@@ -11,6 +11,7 @@ public interface AnimalReportService {
 
     AnimalReportResponse createPublicReport(AnimalReportCreateRequest request, MultipartFile photo, String userEmail);
 
+    Page<AnimalReportResponse> getReportsForMunicipality(ReportStatus status, Pageable pageable);
+
     AnimalReportResponse updateStatus(Long reportId, ReportStatus newStatus);
 }
-    Page<AnimalReportResponse> getReportsForMunicipality(ReportStatus status, Pageable pageable);
