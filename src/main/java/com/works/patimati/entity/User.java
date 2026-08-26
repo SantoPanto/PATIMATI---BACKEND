@@ -62,8 +62,35 @@ public class User {
     @Column(columnDefinition = "geometry(Point, 4326)")
     private Point location;
 
+    // --- Kurum (belediye) hesabı alanları, V34 ---
+    // Üçü de NULL olabilir: normal kullanıcı satırlarında boş kalır.
+    // Doluluk yalnız role = INSTITUTION için beklenir ve orada da
+    // kapsam çözücü ilçeyi bulamazsa isteği reddeder (sessizce
+    // "hepsini göster"e düşmek, bir belediyeye tüm ülkeyi açardı).
+
+    @Column(name = "institution_name", length = 150)
+    private String institutionName;
+
+    @Column(name = "institution_city", length = 100)
+    private String institutionCity;
+
+    /**
+     * Panelin kapsamı. ads.district ile kıyaslanacağı için ReverseGeocodingService'in
+     * ürettiği yazımla ("Nilüfer") saklanır; kıyas büyük/küçük harf duyarsızdır.
+     */
+    @Column(name = "institution_district", length = 100)
+    private String institutionDistrict;
+
     // Rol yönetimi için Enum tanımı
     public enum Role {
-        GUEST, USER, ADMIN
+        GUEST, USER, ADMIN,
+        /**
+         * Belediye/kurum hesabı (V34). Ayrı bir tablo değil, bu satırın
+         * kendisi: rol INSTITUTION olduğunda aşağıdaki institution* alanları
+         * dolar ve {@code /api/municipality/**} uçları açılır. Kuruma
+         * yükseltme yalnız yöneticiden yapılır — serbest kayıt yok, çünkü
+         * kendini belediye ilan eden bir hesap başkasının verisini okurdu.
+         */
+        INSTITUTION
     }
 }

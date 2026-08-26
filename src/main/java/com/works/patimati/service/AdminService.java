@@ -4,6 +4,7 @@ import com.works.patimati.dto.ad.AdResponse;
 import com.works.patimati.dto.admin.AdComplaintAdminResponse;
 import com.works.patimati.dto.admin.AdoptionComplaintAdminResponse;
 import com.works.patimati.dto.admin.ExternalPostAdminResponse;
+import com.works.patimati.dto.admin.InstitutionAssignmentRequest;
 import com.works.patimati.dto.admin.UserComplaintAdminResponse;
 import com.works.patimati.dto.admin.UserDetailForAdminDTO;
 import org.springframework.data.domain.Page;
@@ -28,6 +29,15 @@ public interface AdminService {
      * Belirtilen kullanıcının engelini kaldırır.
      */
     void unbanUser(Long userId);
+
+    /**
+     * Kullanıcıyı kurum (belediye) hesabına yükseltir ve kurum adı/il/ilçe atar.
+     *
+     * <p>Belediye modülünde kurum hesabı SERBEST KAYITLA açılmaz (plan §8):
+     * kendini belediye ilan edebilen bir hesap o ilçenin tüm ihbar ve ilan
+     * verisini okurdu. Yükseltme yalnız buradan yapılır.
+     */
+    void assignInstitution(Long userId, InstitutionAssignmentRequest request);
 
     /**
      * Sistemdeki tüm ilanları sayfalı ve arama filtreli olarak listeler.

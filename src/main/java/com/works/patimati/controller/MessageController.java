@@ -1,5 +1,7 @@
 package com.works.patimati.controller;
 
+import com.works.patimati.dto.message.AdShareRequestDTO;
+import com.works.patimati.dto.message.ChatRoomWithAdResponseDTO;
 import com.works.patimati.dto.message.MessageResponse;
 import com.works.patimati.dto.message.MessageSendRequest;
 import com.works.patimati.service.MessageService;
@@ -23,6 +25,23 @@ import org.springframework.web.bind.annotation.*;
 public class MessageController {
 
     private final MessageService messageService;
+
+    @Operation(
+            summary = "İlan bağlamında sohbet başlat / oda getir ve ilan paylaş",
+            description = "Hedef kullanıcı ile mevcut odayı getirir veya yeni oda açıp AD_SHARE mesajı kaydeder."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Oda ve ilan mesajı başarıyla döndürüldü"),
+            @ApiResponse(responseCode = "400", description = "İlan hedef kullanıcıya ait değil veya kendisiyle sohbet deneniyor"),
+            @ApiResponse(responseCode = "404", description = "Hedef kullanıcı veya ilan bulunamadı")
+    })
+    @PostMapping("/rooms/with-ad")
+    public ResponseEntity<ChatRoomWithAdResponseDTO> shareAdAndGetRoom(
+            Authentication authentication,
+            @Valid @RequestBody AdShareRequestDTO request
+    ) {
+        return ResponseEntity.ok(messageService.shareAdAndGetRoom(authentication.getName(), request));
+    }
 
     @Operation(
             summary = "Yeni mesaj gönder",
