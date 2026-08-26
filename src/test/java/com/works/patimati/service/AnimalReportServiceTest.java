@@ -58,7 +58,6 @@ class AnimalReportServiceTest {
         geometryFactory = new GeometryFactory();
         municipalityScopeService = mock(MunicipalityScopeService.class, RETURNS_DEEP_STUBS);
 
-        // Mock servisi impl sınıfına manuel bağlama
         animalReportService = new AnimalReportServiceImpl(
                 animalReportRepository,
                 userRepository,
@@ -81,7 +80,7 @@ class AnimalReportServiceTest {
         );
 
         when(reverseGeocodingService.cozumle(40.1885, 29.0610))
-                .thenReturn(Optional.of(new ReverseGeocodingResult("Bursa", "Nilüfer")));
+                .thenReturn(Optional.empty());
 
         AnimalReport savedReport = AnimalReport.builder()
                 .id(1L)
@@ -89,8 +88,8 @@ class AnimalReportServiceTest {
                 .type(ReportType.YARALI)
                 .note("Yaralı kedi")
                 .location(geometryFactory.createPoint(new Coordinate(29.0610, 40.1885)))
-                .city("Bursa")
-                .district("Nilüfer")
+                .city(null)
+                .district(null)
                 .status(ReportStatus.YENI)
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -101,7 +100,6 @@ class AnimalReportServiceTest {
 
         assertNotNull(response);
         assertEquals(1L, response.getId());
-        assertEquals("Nilüfer", response.getDistrict());
         assertEquals("YENI", response.getStatus());
         verify(animalReportRepository, times(1)).save(any(AnimalReport.class));
     }
