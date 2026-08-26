@@ -8,6 +8,7 @@ import com.works.patimati.entity.Ad;
 import com.works.patimati.entity.enums.AdResolutionStatus;
 import java.time.Instant;
 import java.util.List;
+import java.util.Collection;
 
 @Repository
 public interface MunicipalityPanelRepository extends JpaRepository<Ad, Long> {
@@ -20,10 +21,10 @@ public interface MunicipalityPanelRepository extends JpaRepository<Ad, Long> {
         @Param("endDate") Instant endDate
     );
 
-    @Query("SELECT COUNT(a) FROM Ad a WHERE LOWER(a.district) = LOWER(:district) AND a.resolutionStatus = :status AND a.resolvedByAdId IS NOT NULL AND a.createdAt BETWEEN :startDate AND :endDate")
+    @Query("SELECT COUNT(a) FROM Ad a WHERE LOWER(a.district) = LOWER(:district) AND a.resolutionStatus IN :statuses AND a.resolvedByAdId IS NOT NULL AND a.createdAt BETWEEN :startDate AND :endDate")
     long countReunionsByDistrict(
         @Param("district") String district, 
-        @Param("status") AdResolutionStatus status,
+        @Param("statuses") Collection<AdResolutionStatus> statuses,
         @Param("startDate") Instant startDate, 
         @Param("endDate") Instant endDate
     );
