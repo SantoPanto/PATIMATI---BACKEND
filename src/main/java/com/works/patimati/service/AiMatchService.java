@@ -40,16 +40,11 @@ public class AiMatchService {
     private final RestTemplate petRaporuRestTemplate;
     private final AiAnalyzeMapper aiAnalyzeMapper;
 
-    public AiMatchService(AdRepository adRepository, AdService adService,
-                          org.springframework.boot.web.client.RestTemplateBuilder restTemplateBuilder,
-                          AiAnalyzeMapper aiAnalyzeMapper) {
+    public AiMatchService(AdRepository adRepository, AdService adService, org.springframework.boot.web.client.RestTemplateBuilder restTemplateBuilder, AiAnalyzeMapper aiAnalyzeMapper) {
         this.adRepository = adRepository;
         this.adService = adService;
         this.aiAnalyzeMapper = aiAnalyzeMapper;
-        this.restTemplate = restTemplateBuilder
-                .setConnectTimeout(java.time.Duration.ofSeconds(10))
-                .setReadTimeout(java.time.Duration.ofSeconds(30))
-                .build();
+        this.restTemplate = restTemplateBuilder.setConnectTimeout(java.time.Duration.ofSeconds(10)).setReadTimeout(java.time.Duration.ofSeconds(30)).build();
         // /analyze_pet (Gemini + AI tarafındaki retry/backoff dahil) tek bir
         // CLIP çıkarımından ÇOK daha uzun sürebilir -- AI tarafının kendi
         // kötü senaryosu (pet_raporu.py: 3 deneme * 25sn zaman aşımı + 1sn +
@@ -59,13 +54,12 @@ public class AiMatchService {
         // yol açardı) yalnızca bu uç için ayrı, daha uzun zaman aşımlı bir
         // RestTemplate kullanılıyor. Canlı testte doğrulandı: paylaşılan
         // 30sn'lik zaman aşımıyla "Read timed out" ile başarısız oluyordu.
-        this.petRaporuRestTemplate = restTemplateBuilder
-                .setConnectTimeout(java.time.Duration.ofSeconds(10))
-                .setReadTimeout(java.time.Duration.ofSeconds(90))
-                .build();
+        this.petRaporuRestTemplate = restTemplateBuilder.setConnectTimeout(java.time.Duration.ofSeconds(10)).setReadTimeout(java.time.Duration.ofSeconds(90)).build();
     }
 
-    /** AI'nın uçlarını koruyan paylaşılan sırrın taşındığı başlık (sözleşme §10). */
+    /**
+     * AI'nın uçlarını koruyan paylaşılan sırrın taşındığı başlık (sözleşme §10).
+     */
     private static final String ANAHTAR_BASLIGI = "X-Api-Key";
 
     @Value("${ai.service.url:http://localhost:8000}")
@@ -86,13 +80,16 @@ public class AiMatchService {
     @Value("${ai.matching.max-candidates:100}")
     private int maxCandidates;
 
-    /** Aday yarıçapı — asenkron yolla ({@code AiAnalysisPublisher}) aynı anahtar ve varsayılan. */
+    /**
+     * Aday yarıçapı — asenkron yolla ({@code AiAnalysisPublisher}) aynı anahtar ve varsayılan.
+     */
     @Value("${ai.matching.radius-km:25}")
     private double radiusKm;
 
-    /** WGS 84 (SRID 4326) — {@code ads.location} sütunuyla aynı referans sistemi. */
-    private final GeometryFactory geometryFactory =
-            new GeometryFactory(new PrecisionModel(), 4326);
+    /**
+     * WGS 84 (SRID 4326) — {@code ads.location} sütunuyla aynı referans sistemi.
+     */
+    private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
     /**
      * Tek bir görseli AI'ya analiz ettirir ve cevabı <b>olduğu gibi</b> döner.
@@ -109,8 +106,8 @@ public class AiMatchService {
      * yeni alanın sessizce düşmesi demek olurdu.
      *
      * @return AI'nın cevabı; AI 2xx dışında bir şey döndürürse {@code null}
-     *         <i>(pratikte {@code RestTemplate} 4xx/5xx'te zaten istisna atar —
-     *         bu kontrol, hata yönetimi ileride değişirse diye duruyor)</i>
+     * <i>(pratikte {@code RestTemplate} 4xx/5xx'te zaten istisna atar —
+     * bu kontrol, hata yönetimi ileride değişirse diye duruyor)</i>
      */
     public Map<String, Object> analyzeImage(MultipartFile file) throws IOException {
         HttpHeaders headers = aiBasliklari(MediaType.MULTIPART_FORM_DATA);
@@ -125,12 +122,7 @@ public class AiMatchService {
 
         HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
 
-        @SuppressWarnings("unchecked")
-        ResponseEntity<Map<String, Object>> response = restTemplate.postForEntity(
-                aiServiceUrl + "/analyze",
-                requestEntity,
-                (Class<Map<String, Object>>) (Class<?>) Map.class
-        );
+        @SuppressWarnings("unchecked") ResponseEntity<Map<String, Object>> response = restTemplate.postForEntity(aiServiceUrl + "/analyze", requestEntity, (Class<Map<String, Object>>) (Class<?>) Map.class);
 
         return response.getStatusCode().is2xxSuccessful() ? response.getBody() : null;
     }
@@ -144,37 +136,41 @@ public class AiMatchService {
      * @param kullaniciNotu opsiyonel, boşsa AI'ya hiç gönderilmez
      * @return AI'nın cevabı; AI 2xx dışında bir şey döndürürse {@code null}
      */
+
     public Map<String, Object> analyzePet(MultipartFile file, String kullaniciNotu) throws IOException {
         HttpHeaders headers = aiBasliklari(MediaType.MULTIPART_FORM_DATA);
 
         MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+
         body.add("file", new ByteArrayResource(file.getBytes()) {
             @Override
             public String getFilename() {
                 return file.getOriginalFilename() != null ? file.getOriginalFilename() : "image.jpg";
             }
         });
+
         if (kullaniciNotu != null && !kullaniciNotu.isBlank()) {
             body.add("kullanici_notu", kullaniciNotu);
         }
 
         HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
 
-        @SuppressWarnings("unchecked")
-        ResponseEntity<Map<String, Object>> response = petRaporuRestTemplate.postForEntity(
-                aiServiceUrl + "/analyze_pet",
-                requestEntity,
-                (Class<Map<String, Object>>) (Class<?>) Map.class
-        );
+        @SuppressWarnings("unchecked") ResponseEntity<Map<String, Object>> response = petRaporuRestTemplate.postForEntity(aiServiceUrl + "/analyze_pet", requestEntity, (Class<Map<String, Object>>) (Class<?>) Map.class);
 
         return response.getStatusCode().is2xxSuccessful() ? response.getBody() : null;
-     * İlan oluşturma ekranı için AI analiz sonucunu frontend sözleşmesine dönüştürerek döner.
+    }
+
+    /**
+     * İlan oluşturma ekranı için AI analiz sonucunu
+     * frontend sözleşmesine dönüştürerek döner.
      */
     public AiAnalyzeResponse analyzeImageForFrontend(MultipartFile file) throws IOException {
         Map<String, Object> raw = analyzeImage(file);
+
         if (raw == null) {
             return null;
         }
+
         return aiAnalyzeMapper.toResponse(raw);
     }
 
@@ -203,8 +199,7 @@ public class AiMatchService {
      * mesafe 0): ilan formunda analiz düğmesi konum girilmeden de basılabiliyor
      * ve "mesafe bilinmiyor"u ceza gibi işletmek eşleşmeleri saklardı.
      */
-    public List<MatchedAdResponseDTO> matchImages(List<MultipartFile> images, String listingType,
-                                                  Double latitude, Double longitude) throws Exception {
+    public List<MatchedAdResponseDTO> matchImages(List<MultipartFile> images, String listingType, Double latitude, Double longitude) throws Exception {
         List<List<Float>> allEmbeddings = new ArrayList<>();
         Set<String> allLabels = new HashSet<>();
         String majoritySpecies = "unknown";
@@ -215,18 +210,16 @@ public class AiMatchService {
             Map<String, Object> res = analyzeImage(file);
 
             if (res != null) {
-                @SuppressWarnings("unchecked")
-                List<Float> embedding = (List<Float>) res.get("embedding");
+                @SuppressWarnings("unchecked") List<Float> embedding = (List<Float>) res.get("embedding");
                 if (embedding != null) {
                     allEmbeddings.add(embedding);
                 }
-                
-                @SuppressWarnings("unchecked")
-                List<String> labels = (List<String>) res.get("labels");
+
+                @SuppressWarnings("unchecked") List<String> labels = (List<String>) res.get("labels");
                 if (labels != null) {
                     allLabels.addAll(labels);
                 }
-                
+
                 String species = (String) res.get("species");
                 if (species != null) {
                     speciesCount.put(species, speciesCount.getOrDefault(species, 0) + 1);
@@ -256,8 +249,7 @@ public class AiMatchService {
             Point origin = geometryFactory.createPoint(new Coordinate(longitude, latitude));
             // selfAdId=-1: ilan henüz OLUŞMADI, dışlanacak "kendisi" yok;
             // -1 hiçbir gerçek id ile çakışmaz.
-            rows = adRepository.findAiCandidates(
-                    -1L, oppositeAdType, origin, radiusKm * 1000.0, since);
+            rows = adRepository.findAiCandidates(-1L, oppositeAdType, origin, radiusKm * 1000.0, since);
         } else {
             rows = adRepository.findAiCandidatesWithoutLocation(oppositeAdType, since);
         }
@@ -273,8 +265,7 @@ public class AiMatchService {
         // findAllById ile tek sorguda çekilip Map'e konuyor -- öncesinde
         // her satır için ayrı bir findById çağrılıyordu (N+1).
         List<Long> candidateAdIds = rows.stream().map(AiCandidateRow::getAdId).toList();
-        Map<Long, Ad> candidateAdsById = adRepository.findAllById(candidateAdIds).stream()
-                .collect(Collectors.toMap(Ad::getId, ad -> ad));
+        Map<Long, Ad> candidateAdsById = adRepository.findAllById(candidateAdIds).stream().collect(Collectors.toMap(Ad::getId, ad -> ad));
 
         List<AiCandidate> candidates = new ArrayList<>();
         for (AiCandidateRow row : rows) {
@@ -288,17 +279,10 @@ public class AiMatchService {
                 candidateEmbeddings.add(vector.embedding());
             }
 
-            AiCandidate candidate = new AiCandidate(
-                    ad.getId(),
-                    candidateEmbeddings,
-                    ad.getAiLabels() != null ? ad.getAiLabels() : List.of(),
-                    declaredSpecies(ad) != null ? declaredSpecies(ad) : "unknown",
+            AiCandidate candidate = new AiCandidate(ad.getId(), candidateEmbeddings, ad.getAiLabels() != null ? ad.getAiLabels() : List.of(), declaredSpecies(ad) != null ? declaredSpecies(ad) : "unknown",
                     // Konumlu yolda PostGIS'in gerçek mesafesi; konumsuz yolda
                     // sorgu 0.0 döndürüyor (herkese eşit — sıralamayı bozmaz).
-                    row.getDistanceKm() != null ? row.getDistanceKm() : 0.0,
-                    ad.getAiModelVersion(),
-                    null
-            );
+                    row.getDistanceKm() != null ? row.getDistanceKm() : 0.0, ad.getAiModelVersion(), null);
             candidates.add(candidate);
         }
 
@@ -313,22 +297,16 @@ public class AiMatchService {
         matchRequest.put("species", majoritySpecies);
         matchRequest.put("candidates", candidates);
 
-        @SuppressWarnings("unchecked")
-        ResponseEntity<Map<String, Object>> matchResponse = restTemplate.postForEntity(
-                aiServiceUrl + "/match",
-                new HttpEntity<>(matchRequest, aiBasliklari(MediaType.APPLICATION_JSON)),
-                (Class<Map<String, Object>>) (Class<?>) Map.class
-        );
+        @SuppressWarnings("unchecked") ResponseEntity<Map<String, Object>> matchResponse = restTemplate.postForEntity(aiServiceUrl + "/match", new HttpEntity<>(matchRequest, aiBasliklari(MediaType.APPLICATION_JSON)), (Class<Map<String, Object>>) (Class<?>) Map.class);
 
         if (matchResponse.getStatusCode().is2xxSuccessful() && matchResponse.getBody() != null) {
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> matches = (List<Map<String, Object>>) matchResponse.getBody().get("matches");
-            
+            @SuppressWarnings("unchecked") List<Map<String, Object>> matches = (List<Map<String, Object>>) matchResponse.getBody().get("matches");
+
             Object skipped = matchResponse.getBody().get("skipped_candidates");
             if (skipped != null && skipped instanceof Integer && (Integer) skipped > 0) {
                 log.info("Yapay zeka eşleştirmede {} adet adayı (tür vb. uyuşmazlığından) sessizce eledi.", skipped);
             }
-            
+
             if (matches == null) return List.of();
 
             // ad_id null gelebilir (bugün bu uç yalnızca native aday
@@ -343,8 +321,7 @@ public class AiMatchService {
                     matchedAdIds.add(adId.longValue());
                 }
             }
-            Map<Long, Ad> matchedAdsById = adRepository.findAllById(matchedAdIds).stream()
-                    .collect(Collectors.toMap(Ad::getId, ad -> ad));
+            Map<Long, Ad> matchedAdsById = adRepository.findAllById(matchedAdIds).stream().collect(Collectors.toMap(Ad::getId, ad -> ad));
 
             // Map the matched Ad info along with score into MatchedAdResponseDTO
             List<MatchedAdResponseDTO> result = new ArrayList<>();
@@ -363,17 +340,13 @@ public class AiMatchService {
 
                 Ad ad = matchedAdsById.get(adId.longValue());
                 if (ad != null) {
-                    MatchedAdResponseDTO dto = MatchedAdResponseDTO.builder()
-                            .score(score)
-                            .ad(adService.toResponseWithTemporaryPhotoUrls(ad))
-                            .build();
+                    MatchedAdResponseDTO dto = MatchedAdResponseDTO.builder().score(score).ad(adService.toResponseWithTemporaryPhotoUrls(ad)).build();
                     result.add(dto);
                 }
             }
             if (esikAltiElenen > 0) {
                 // "Pencere neden boş/kısa" sorusu cevapsız kalmasın.
-                log.info("Eşleştirme cevabında {} aday eşik altında kaldığı için gösterilmedi.",
-                        esikAltiElenen);
+                log.info("Eşleştirme cevabında {} aday eşik altında kaldığı için gösterilmedi.", esikAltiElenen);
             }
             return result;
         }
@@ -397,9 +370,7 @@ public class AiMatchService {
         try {
             type = Ad.AdType.valueOf(listingType.trim().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException | NullPointerException e) {
-            throw new IllegalArgumentException(
-                    "Geçersiz listingType: '" + listingType + "'. Geçerli değerler: "
-                            + Arrays.toString(Ad.AdType.values()));
+            throw new IllegalArgumentException("Geçersiz listingType: '" + listingType + "'. Geçerli değerler: " + Arrays.toString(Ad.AdType.values()));
         }
         return switch (type) {
             case LOST -> Ad.AdType.FOUND.name();
