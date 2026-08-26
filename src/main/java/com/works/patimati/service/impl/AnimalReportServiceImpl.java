@@ -116,7 +116,13 @@ public class AnimalReportServiceImpl implements AnimalReportService {
         AnimalReport report = animalReportRepository.findById(reportId)
                 .orElseThrow(() -> new ResourceNotFoundException("İhbar bulunamadı ID: " + reportId));
 
-        if (!report.getDistrict().equalsIgnoreCase(kurumIlcesi)) {
+        String reportDistrict = report.getDistrict();
+        boolean districtMatches = reportDistrict != null
+                && kurumIlcesi != null
+                && reportDistrict.toLowerCase(java.util.Locale.forLanguageTag("tr"))
+                .equals(kurumIlcesi.toLowerCase(java.util.Locale.forLanguageTag("tr")));
+
+        if (!districtMatches) {
             throw new AccessDeniedException("Bu ilçeye ait ihbara müdahale yetkiniz bulunmamaktadır");
         }
 
