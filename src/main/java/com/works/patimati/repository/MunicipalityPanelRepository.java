@@ -28,9 +28,7 @@ public interface MunicipalityPanelRepository extends JpaRepository<Ad, Long> {
         @Param("endDate") Instant endDate
     );
 
-    @Query(value = "SELECT ST_Y(a.location) as lat, ST_X(a.location) as lng, a.ad_type as type, a.created_at as created_at " +
-                   "FROM ads a WHERE LOWER(a.district) = LOWER(:district) AND a.created_at BETWEEN :startDate AND :endDate " +
-                   "LIMIT :limitCount", nativeQuery = true)
+    @Query(value = "SELECT ST_Y(a.location) as lat, ST_X(a.location) as lng, a.ad_type as type, a.created_at as created_at FROM ads a WHERE LOWER(a.district) = LOWER(:district) AND a.created_at BETWEEN :startDate AND :endDate LIMIT :limitCount", nativeQuery = true)
     List<Object[]> getHeatmapPoints(
         @Param("district") String district, 
         @Param("startDate") Instant startDate, 
