@@ -9,8 +9,8 @@ import com.works.patimati.exception.ResourceNotFoundException;
 import com.works.patimati.repository.AnimalReportRepository;
 import com.works.patimati.repository.UserRepository;
 import com.works.patimati.service.AnimalReportService;
-import com.works.patimati.service.GeocodingService;
-import com.works.patimati.service.MunicipalityScopeService;
+import com.works.patimati.service.ReverseGeocodingService;
+import com.works.patimati.municipality.MunicipalityScopeService;
 import com.works.patimati.service.NotificationService;
 import com.works.patimati.storage.ImageStorageService;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -36,7 +37,7 @@ public class AnimalReportServiceImpl implements AnimalReportService {
     private final AnimalReportRepository animalReportRepository;
     private final UserRepository userRepository;
     private final ImageStorageService imageStorageService;
-    private final GeocodingService geocodingService;
+    private final ReverseGeocodingService reverseGeocodingService;
     private final NotificationService notificationService;
     private final MunicipalityScopeService municipalityScopeService;
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
@@ -55,9 +56,14 @@ public class AnimalReportServiceImpl implements AnimalReportService {
             // 2. Nokta (Geometry Point) Üretimi
             Point point = geometryFactory.createPoint(new Coordinate(request.getLongitude(), request.getLatitude()));
 
-            // 3. İlanlardaki Ters Geokodlamanın Aynısı ile İl/İlçe Türetimi
-            String city = geocodingService.extractCity(request.getLatitude(), request.getLongitude());
-            String district = geocodingService.extractDistrict(request.getLatitude(), request.getLongitude());
+            // 3. İlanlardaki ters geokodlamanın AYNISI ile il/ilçe türetimi.
+            // Çözülemezse ihbar yine kaydedilir (city/district null kalır) —
+            // vatandaşın kaydı düşmesin. İlçesiz ihbar panele düşmez, elde kalır.
+            var ilIlce = reverseGeocodingService
+                    .cozumle(request.getLatitude(), request.getLongitude())
+                    .orElse(null);
+            String city = ilIlce != null ? ilIlce.il() : null;
+            String district = ilIlce != null ? ilIlce.ilce() : null;
 
             // 4. Giriş Yapmış Kullanıcı Varsa Bağlama
             User reporter = null;
@@ -81,8 +87,8 @@ public class AnimalReportServiceImpl implements AnimalReportService {
             AnimalReport saved = animalReportRepository.save(report);
             log.info("Yeni ihbar kaydedildi. id={}, district={}", saved.getId(), district);
 
-            // 6. Belediyeye Asenkron Bildirim Gönderme
-            notificationService.notifyMunicipality(district, "Yeni bir hayvan ihbarı alındı: " + request.getType());
+            // 6. İlçedeki kurum hesaplarına bildirim
+            kurumaBildirimGonder(district, saved);
 
             return mapToResponse(saved);
 
@@ -128,6 +134,39 @@ public class AnimalReportServiceImpl implements AnimalReportService {
         log.info("İhbar durumu güncellendi. reportId={}, newStatus={}, handledBy={}", reportId, newStatus, kurumKullaniciId);
 
         return mapToResponse(report);
+    }
+
+    /**
+     * İlçeye atanmış kurum hesaplarına yeni ihbar bildirimi.
+     *
+     * <p>Bildirim gönderilemezse ihbar yine de kaydolur: kaydın kendisi
+     * bildirimin başarısına bağlanmaz. İlçe çözülemediyse kimseye gitmez.
+     */
+    private void kurumaBildirimGonder(String district, AnimalReport report) {
+        if (district == null || district.isBlank()) {
+            log.warn("İhbar {} için ilçe çözülemedi; kuruma bildirim gönderilmedi.", report.getId());
+            return;
+        }
+        try {
+            List<User> kurumlar = userRepository
+                    .findByRoleAndInstitutionDistrictIgnoreCase(User.Role.INSTITUTION, district);
+            if (kurumlar.isEmpty()) {
+                log.info("{} ilçesine atanmış kurum hesabı yok; ihbar {} bildirimsiz kaydedildi.",
+                        district, report.getId());
+                return;
+            }
+            for (User kurum : kurumlar) {
+                notificationService.createAndSend(
+                        kurum,
+                        "Yeni hayvan ihbarı",
+                        district + " ilçesinde yeni bir ihbar var: " + report.getType().name(),
+                        "ANIMAL_REPORT",
+                        Map.of("reportId", String.valueOf(report.getId())),
+                        report.getId());
+            }
+        } catch (Exception e) {
+            log.warn("Kuruma ihbar bildirimi gönderilemedi. reportId={}", report.getId(), e);
+        }
     }
 
     private void deletePhotoSafely(String photoReference) {

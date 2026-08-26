@@ -2,7 +2,7 @@ package com.works.patimati.controller;
 
 import com.works.patimati.dto.request.AnimalReportCreateRequest;
 import com.works.patimati.dto.response.AnimalReportResponse;
-import com.works.patimati.entity.AnimalReport;
+import com.works.patimati.entity.enums.ReportStatus;
 import com.works.patimati.service.AnimalReportService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -39,7 +39,7 @@ public class AnimalReportController {
     @GetMapping("/api/municipality/reports")
     @PreAuthorize("hasAnyRole('INSTITUTION', 'ADMIN')")
     public ResponseEntity<Page<AnimalReportResponse>> getReports(
-            @RequestParam(required = false) AnimalReport.ReportStatus status,
+            @RequestParam(required = false) ReportStatus status,
             Pageable pageable) {
 
         Page<AnimalReportResponse> reports = animalReportService.getReportsForMunicipality(status, pageable);
@@ -51,7 +51,7 @@ public class AnimalReportController {
     @PreAuthorize("hasAnyRole('INSTITUTION', 'ADMIN')")
     public ResponseEntity<AnimalReportResponse> updateStatus(
             @PathVariable Long id,
-            @RequestParam AnimalReport.ReportStatus status) {
+            @RequestParam ReportStatus status) {
 
         AnimalReportResponse response = animalReportService.updateStatus(id, status);
         return ResponseEntity.ok(response);
