@@ -62,7 +62,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
          * Faz 2 kapsamındaki kullanıcıya özel mesajlar /user/queue/... adresinden
          * dinlenecek ve gerçek oturuma özel kuyruğa Spring tarafından çevrilecektir.
          */
-        registry.enableSimpleBroker(PRIVATE_QUEUE_PREFIX, PUBLIC_TOPIC_PREFIX);
         org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler taskScheduler =
                 new org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler();
         taskScheduler.setPoolSize(1);
