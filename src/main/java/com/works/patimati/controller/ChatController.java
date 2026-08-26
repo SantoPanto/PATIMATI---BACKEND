@@ -1,6 +1,8 @@
 package com.works.patimati.controller;
 
+import com.works.patimati.dto.message.AdShareRequestDTO;
 import com.works.patimati.dto.message.ChatRoomResponseDTO;
+import com.works.patimati.dto.message.ChatRoomWithAdResponseDTO;
 import com.works.patimati.dto.message.MessageResponse;
 import com.works.patimati.dto.message.MessageSendRequest;
 import com.works.patimati.service.MessageService;
@@ -42,6 +44,16 @@ public class ChatController {
     ) {
         return ResponseEntity.ok(
                 messageService.createOrGetRoom(principal.getName(), partnerId)
+        );
+    }
+
+    @PostMapping("/rooms/with-ad")
+    public ResponseEntity<ChatRoomWithAdResponseDTO> shareAdAndGetRoom(
+            @Valid @RequestBody AdShareRequestDTO request,
+            Authentication authentication
+    ) {
+        return ResponseEntity.ok(
+                messageService.shareAdAndGetRoom(authentication.getName(), request)
         );
     }
 

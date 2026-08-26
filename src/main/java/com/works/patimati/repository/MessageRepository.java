@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Message entity'si için veritabanı işlemlerini yöneten repository katmanıdır.
@@ -81,4 +82,9 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
      * Belirli bir göndericiden gelen ve kullanıcının henüz okumadığı mesajların sayısı.
      */
     long countBySender_UidAndRecipient_UidAndReadFalse(Long senderId, Long recipientId);
+
+    /**
+     * Belirli bir göndericiden alıcıya atılan en son mesajı getirir (çift tıklama / duplicate koruması için).
+     */
+    Optional<Message> findTopBySender_UidAndRecipient_UidOrderByIdDesc(Long senderId, Long recipientId);
 }
