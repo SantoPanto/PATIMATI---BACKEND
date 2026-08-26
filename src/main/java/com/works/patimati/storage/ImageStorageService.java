@@ -27,6 +27,15 @@ public interface ImageStorageService {
     String createTemporaryReadUrl(String storageReference);
 
     /**
+     * Kalıcı depolama referansındaki görseli uygulama içinde kullanılmak üzere okur.
+     *
+     * <p>Bu metot özellikle PDF afiş gibi sunucu tarafında görsel üretilen
+     * akışlar içindir. Dışarıdan verilen rastgele bir URL'e istek atmaz; nesneyi
+     * doğrudan uygulamanın yapılandırılmış MinIO/R2 alanından getirir.</p>
+     */
+    byte[] readImage(String storageReference);
+
+    /**
      * Verilen kalıcı depolama referanslarına ait nesneleri siler.
      */
     void deleteImages(Collection<String> storageReferences);
