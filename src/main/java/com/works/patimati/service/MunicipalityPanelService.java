@@ -51,10 +51,10 @@ public class MunicipalityPanelService {
         List<HeatmapPointDto> heatmap = new ArrayList<>();
 
         for (Object[] row : results) {
-            Double lat = (([Number] row[0])).doubleValue();
-            Double lng = (([Number] row[1])).doubleValue();
+            Double lat = ((Number) row[0]).doubleValue();
+            Double lng = ((Number) row[1]).doubleValue();
             String type = (String) row[2];
-            LocalDateTime createdAt = (([Timestamp] row[3])).toLocalDateTime();
+            LocalDateTime createdAt = ((Timestamp) row[3]).toLocalDateTime();
             heatmap.add(new HeatmapPointDto(lat, lng, type, createdAt));
         }
         return heatmap;
