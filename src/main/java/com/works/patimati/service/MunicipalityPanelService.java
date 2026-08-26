@@ -20,8 +20,12 @@ import java.util.List;
 public class MunicipalityPanelService {
 
     private final MunicipalityPanelRepository repository;
+    private final MunicipalityScopeService municipalityScopeService;
 
-    public MunicipalityStatsDto getStats(String district, LocalDateTime startDate, LocalDateTime endDate) {
+    public MunicipalityStatsDto getStats(LocalDateTime startDate, LocalDateTime endDate) {
+        // District bilgisini disaridan degil, mevcut oturumdan (session) aliyoruz
+        String district = municipalityScopeService.mevcutKapsam().ilce();
+        
         Instant start = startDate.atZone(ZoneId.systemDefault()).toInstant();
         Instant end = endDate.atZone(ZoneId.systemDefault()).toInstant();
 
@@ -29,7 +33,6 @@ public class MunicipalityPanelService {
         long found = repository.countAdsByDistrictAndType(district, AdType.FOUND, start, end);
         long adoption = repository.countAdsByDistrictAndType(district, AdType.ADOPTION, start, end);
         
-        // "Kavuşma Sayısı": FOUND durumu ve resolvedByAdId'si olanlar (eşleşerek kapatılanlar)
         long reunion = repository.countReunionsByDistrict(district, AdResolutionStatus.FOUND, start, end);
 
         MunicipalityStatsDto stats = new MunicipalityStatsDto();
@@ -41,7 +44,10 @@ public class MunicipalityPanelService {
         return stats;
     }
 
-    public List<HeatmapPointDto> getHeatmap(String district, LocalDateTime startDate, LocalDateTime endDate, int limit) {
+    public List<HeatmapPointDto> getHeatmap(LocalDateTime startDate, LocalDateTime endDate, int limit) {
+        // District bilgisini disaridan degil, mevcut oturumdan (session) aliyoruz
+        String district = municipalityScopeService.mevcutKapsam().ilce();
+        
         Instant start = startDate.atZone(ZoneId.systemDefault()).toInstant();
         Instant end = endDate.atZone(ZoneId.systemDefault()).toInstant();
 
