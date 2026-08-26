@@ -67,7 +67,7 @@ public class AiAnalysisPublisher {
             // açıkça bildirilir.
             boolean matchRequired = ad.getIsMatchRequired() != null
                     ? ad.getIsMatchRequired()
-                    : (ad.getAdType() != Ad.AdType.ADOPTION);
+                    : (ad.getAdType() != Ad.AdType.ADOPTION && ad.getAdType() != Ad.AdType.HELP);
 
             // Faz 2 revize blueprint §1: MatchCandidateGatherer hem konumsuz
             // ilanlar için var olan boş-liste hatasını düzeltir hem de Flow

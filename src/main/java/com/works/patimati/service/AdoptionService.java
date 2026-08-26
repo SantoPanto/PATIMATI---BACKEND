@@ -51,6 +51,16 @@ public interface AdoptionService {
     Page<AdResponse> getPublicAdoptionAds(Pageable pageable);
 
     /**
+     * Herkese açık aktif sahiplendirme ilanlarını TEK bir sahibe (barınak
+     * kartının {@code user_id}'sine) göre filtreler -- barınağın herkese
+     * açık detay sayfasında "bu barınağın güncel sahiplendirme ilanları"nı
+     * göstermek için (bkz. {@code ShelterDirectoryController},
+     * {@code ShelterService#resolveOwnerUid}). {@link #getPublicAdoptionAds}'in
+     * birebir paraleli, yalnızca ekstra {@code ownerUid} filtresiyle.
+     */
+    Page<AdResponse> getPublicAdoptionAdsByOwner(Long ownerUid, Pageable pageable);
+
+    /**
      * Sahiplendirme ilanına yapılan şikayeti kaydeder.
      */
     ComplaintResponse createAdoptionComplaint(

@@ -47,8 +47,8 @@ public class AiMatchService {
         this.adService = adService;
         this.aiAnalyzeMapper = aiAnalyzeMapper;
         this.restTemplate = restTemplateBuilder
-                .setConnectTimeout(java.time.Duration.ofSeconds(10))
-                .setReadTimeout(java.time.Duration.ofSeconds(30))
+                .connectTimeout(java.time.Duration.ofSeconds(10))
+                .readTimeout(java.time.Duration.ofSeconds(30))
                 .build();
         // /analyze_pet (Gemini + AI tarafındaki retry/backoff dahil) tek bir
         // CLIP çıkarımından ÇOK daha uzun sürebilir -- AI tarafının kendi
@@ -60,8 +60,8 @@ public class AiMatchService {
         // RestTemplate kullanılıyor. Canlı testte doğrulandı: paylaşılan
         // 30sn'lik zaman aşımıyla "Read timed out" ile başarısız oluyordu.
         this.petRaporuRestTemplate = restTemplateBuilder
-                .setConnectTimeout(java.time.Duration.ofSeconds(10))
-                .setReadTimeout(java.time.Duration.ofSeconds(90))
+                .connectTimeout(java.time.Duration.ofSeconds(10))
+                .readTimeout(java.time.Duration.ofSeconds(90))
                 .build();
     }
 
@@ -419,7 +419,7 @@ public class AiMatchService {
         return switch (type) {
             case LOST -> Ad.AdType.FOUND.name();
             case FOUND -> Ad.AdType.LOST.name();
-            case ADOPTION -> null;
+            case ADOPTION, HELP -> null;
         };
     }
 

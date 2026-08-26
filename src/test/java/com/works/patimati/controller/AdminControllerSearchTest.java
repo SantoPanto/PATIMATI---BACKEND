@@ -4,12 +4,15 @@ import com.works.patimati.dto.ad.AdResponse;
 import com.works.patimati.dto.admin.AdComplaintAdminResponse;
 import com.works.patimati.dto.admin.AdoptionComplaintAdminResponse;
 import com.works.patimati.dto.admin.UserComplaintAdminResponse;
+import com.works.patimati.dto.admin.CreateShelterAccountRequest;
 import com.works.patimati.dto.admin.UserDetailForAdminDTO;
 import com.works.patimati.entity.User;
 import com.works.patimati.entity.enums.ComplaintReason;
 import com.works.patimati.entity.enums.ComplaintStatus;
 import com.works.patimati.service.AdminService;
 import com.works.patimati.service.InstagramPublishService;
+import com.works.patimati.service.PetShopService;
+import com.works.patimati.service.ShelterService;
 import com.works.patimati.service.VetClinicService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,6 +31,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -35,17 +39,33 @@ class AdminControllerSearchTest {
 
     private AdminService adminService;
     private InstagramPublishService instagramPublishService;
+    private ShelterService shelterService;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         adminService = mock(AdminService.class);
         instagramPublishService = mock(InstagramPublishService.class);
+        shelterService = mock(ShelterService.class);
 
         mockMvc = MockMvcBuilders
-                .standaloneSetup(new AdminController(adminService, instagramPublishService, mock(VetClinicService.class)))
+                .standaloneSetup(new AdminController(adminService, instagramPublishService, mock(VetClinicService.class), mock(PetShopService.class), shelterService))
                 .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
                 .build();
+    }
+
+    @Test
+    void createShelterAccount_geçerliIstekleBarinakHesabiOlusturur() throws Exception {
+        mockMvc.perform(post("/api/admin/shelter-accounts")
+                        .contentType("application/json")
+                        .content("""
+                                {"firstName":"Ad","lastName":"Soyad","email":"barinak@ornek.com","password":"Sifre123"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Barınak hesabı oluşturuldu."));
+
+        verify(shelterService).createShelterAccount(
+                new CreateShelterAccountRequest("Ad", "Soyad", "barinak@ornek.com", "Sifre123"));
     }
 
     @Test

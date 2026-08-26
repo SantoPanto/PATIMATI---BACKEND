@@ -84,6 +84,18 @@ public interface AdRepository extends JpaRepository<Ad, Long>, JpaSpecificationE
             Pageable pageable
     );
 
+    // Yukarıdaki kardeşinin sahip filtreli hali -- barınağın herkese açık
+    // detay sayfasında "bu barınağın güncel sahiplendirme ilanları"nı
+    // göstermek için (bkz. ShelterDirectoryController#getAdoptions,
+    // AdoptionService#getPublicAdoptionAdsByOwner). Bilerek OrderBy...
+    // eki TAŞIMIYOR -- sıralama controller'daki Pageable'dan geliyor, aynı
+    // desen korunuyor.
+    Page<Ad> findAllByAdTypeAndActiveTrueAndSuspendedFalseAndUser_Uid(
+            Ad.AdType adType,
+            Long userUid,
+            Pageable pageable
+    );
+
     // Halka açık listede metin araması: başlık + ırk + açıklama.
     // Açıklama bilerek dahil — şehir/semt bilgisi ayrı bir sütunda YOK;
     // bulundu ve sahiplendirme formları Nominatim adresini açıklamaya kattığı

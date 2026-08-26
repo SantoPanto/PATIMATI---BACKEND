@@ -394,6 +394,7 @@ class AdoptionControllerTest {
                 "Nilüfer",
                 1L,
                 "Owner",
+                null,
                 true,
                 false,
                 Instant.parse("2026-08-20T10:00:00Z"),

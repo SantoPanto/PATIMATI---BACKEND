@@ -1,5 +1,7 @@
 package com.works.patimati.dto.message;
 
+import com.works.patimati.entity.User;
+
 import java.time.Instant;
 
 public record ChatRoomResponseDTO(
@@ -9,6 +11,8 @@ public record ChatRoomResponseDTO(
         String partnerAvatar,
         String lastMessage,
         Instant lastMessageTimestamp,
-        long unreadCount
+        long unreadCount,
+        /** Karşı tarafın rolü -- sohbette rol rozeti (RoleBadge) gösterebilmek için. */
+        User.Role partnerRole
 ) {
 }

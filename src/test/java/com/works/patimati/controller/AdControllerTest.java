@@ -385,6 +385,7 @@ class AdControllerTest {
                 "Nilüfer",
                 42L,
                 "Test User",
+                null,
                 true,
                 false,
                 Instant.parse("2026-07-27T12:00:00Z"),

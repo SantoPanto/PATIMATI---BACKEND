@@ -64,6 +64,6 @@ public class User {
 
     // Rol yönetimi için Enum tanımı
     public enum Role {
-        GUEST, USER, ADMIN, VET
+        GUEST, USER, ADMIN, VET, PETSHOP, BARINAK
     }
 }

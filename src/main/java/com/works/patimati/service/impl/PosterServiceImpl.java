@@ -96,13 +96,18 @@ public class PosterServiceImpl implements PosterService {
             }
 
             // Başlık Alanı
-            DeviceRgb headerColor = (ad.getAdType() == Ad.AdType.LOST)
-                    ? new DeviceRgb(220, 53, 69) // Kırmızı (Kayıp)
-                    : new DeviceRgb(40, 167, 69); // Yeşil (Sahiplendirme)
+            DeviceRgb headerColor = switch (ad.getAdType()) {
+                case LOST -> new DeviceRgb(220, 53, 69); // Kırmızı (Kayıp)
+                case HELP -> new DeviceRgb(8, 145, 178); // Camgöbeği (Yardım)
+                case FOUND, ADOPTION -> new DeviceRgb(40, 167, 69); // Yeşil (Bulundu/Sahiplendirme)
+            };
 
-            String bannerText = (ad.getAdType() == Ad.AdType.LOST)
-                    ? "KAYIP EVCİL HAYVAN AFİŞİ"
-                    : (ad.getAdType() == Ad.AdType.ADOPTION ? "SAHİPLENDİRME AFİŞİ" : "EVCİL HAYVAN İLANI");
+            String bannerText = switch (ad.getAdType()) {
+                case LOST -> "KAYIP EVCİL HAYVAN AFİŞİ";
+                case ADOPTION -> "SAHİPLENDİRME AFİŞİ";
+                case HELP -> "YARDIMA MUHTAÇ HAYVAN AFİŞİ";
+                case FOUND -> "EVCİL HAYVAN İLANI";
+            };
 
             Paragraph header = new Paragraph("PATİMATİ")
                     .setFontSize(28)
@@ -365,6 +370,7 @@ public class PosterServiceImpl implements PosterService {
             case LOST: return "Kayıp";
             case FOUND: return "Bulundu";
             case ADOPTION: return "Sahiplendirme";
+            case HELP: return "Yardım";
             default: return "İlan";
         }
     }

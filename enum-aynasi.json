@@ -14,7 +14,8 @@
       "degerler": [
         "LOST",
         "FOUND",
-        "ADOPTION"
+        "ADOPTION",
+        "HELP"
       ]
     },
     "AgeGroup": {
@@ -34,6 +35,21 @@
         "DONE",
         "FAILED",
         "NOT_APPLICABLE"
+      ]
+    },
+    "AnimalType": {
+      "kaynak": "src/main/java/com/works/patimati/entity/enums/AnimalType.java",
+      "degerler": [
+        "DOG",
+        "CAT",
+        "BIRD",
+        "RABBIT",
+        "RODENT",
+        "REPTILE",
+        "FISH",
+        "FARM_ANIMAL",
+        "EXOTIC",
+        "OTHER"
       ]
     },
     "CandidateKind": {
@@ -178,7 +194,8 @@
       "kaynak": "src/main/java/com/works/patimati/entity/enums/PoiSource.java",
       "degerler": [
         "OSM",
-        "MANUAL"
+        "MANUAL",
+        "PLATFORM"
       ]
     },
     "PoiType": {
@@ -229,7 +246,9 @@
         "GUEST",
         "USER",
         "ADMIN",
-        "VET"
+        "VET",
+        "PETSHOP",
+        "BARINAK"
       ]
     },
     "Species": {

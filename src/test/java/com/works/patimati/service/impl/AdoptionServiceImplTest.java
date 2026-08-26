@@ -17,14 +17,20 @@ import com.works.patimati.service.RewardService;
 import com.works.patimati.storage.ImageStorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class AdoptionServiceImplTest {
@@ -140,5 +146,25 @@ class AdoptionServiceImplTest {
 
         Ad savedAd = adCaptor.getValue();
         assertThat(savedAd.getLostDate()).isEqualTo(testDate);
+    }
+
+    @Test
+    void getPublicAdoptionAdsByOwner_dogruAdTypeActiveSuspendedOwnerUidFiltresiyleRepositoryiCagirir() {
+        Long ownerUid = 42L;
+        Pageable pageable = PageRequest.of(0, 20);
+        Ad ad = Ad.builder().id(7L).adType(Ad.AdType.ADOPTION).build();
+        AdResponse beklenenYanit = mock(AdResponse.class);
+
+        when(adRepository.findAllByAdTypeAndActiveTrueAndSuspendedFalseAndUser_Uid(
+                Ad.AdType.ADOPTION, ownerUid, pageable))
+                .thenReturn(new PageImpl<>(List.of(ad), pageable, 1));
+        when(adService.toResponseWithTemporaryPhotoUrls(ad)).thenReturn(beklenenYanit);
+
+        var sonuc = adoptionService.getPublicAdoptionAdsByOwner(ownerUid, pageable);
+
+        assertThat(sonuc.getContent()).containsExactly(beklenenYanit);
+        verify(adRepository).findAllByAdTypeAndActiveTrueAndSuspendedFalseAndUser_Uid(
+                eq(Ad.AdType.ADOPTION), eq(ownerUid), eq(pageable));
+        verify(adService).toResponseWithTemporaryPhotoUrls(ad);
     }
 }

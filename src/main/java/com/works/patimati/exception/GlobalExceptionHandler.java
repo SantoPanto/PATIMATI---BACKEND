@@ -256,7 +256,7 @@ public class GlobalExceptionHandler {
             HttpServletRequest request
     ) {
         Map<String, String> fieldErrors = new LinkedHashMap<>();
-        exception.getAllValidationResults().forEach(result -> {
+        exception.getParameterValidationResults().forEach(result -> {
             String paramName = result.getMethodParameter().getParameterName();
             result.getResolvableErrors().forEach(error -> {
                 String key = (error instanceof org.springframework.validation.FieldError fe)

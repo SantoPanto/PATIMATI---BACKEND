@@ -1,5 +1,7 @@
 package com.works.patimati.dto.message;
 
+import com.works.patimati.entity.User;
+
 import java.time.Instant;
 
 public record MessageResponse(
@@ -13,6 +15,8 @@ public record MessageResponse(
         String partnerAvatar,
         String content,
         Instant timestamp,
-        boolean isRead
+        boolean isRead,
+        /** Karşı tarafın rolü -- sohbette rol rozeti (RoleBadge) gösterebilmek için. */
+        User.Role partnerRole
 ) {
 }
