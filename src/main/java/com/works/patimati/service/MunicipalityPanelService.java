@@ -14,6 +14,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 @Service
@@ -31,7 +32,9 @@ public class MunicipalityPanelService {
         long lost = repository.countAdsByDistrictAndType(district, AdType.LOST, start, end);
         long found = repository.countAdsByDistrictAndType(district, AdType.FOUND, start, end);
         long adoption = repository.countAdsByDistrictAndType(district, AdType.ADOPTION, start, end);
-        long reunion = repository.countReunionsByDistrict(district, AdResolutionStatus.FOUND, start, end);
+        
+        List<AdResolutionStatus> happyStatuses = Arrays.asList(AdResolutionStatus.FOUND, AdResolutionStatus.ADOPTED);
+        long reunion = repository.countReunionsByDistrict(district, happyStatuses, start, end);
 
         MunicipalityStatsDto stats = new MunicipalityStatsDto();
         stats.setDistrict(district);
