@@ -40,6 +40,9 @@ public class AiAnalyzeMapper {
         }
 
         Set<PetColor> colors = parseColorsFromLabels(raw.get("labels"));
+        if (colors.isEmpty()) {
+            colors = parseColors(raw.get("colors"));
+        }
 
         Boolean isPet = raw.get("is_pet") instanceof Boolean b ? b :
                 (raw.get("isPet") instanceof Boolean b2 ? b2 : null);
@@ -101,6 +104,22 @@ public class AiAnalyzeMapper {
                 if (petColor != null) {
                     colorSet.add(petColor);
                 }
+            }
+        }
+        return colorSet;
+    }
+
+    private Set<PetColor> parseColors(Object rawColors) {
+        if (!(rawColors instanceof List<?> colorList)) {
+            return LinkedHashSet.newLinkedHashSet(0);
+        }
+
+        Set<PetColor> colorSet = new LinkedHashSet<>();
+        for (Object item : colorList) {
+            if (item == null) continue;
+            PetColor petColor = PetColor.fromString(item.toString());
+            if (petColor != null) {
+                colorSet.add(petColor);
             }
         }
         return colorSet;

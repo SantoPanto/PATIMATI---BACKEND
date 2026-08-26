@@ -1,5 +1,6 @@
 package com.works.patimati.entity;
 
+import com.works.patimati.entity.enums.MessageType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -80,6 +81,21 @@ public class Message {
      */
     @Column(nullable = false, length = 2000)
     private String content;
+
+    /**
+     * Mesajın türü (TEXT, AD_SHARE vb.).
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "message_type", nullable = false, length = 20)
+    @Builder.Default
+    private MessageType type = MessageType.TEXT;
+
+    /**
+     * Mesaj bir ilan paylaşımı ise ilgili ilan referansı.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "shared_ad_id")
+    private Ad sharedAd;
 
     /**
      * Mesajın oluşturulduğu zaman.

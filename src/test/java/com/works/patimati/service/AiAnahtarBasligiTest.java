@@ -12,7 +12,6 @@ import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.client.MockRestServiceServer;
-import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
 import java.util.List;
@@ -48,13 +47,9 @@ class AiAnahtarBasligiTest {
     void anahtarVarsaBaslikGonderilir() throws IOException {
         MockServerRestTemplateCustomizer duzenek = new MockServerRestTemplateCustomizer();
         AiMatchService servis = servis(duzenek, ANAHTAR);
-        // getServer() (parametresiz) artık belirsiz: AiMatchService, AYNI
-        // builder+customizer'dan İKİ RestTemplate inşa ediyor (restTemplate +
-        // petRaporuRestTemplate, bkz. "Ben Neyim?" pet raporu özelliği) --
-        // hangisine bağlanacağını netleştirmek için asıl alanı yansımayla
-        // (reflection) alıp doğrudan onunla bağlanıyoruz.
-        MockRestServiceServer sunucu = duzenek.getServer(
-                (RestTemplate) ReflectionTestUtils.getField(servis, "restTemplate"));
+        org.springframework.web.client.RestTemplate restTemplate =
+                (org.springframework.web.client.RestTemplate) ReflectionTestUtils.getField(servis, "restTemplate");
+        MockRestServiceServer sunucu = duzenek.getServer(restTemplate);
 
         sunucu.expect(requestTo(AI_ADRESI + "/analyze"))
                 .andExpect(header("X-Api-Key", ANAHTAR))
@@ -72,19 +67,33 @@ class AiAnahtarBasligiTest {
     void anahtarYoksaBaslikEklenmez() throws IOException {
         MockServerRestTemplateCustomizer duzenek = new MockServerRestTemplateCustomizer();
         AiMatchService servis = servis(duzenek, "");
-        // getServer() (parametresiz) artık belirsiz: AiMatchService, AYNI
-        // builder+customizer'dan İKİ RestTemplate inşa ediyor (restTemplate +
-        // petRaporuRestTemplate, bkz. "Ben Neyim?" pet raporu özelliği) --
-        // hangisine bağlanacağını netleştirmek için asıl alanı yansımayla
-        // (reflection) alıp doğrudan onunla bağlanıyoruz.
-        MockRestServiceServer sunucu = duzenek.getServer(
-                (RestTemplate) ReflectionTestUtils.getField(servis, "restTemplate"));
+        org.springframework.web.client.RestTemplate restTemplate =
+                (org.springframework.web.client.RestTemplate) ReflectionTestUtils.getField(servis, "restTemplate");
+        MockRestServiceServer sunucu = duzenek.getServer(restTemplate);
 
         sunucu.expect(requestTo(AI_ADRESI + "/analyze"))
                 .andExpect(headerDoesNotExist("X-Api-Key"))
                 .andRespond(withSuccess("{\"species\":\"cat\"}", MediaType.APPLICATION_JSON));
 
         servis.analyzeImage(fotograf());
+
+        sunucu.verify();
+    }
+
+    @Test
+    @DisplayName("analyzePet (pet raporu) da /analyze ucuna gider ve X-Api-Key başlığını taşır")
+    void analyzePetCagrisiDaAnalyzeUcuneGiderVeAnahtariTasir() throws IOException {
+        MockServerRestTemplateCustomizer duzenek = new MockServerRestTemplateCustomizer();
+        AiMatchService servis = servis(duzenek, ANAHTAR);
+        org.springframework.web.client.RestTemplate petRaporuRestTemplate =
+                (org.springframework.web.client.RestTemplate) ReflectionTestUtils.getField(servis, "petRaporuRestTemplate");
+        MockRestServiceServer sunucu = duzenek.getServer(petRaporuRestTemplate);
+
+        sunucu.expect(requestTo(AI_ADRESI + "/analyze"))
+                .andExpect(header("X-Api-Key", ANAHTAR))
+                .andRespond(withSuccess("{\"species\":\"cat\"}", MediaType.APPLICATION_JSON));
+
+        servis.analyzePet(fotograf(), null);
 
         sunucu.verify();
     }
@@ -98,13 +107,9 @@ class AiAnahtarBasligiTest {
         ReflectionTestUtils.setField(servis, "maxCandidates", 100);
         adaylariKur(adRepository);
 
-        // getServer() (parametresiz) artık belirsiz: AiMatchService, AYNI
-        // builder+customizer'dan İKİ RestTemplate inşa ediyor (restTemplate +
-        // petRaporuRestTemplate, bkz. "Ben Neyim?" pet raporu özelliği) --
-        // hangisine bağlanacağını netleştirmek için asıl alanı yansımayla
-        // (reflection) alıp doğrudan onunla bağlanıyoruz.
-        MockRestServiceServer sunucu = duzenek.getServer(
-                (RestTemplate) ReflectionTestUtils.getField(servis, "restTemplate"));
+        org.springframework.web.client.RestTemplate restTemplate =
+                (org.springframework.web.client.RestTemplate) ReflectionTestUtils.getField(servis, "restTemplate");
+        MockRestServiceServer sunucu = duzenek.getServer(restTemplate);
         sunucu.expect(requestTo(AI_ADRESI + "/analyze"))
                 .andRespond(withSuccess("{\"embedding\":[0.1,0.2],\"labels\":[\"cat\"],\"species\":\"cat\"}",
                         MediaType.APPLICATION_JSON));
