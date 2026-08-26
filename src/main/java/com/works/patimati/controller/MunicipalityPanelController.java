@@ -22,7 +22,6 @@ public class MunicipalityPanelController {
     public ResponseEntity<MunicipalityStatsDto> getStats(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
-        
         return ResponseEntity.ok(service.getStats(startDate, endDate));
     }
 
@@ -31,7 +30,6 @@ public class MunicipalityPanelController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
             @RequestParam(defaultValue = "500") int limit) {
-        
         return ResponseEntity.ok(service.getHeatmap(startDate, endDate, limit));
     }
 }
