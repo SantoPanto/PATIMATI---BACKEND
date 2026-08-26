@@ -50,7 +50,7 @@ public class AiMatchService {
                 .connectTimeout(java.time.Duration.ofSeconds(10))
                 .readTimeout(java.time.Duration.ofSeconds(30))
                 .build();
-        // /analyze_pet (Gemini + AI tarafındaki retry/backoff dahil) tek bir
+        // /analyze (Gemini + AI tarafındaki retry/backoff dahil) tek bir
         // CLIP çıkarımından ÇOK daha uzun sürebilir -- AI tarafının kendi
         // kötü senaryosu (pet_raporu.py: 3 deneme * 25sn zaman aşımı + 1sn +
         // 2sn backoff) ~78 saniyeye kadar çıkabiliyor. Paylaşılan 30sn'lik
@@ -136,10 +136,9 @@ public class AiMatchService {
     }
 
     /**
-     * Tek bir görseli AI'nın "Ben Neyim?" ucuna (pet raporu) gönderir, cevabı
-     * <b>olduğu gibi</b> döner -- {@link #analyzeImage} ile AYNI ilke (bkz.
-     * oradaki javadoc): AI'nın {@code /analyze_pet} cevabı zaten dışarıya
-     * gösterilmek üzere tanımlanmış bir sözleşme, burada yeniden modellenmez.
+     * Tek bir görseli AI'nın analiz ucuna gönderir, cevabı <b>olduğu gibi</b> döner
+     * -- {@link #analyzeImage} ile AYNI ilke (bkz. oradaki javadoc): AI'nın
+     * {@code /analyze} cevabı zaten dışarıya gösterilmek üzere tanımlanmış bir sözleşme.
      *
      * @param kullaniciNotu opsiyonel, boşsa AI'ya hiç gönderilmez
      * @return AI'nın cevabı; AI 2xx dışında bir şey döndürürse {@code null}
@@ -162,7 +161,7 @@ public class AiMatchService {
 
         @SuppressWarnings("unchecked")
         ResponseEntity<Map<String, Object>> response = petRaporuRestTemplate.postForEntity(
-                aiServiceUrl + "/analyze_pet",
+                aiServiceUrl + "/analyze",
                 requestEntity,
                 (Class<Map<String, Object>>) (Class<?>) Map.class
         );

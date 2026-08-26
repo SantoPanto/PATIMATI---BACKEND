@@ -90,6 +90,24 @@ class AiAnahtarBasligiTest {
     }
 
     @Test
+    @DisplayName("analyzePet (pet raporu) da /analyze ucuna gider ve X-Api-Key başlığını taşır")
+    void analyzePetCagrisiDaAnalyzeUcuneGiderVeAnahtariTasir() throws IOException {
+        MockServerRestTemplateCustomizer duzenek = new MockServerRestTemplateCustomizer();
+        AiMatchService servis = servis(duzenek, ANAHTAR);
+        org.springframework.web.client.RestTemplate petRaporuRestTemplate =
+                (org.springframework.web.client.RestTemplate) ReflectionTestUtils.getField(servis, "petRaporuRestTemplate");
+        MockRestServiceServer sunucu = duzenek.getServer(petRaporuRestTemplate);
+
+        sunucu.expect(requestTo(AI_ADRESI + "/analyze"))
+                .andExpect(header("X-Api-Key", ANAHTAR))
+                .andRespond(withSuccess("{\"species\":\"cat\"}", MediaType.APPLICATION_JSON));
+
+        servis.analyzePet(fotograf(), null);
+
+        sunucu.verify();
+    }
+
+    @Test
     @DisplayName("/match çağrısı da anahtarı taşır — arama yolu unutulmamalı")
     void matchCagrisiDaAnahtariTasir() throws Exception {
         MockServerRestTemplateCustomizer duzenek = new MockServerRestTemplateCustomizer();

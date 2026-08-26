@@ -161,6 +161,13 @@
         "NOTIFICATION_FAILED"
       ]
     },
+    "MessageType": {
+      "kaynak": "src/main/java/com/works/patimati/entity/enums/MessageType.java",
+      "degerler": [
+        "TEXT",
+        "AD_SHARE"
+      ]
+    },
     "NoteAuthorType": {
       "kaynak": "src/main/java/com/works/patimati/entity/enums/NoteAuthorType.java",
       "degerler": [
@@ -240,6 +247,22 @@
         "OWNER"
       ]
     },
+    "ReportStatus": {
+      "kaynak": "src/main/java/com/works/patimati/entity/AnimalReport.java",
+      "degerler": [
+        "YENI",
+        "ISLEME_ALINDI",
+        "TAMAMLANDI"
+      ]
+    },
+    "ReportType": {
+      "kaynak": "src/main/java/com/works/patimati/entity/AnimalReport.java",
+      "degerler": [
+        "YARALI",
+        "SAHIPSIZ",
+        "DIGER"
+      ]
+    },
     "Role": {
       "kaynak": "src/main/java/com/works/patimati/entity/User.java",
       "degerler": [
@@ -248,7 +271,8 @@
         "ADMIN",
         "VET",
         "PETSHOP",
-        "BARINAK"
+        "BARINAK",
+        "INSTITUTION"
       ]
     },
     "Species": {

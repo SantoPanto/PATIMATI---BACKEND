@@ -3,6 +3,7 @@ package com.works.patimati.service.impl;
 import com.works.patimati.dto.ad.AdResponse;
 import com.works.patimati.dto.admin.AdComplaintAdminResponse;
 import com.works.patimati.dto.admin.ExternalPostAdminResponse;
+import com.works.patimati.dto.admin.InstitutionAssignmentRequest;
 import com.works.patimati.dto.admin.UserComplaintAdminResponse;
 import com.works.patimati.dto.admin.UserDetailForAdminDTO;
 import com.works.patimati.entity.Ad;
@@ -101,6 +102,32 @@ public class AdminServiceImpl implements AdminService {
                 .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı bulunamadı ID: " + userId));
         user.setEnabled(true);
         userRepository.save(user);
+    }
+
+    @Transactional
+    @Override
+    public void assignInstitution(Long userId, InstitutionAssignmentRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı bulunamadı ID: " + userId));
+
+        // YÖNETİCİ ROLÜ KORUNUYOR: bir ADMIN'e ilçe atanmak istenirse rolü
+        // INSTITUTION'a çevirmek onu /api/admin/** dışında bırakır — yani
+        // yönetici kendi hesabını paneli denemek için hazırlarken yönetici
+        // panelini kaybeder. ADMIN'de yalnız kurum alanları dolar; kapsam
+        // çözücü ADMIN'i zaten ilçesi doluysa kabul ediyor.
+        if (user.getRole() != User.Role.ADMIN) {
+            user.setRole(User.Role.INSTITUTION);
+        }
+
+        user.setInstitutionName(request.institutionName().trim());
+        user.setInstitutionCity(request.institutionCity().trim());
+        user.setInstitutionDistrict(request.institutionDistrict().trim());
+        userRepository.save(user);
+
+        // Kurum hesabı açmak nadir ve yetki genişleten bir işlem; izi kalsın.
+        log.info("Kurum hesabı atandı: uid={} rol={} kurum='{}' il='{}' ilce='{}'",
+                user.getUid(), user.getRole(), user.getInstitutionName(),
+                user.getInstitutionCity(), user.getInstitutionDistrict());
     }
 
     @Transactional(readOnly = true)

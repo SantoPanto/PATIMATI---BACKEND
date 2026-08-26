@@ -1,10 +1,15 @@
 package com.works.patimati.service;
 
+import com.works.patimati.dto.ad.SharedAdDTO;
+import com.works.patimati.dto.message.AdShareRequestDTO;
+import com.works.patimati.dto.message.ChatRoomWithAdResponseDTO;
 import com.works.patimati.dto.message.MessageSendRequest;
 import com.works.patimati.dto.message.MessageResponse;
 import com.works.patimati.dto.message.ChatRoomResponseDTO;
+import com.works.patimati.entity.Ad;
 import com.works.patimati.entity.Message;
 import com.works.patimati.entity.User;
+import com.works.patimati.entity.enums.MessageType;
 import com.works.patimati.exception.ResourceNotFoundException;
 import com.works.patimati.repository.AdRepository;
 import com.works.patimati.repository.MessageRepository;
@@ -19,11 +24,13 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import lombok.extern.slf4j.Slf4j;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -260,6 +267,78 @@ public class MessageService {
         return messageRepository.countByRecipient_UidAndReadFalse(currentUser.getUid());
     }
 
+    /**
+     * İlan bağlamında sohbet odası açar / mevcut odayı getirir ve AD_SHARE mesajını kaydeder/iletir.
+     */
+    @Transactional
+    public ChatRoomWithAdResponseDTO shareAdAndGetRoom(String currentUserEmail, AdShareRequestDTO request) {
+        User sender = findUserByEmail(currentUserEmail);
+        User recipient = userRepository.findById(request.targetUserId())
+                .orElseThrow(() -> new ResourceNotFoundException(ODA_ACILAMAZ));
+
+        if (sender.getUid().equals(recipient.getUid())) {
+            throw new IllegalArgumentException("Kullanıcı kendisi ile sohbet odası oluşturamaz.");
+        }
+
+        Ad ad = adRepository.findById(request.adId())
+                .orElseThrow(() -> new ResourceNotFoundException("İlan bulunamadı: " + request.adId()));
+
+        if (ad.getUser() == null || !ad.getUser().getUid().equals(recipient.getUid())) {
+            throw new IllegalArgumentException("Paylaşılmak istenen ilan hedef kullanıcıya ait değil.");
+        }
+
+        // Çift tıklama / Mükerrer istek koruması: Son 5 saniye içinde aynı göndericiden aynı alıcıya aynı ilan paylaşıldıysa mesajı tekrar oluşturma
+        Optional<Message> lastSentMessage = messageRepository.findTopBySender_UidAndRecipient_UidOrderByIdDesc(sender.getUid(), recipient.getUid());
+        Message savedMessage;
+        if (lastSentMessage.isPresent()
+                && lastSentMessage.get().getType() == MessageType.AD_SHARE
+                && lastSentMessage.get().getSharedAd() != null
+                && lastSentMessage.get().getSharedAd().getId().equals(ad.getId())
+                && lastSentMessage.get().getTimestamp() != null
+                && Duration.between(lastSentMessage.get().getTimestamp(), Instant.now()).getSeconds() < 5) {
+            savedMessage = lastSentMessage.get();
+        } else {
+            String content = "İlan Paylaşıldı: " + ad.getTitle();
+            Message message = Message.builder()
+                    .sender(sender)
+                    .recipient(recipient)
+                    .content(content)
+                    .type(MessageType.AD_SHARE)
+                    .sharedAd(ad)
+                    .timestamp(Instant.now())
+                    .read(false)
+                    .build();
+
+            savedMessage = messageRepository.save(message);
+
+            MessageResponse response = mapToResponse(savedMessage, sender);
+
+            log.info("[WS SEND] [AD_SHARE] messageId={} shared adId={} saved to DB.", savedMessage.getId(), ad.getId());
+
+            notificationService.createOrStackMessageNotification(
+                    recipient,
+                    sender,
+                    savedMessage.getId()
+            );
+
+            messagingTemplate.convertAndSendToUser(
+                    recipient.getEmail(),
+                    "/queue/messages",
+                    response
+            );
+            messagingTemplate.convertAndSendToUser(
+                    sender.getEmail(),
+                    "/queue/messages",
+                    response
+            );
+        }
+
+        ChatRoomResponseDTO room = createOrGetRoom(currentUserEmail, recipient.getUid());
+        MessageResponse sharedMessageResponse = mapToResponse(savedMessage, sender);
+
+        return new ChatRoomWithAdResponseDTO(room, sharedMessageResponse);
+    }
+
     private User findUserByEmail(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı bulunamadı: " + email));
@@ -274,6 +353,10 @@ public class MessageService {
         User partner = isSenderCurrent ? message.getRecipient() : message.getSender();
         String partnerName = partner.getFirstName() + " " + partner.getLastName();
 
+        SharedAdDTO sharedAdDTO = (message.getType() == MessageType.AD_SHARE && message.getSharedAd() != null)
+                ? SharedAdDTO.fromEntity(message.getSharedAd())
+                : null;
+
         return new MessageResponse(
                 message.getId(),
                 message.getSender().getUid(),
@@ -286,7 +369,9 @@ public class MessageService {
                 message.getContent(),
                 message.getTimestamp(),
                 message.isRead(),
-                partner.getRole()
+                partner.getRole(),
+                message.getType() != null ? message.getType() : MessageType.TEXT,
+                sharedAdDTO
         );
     }
 }

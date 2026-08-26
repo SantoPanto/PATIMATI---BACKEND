@@ -6,9 +6,11 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.util.unit.DataSize;
+import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
@@ -188,6 +190,29 @@ class S3ImageStorageServiceTest {
                 .isEqualTo("ads/2026/07/cat.jpg");
         assertThat(temporaryUrl)
                 .isEqualTo("https://example.com/cat.jpg");
+    }
+
+    @Test
+    void shouldReadImageBytesDirectlyFromConfiguredBucket() {
+        byte[] expectedImage = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, 0x01};
+
+        when(s3Client.getObjectAsBytes(any(GetObjectRequest.class)))
+                .thenReturn(ResponseBytes.fromByteArray(
+                        GetObjectResponse.builder().build(),
+                        expectedImage
+                ));
+
+        byte[] actualImage = storageService.readImage(
+                "s3://patimati-test/ads/2026/08/cat.jpg"
+        );
+
+        ArgumentCaptor<GetObjectRequest> requestCaptor =
+                ArgumentCaptor.forClass(GetObjectRequest.class);
+        verify(s3Client).getObjectAsBytes(requestCaptor.capture());
+
+        assertThat(requestCaptor.getValue().bucket()).isEqualTo("patimati-test");
+        assertThat(requestCaptor.getValue().key()).isEqualTo("ads/2026/08/cat.jpg");
+        assertThat(actualImage).isEqualTo(expectedImage);
     }
 
     @Test

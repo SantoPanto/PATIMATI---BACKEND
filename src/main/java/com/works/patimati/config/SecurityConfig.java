@@ -107,6 +107,24 @@ public class SecurityConfig {
                         .requestMatchers("/api/vet/**").hasRole("VET") // Veteriner kendi klinik kartı uçları
                         .requestMatchers("/api/petshop/**").hasRole("PETSHOP") // Petshop sahibinin kendi kart+ürün yönetim uçları
                         .requestMatchers("/api/shelter/**").hasRole("BARINAK") // Barınak sahibinin kendi kart yönetim uçları
+                        /*
+                         * Belediye modülü (B parçası).
+                         *
+                         * INSTITUTION: kurum hesabı — panel ve ihbar kuyruğu bu rolle açılır.
+                         * ADMIN da eklendi çünkü prova/sunum sırasında paneli kurum hesabı
+                         * açmadan görebilmek gerekiyor; kapsam çözücü ADMIN'e ilçe
+                         * bulamayacağı için isteği yine de reddeder (bkz. MunicipalityScopeService).
+                         *
+                         * hasAnyRole "ROLE_" önekini kendisi ekler; JwtAuthFilter yetkiyi
+                         * "ROLE_" + jetondaki rol olarak kuruyor, ikisi örtüşüyor.
+                         *
+                         * KİŞİ 3'E NOT — bu dosyaya DOKUNMAYIN: C parçasının halka açık ucu
+                         * POST /api/public/reports, yukarıdaki "/api/public/**" permitAll
+                         * satırının ZATEN kapsamında. Ayrı satır gerekmiyor (26.08'de ölçüldü).
+                         * Panel tarafındaki GET/PATCH /api/municipality/reports da aşağıdaki
+                         * satırın kapsamında. Yani bu dosyada C için yapılacak bir şey yok.
+                         */
+                        .requestMatchers("/api/municipality/**").hasAnyRole("INSTITUTION", "ADMIN")
                         // /internal/** normal kullanıcı JWT'si DEĞİL, paylaşılan-sır
                         // başlığı ister (InternalServiceAuthFilter). Burada permitAll
                         // GÖRÜNMÜYOR bilerek: filtre, anahtar tutmazsa isteği zaten
@@ -150,7 +168,7 @@ public class SecurityConfig {
                                             "\"instance\":\"%s\"" +
                                             "}",
                                     HttpStatus.FORBIDDEN.value(),
-                                    "Bu kaynağa erişmek için yönetici (ADMIN) yetkisine sahip olmalısınız.",
+                                    "Bu kaynağa erişmek için gerekli yetkiye sahip değilsiniz.",
                                     request.getRequestURI()
                                 );
 

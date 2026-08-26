@@ -8,6 +8,7 @@ import com.works.patimati.dto.admin.CreateVetAccountRequest;
 import com.works.patimati.dto.admin.ExternalPostAdminResponse;
 import com.works.patimati.dto.admin.InstagramPublishQueueAdminResponse;
 import com.works.patimati.dto.admin.InstagramPublishRequest;
+import com.works.patimati.dto.admin.InstitutionAssignmentRequest;
 import com.works.patimati.dto.admin.UserComplaintAdminResponse;
 import com.works.patimati.dto.admin.UserDetailForAdminDTO;
 import com.works.patimati.entity.enums.InstagramPublishStatus;
@@ -72,6 +73,30 @@ public class AdminController {
     public ResponseEntity<Map<String, String>> unbanUser(@PathVariable @Min(1) Long userId) {
         adminService.unbanUser(userId);
         return ResponseEntity.ok(Map.of("message", "User with ID " + userId + " has been successfully unbanned."));
+    }
+
+    /**
+     * Kullanıcıyı kurum (belediye) hesabına yükseltir; kurum adı, il ve ilçe atar.
+     *
+     * <p>Belediye modülünün giriş kapısı: bu çağrı yapılmadan hiç kimse
+     * {@code /api/municipality/**} uçlarını kullanamaz. Kurum hesabı serbest
+     * kayıtla açılmıyor — sebebi {@link com.works.patimati.dto.admin.InstitutionAssignmentRequest}
+     * içinde yazılı.
+     *
+     * <p><b>Yükseltilen kullanıcı YENİDEN GİRİŞ yapmalı:</b> yetki jetondaki
+     * rol claim'inden kuruluyor (JwtAuthFilter), elindeki eski jeton hâlâ
+     * "USER" taşır ve kapıdan geçemez.
+     */
+    @PutMapping("/users/{userId}/institution")
+    public ResponseEntity<Map<String, String>> assignInstitution(
+            @PathVariable @Min(1) Long userId,
+            @Valid @RequestBody InstitutionAssignmentRequest request
+    ) {
+        adminService.assignInstitution(userId, request);
+        return ResponseEntity.ok(Map.of(
+                "message", "Kullanıcı " + userId + " kurum hesabı olarak tanımlandı: "
+                        + request.institutionDistrict().trim(),
+                "note", "Kullanıcının yeniden giriş yapması gerekir; yetki jetondaki rolden okunuyor."));
     }
 
     /**
