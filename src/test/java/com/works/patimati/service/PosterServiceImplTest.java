@@ -1,8 +1,17 @@
 package com.works.patimati.service;
 
+import com.google.zxing.BinaryBitmap;
+import com.google.zxing.MultiFormatReader;
+import com.google.zxing.NotFoundException;
+import com.google.zxing.RGBLuminanceSource;
+import com.google.zxing.common.HybridBinarizer;
 import com.itextpdf.kernel.pdf.PdfDocument;
+import com.itextpdf.kernel.pdf.PdfDictionary;
+import com.itextpdf.kernel.pdf.PdfName;
 import com.itextpdf.kernel.pdf.PdfReader;
+import com.itextpdf.kernel.pdf.PdfStream;
 import com.itextpdf.kernel.pdf.canvas.parser.PdfTextExtractor;
+import com.itextpdf.kernel.pdf.xobject.PdfImageXObject;
 import com.works.patimati.entity.Ad;
 import com.works.patimati.entity.User;
 import com.works.patimati.entity.enums.AgeGroup;
@@ -12,6 +21,7 @@ import com.works.patimati.entity.enums.Species;
 import com.works.patimati.exception.ResourceNotFoundException;
 import com.works.patimati.repository.AdRepository;
 import com.works.patimati.service.impl.PosterServiceImpl;
+import com.works.patimati.storage.ImageStorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,10 +30,18 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+
+import javax.imageio.ImageIO;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -33,6 +51,9 @@ class PosterServiceImplTest {
 
     @Mock
     private AdRepository adRepository;
+
+    @Mock
+    private ImageStorageService imageStorageService;
 
     @InjectMocks
     private PosterServiceImpl posterService;
@@ -144,7 +165,7 @@ class PosterServiceImplTest {
         byte[] pdfBytes = posterService.generateAdPosterPdf(100L, "ali@example.com");
         String metin = pdfMetni(pdfBytes);
 
-        assertTrue(metin.contains("Kayıp"), "adType LOST 'Kayıp' olmalı");
+        assertTrue(metin.contains("KAYIP"), "adType LOST afişte Türkçe 'KAYIP' olmalı");
         assertTrue(metin.contains("Kedi"), "species CAT 'Kedi' olmalı");
         assertTrue(metin.contains("Erkek"), "gender MALE 'Erkek' olmalı");
         assertTrue(metin.contains("Yetişkin"), "ageGroup ADULT 'Yetişkin' olmalı");
@@ -159,6 +180,27 @@ class PosterServiceImplTest {
         assertFalse(metin.contains("MIXED_OR_UNKNOWN"), "ham ırk sızmamalı");
     }
 
+    @Test
+    void generateAdPosterPdf_ShouldEmbedPetPhotoAndKeepQrCodeReadable() throws Exception {
+        String photoReference = "s3://patimati-test/ads/2026/08/tekir.jpg";
+        testAd.setPhotoUrls(List.of(photoReference));
+        testAd.setCity("İstanbul");
+        testAd.setDistrict("Kadıköy");
+        testAd.setLostDate(LocalDate.of(2026, 8, 24));
+        testAd.setColors(new LinkedHashSet<>(List.of(PetColor.BROWN, PetColor.WHITE)));
+
+        when(adRepository.findById(100L)).thenReturn(Optional.of(testAd));
+        when(imageStorageService.readImage(photoReference)).thenReturn(testJpeg());
+
+        byte[] pdfBytes = posterService.generateAdPosterPdf(100L, "ali@example.com");
+
+        assertEquals(1, pageCount(pdfBytes), "Afiş tek A4 sayfasında kalmalı");
+        assertTrue(embeddedImageCount(pdfBytes) >= 3,
+                "PDF'de PatiMati logosu, hayvan fotoğrafı ve QR bulunmalı");
+        assertTrue(decodedQrValues(pdfBytes).contains("http://localhost:5173/ads/100"));
+        verify(imageStorageService).readImage(photoReference);
+    }
+
     private static String pdfMetni(byte[] pdfBytes) throws IOException {
         try (PdfDocument pdf = new PdfDocument(new PdfReader(new ByteArrayInputStream(pdfBytes)))) {
             StringBuilder sb = new StringBuilder();
@@ -166,6 +208,84 @@ class PosterServiceImplTest {
                 sb.append(PdfTextExtractor.getTextFromPage(pdf.getPage(i)));
             }
             return sb.toString();
+        }
+    }
+
+    private static int pageCount(byte[] pdfBytes) throws IOException {
+        try (PdfDocument pdf = new PdfDocument(new PdfReader(new ByteArrayInputStream(pdfBytes)))) {
+            return pdf.getNumberOfPages();
+        }
+    }
+
+    private static int embeddedImageCount(byte[] pdfBytes) throws IOException {
+        try (PdfDocument pdf = new PdfDocument(new PdfReader(new ByteArrayInputStream(pdfBytes)))) {
+            PdfDictionary xObjects = pdf.getPage(1)
+                    .getResources()
+                    .getPdfObject()
+                    .getAsDictionary(PdfName.XObject);
+            return xObjects == null ? 0 : xObjects.size();
+        }
+    }
+
+    private static List<String> decodedQrValues(byte[] pdfBytes) throws IOException {
+        List<String> values = new ArrayList<>();
+
+        try (PdfDocument pdf = new PdfDocument(new PdfReader(new ByteArrayInputStream(pdfBytes)))) {
+            PdfDictionary xObjects = pdf.getPage(1)
+                    .getResources()
+                    .getPdfObject()
+                    .getAsDictionary(PdfName.XObject);
+
+            if (xObjects == null) {
+                return values;
+            }
+
+            for (PdfName name : xObjects.keySet()) {
+                PdfStream stream = xObjects.getAsStream(name);
+                if (stream == null || !PdfName.Image.equals(stream.getAsName(PdfName.Subtype))) {
+                    continue;
+                }
+
+                BufferedImage image = ImageIO.read(new ByteArrayInputStream(
+                        new PdfImageXObject(stream).getImageBytes(true)
+                ));
+                if (image == null) {
+                    continue;
+                }
+
+                int width = image.getWidth();
+                int height = image.getHeight();
+                int[] pixels = image.getRGB(0, 0, width, height, null, 0, width);
+
+                try {
+                    BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(
+                            new RGBLuminanceSource(width, height, pixels)
+                    ));
+                    values.add(new MultiFormatReader().decode(bitmap).getText());
+                } catch (NotFoundException ignored) {
+                    // Hayvan fotoğrafı QR olmadığı için bu sonuç beklenir.
+                }
+            }
+        }
+
+        return values;
+    }
+
+    private static byte[] testJpeg() throws IOException {
+        BufferedImage image = new BufferedImage(900, 650, BufferedImage.TYPE_INT_RGB);
+        Graphics2D graphics = image.createGraphics();
+        try {
+            graphics.setColor(new Color(230, 196, 150));
+            graphics.fillRect(0, 0, image.getWidth(), image.getHeight());
+            graphics.setColor(new Color(90, 61, 38));
+            graphics.fillOval(250, 120, 400, 400);
+        } finally {
+            graphics.dispose();
+        }
+
+        try (ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+            ImageIO.write(image, "jpg", output);
+            return output.toByteArray();
         }
     }
 
