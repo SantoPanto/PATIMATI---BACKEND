@@ -28,6 +28,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import com.works.patimati.service.InstagramPublishService;
 
 class AdminControllerSearchTest {
 
@@ -38,8 +39,16 @@ class AdminControllerSearchTest {
     void setUp() {
         adminService = mock(AdminService.class);
 
+        InstagramPublishService instagramPublishService =
+                mock(InstagramPublishService.class);
+
         mockMvc = MockMvcBuilders
-                .standaloneSetup(new AdminController(adminService))
+                .standaloneSetup(
+                        new AdminController(
+                                adminService,
+                                instagramPublishService
+                        )
+                )
                 .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
                 .build();
     }
