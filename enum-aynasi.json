@@ -124,6 +124,15 @@
         "OTHER"
       ]
     },
+    "InstagramPublishStatus": {
+      "kaynak": "src/main/java/com/works/patimati/entity/enums/InstagramPublishStatus.java",
+      "degerler": [
+        "PENDING",
+        "PUBLISHED",
+        "FAILED",
+        "SKIPPED"
+      ]
+    },
     "MatchStatus": {
       "kaynak": "src/main/java/com/works/patimati/entity/enums/MatchStatus.java",
       "degerler": [
@@ -197,7 +206,8 @@
       "degerler": [
         "GUEST",
         "USER",
-        "ADMIN"
+        "ADMIN",
+        "INSTITUTION"
       ]
     },
     "Species": {
