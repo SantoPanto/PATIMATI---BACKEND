@@ -27,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -81,9 +82,7 @@ public class AnimalReportServiceImpl implements AnimalReportService {
             AnimalReport saved = animalReportRepository.save(report);
             log.info("Yeni ihbar kaydedildi. id={}, district={}", saved.getId(), district);
 
-            if (district != null) {
-                notificationService.notifyMunicipality(district, "Yeni bir hayvan ihbarı alındı: " + request.getType());
-            }
+            kurumaBildirimGonder(district, saved);
 
             return mapToResponse(saved);
 
@@ -128,6 +127,43 @@ public class AnimalReportServiceImpl implements AnimalReportService {
         log.info("İhbar durumu güncellendi. reportId={}, newStatus={}, handledBy={}", reportId, newStatus, kurumKullaniciId);
 
         return mapToResponse(report);
+    }
+
+    /**
+     * İlçeye atanmış kurum hesaplarına yeni ihbar bildirimi.
+     *
+     * <p>{@code NotificationService.notifyMunicipality(...)} diye bir uç yok;
+     * mevcut {@code createAndSend(...)} kullanılıyor. {@code notifications.type}
+     * serbest String olduğu için göç gerekmiyor.
+     *
+     * <p>Bildirim gönderilemezse ihbar yine de kaydolur: kaydın kendisi
+     * bildirimin başarısına bağlanmaz. İlçe çözülemediyse kimseye gitmez.
+     */
+    private void kurumaBildirimGonder(String district, AnimalReport report) {
+        if (district == null || district.isBlank()) {
+            log.warn("İhbar {} için ilçe çözülemedi; kuruma bildirim gönderilmedi.", report.getId());
+            return;
+        }
+        try {
+            List<User> kurumlar = userRepository
+                    .findByRoleAndInstitutionDistrictIgnoreCase(User.Role.INSTITUTION, district);
+            if (kurumlar.isEmpty()) {
+                log.info("{} ilçesine atanmış kurum hesabı yok; ihbar {} bildirimsiz kaydedildi.",
+                        district, report.getId());
+                return;
+            }
+            for (User kurum : kurumlar) {
+                notificationService.createAndSend(
+                        kurum,
+                        "Yeni hayvan ihbarı",
+                        district + " ilçesinde yeni bir ihbar var: " + report.getType().name(),
+                        "ANIMAL_REPORT",
+                        Map.of("reportId", String.valueOf(report.getId())),
+                        report.getId());
+            }
+        } catch (Exception e) {
+            log.warn("Kuruma ihbar bildirimi gönderilemedi. reportId={}", report.getId(), e);
+        }
     }
 
     private void deletePhotoSafely(String photoReference) {

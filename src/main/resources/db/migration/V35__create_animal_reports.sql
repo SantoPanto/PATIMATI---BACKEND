@@ -1,7 +1,7 @@
 -- V35: Vatandas ihbarlari tablosu ve cografi indeksler
 CREATE TABLE animal_reports (
                                 id BIGSERIAL PRIMARY KEY,
-                                reporter_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+                                reporter_id BIGINT REFERENCES users(uid) ON DELETE SET NULL,
                                 reporter_contact VARCHAR(100) NOT NULL,
                                 type VARCHAR(20) NOT NULL,
                                 note TEXT,
@@ -10,7 +10,7 @@ CREATE TABLE animal_reports (
                                 city VARCHAR(50),
                                 district VARCHAR(50),
                                 status VARCHAR(20) NOT NULL DEFAULT 'YENI',
-                                handled_by_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+                                handled_by_user_id BIGINT REFERENCES users(uid) ON DELETE SET NULL,
                                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                                 updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

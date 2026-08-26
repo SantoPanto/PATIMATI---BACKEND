@@ -1,6 +1,6 @@
 package com.works.patimati.dto.request;
 
-import com.works.patimati.entity.AnimalReport;
+import com.works.patimati.entity.enums.ReportType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -18,7 +18,7 @@ public class AnimalReportCreateRequest {
     private String reporterContact;
 
     @NotNull(message = "İhbar türü zorunludur")
-    private AnimalReport.ReportType type;
+    private ReportType type;
 
     private String note;
 
