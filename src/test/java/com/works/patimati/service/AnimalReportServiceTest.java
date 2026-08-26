@@ -69,7 +69,7 @@ class AnimalReportServiceTest {
     }
 
     @Test
-    @DisplayName("İhbar oluşturma başarılı olmalı ve doğru verileri dönmelidir")
+    @DisplayName("İhbar oluşturma başarılı olmalı; il ve ilçe geokodlamadan doğru çözümlenip atanmalıdır")
     void createPublicReport_Success() {
         AnimalReportCreateRequest request = new AnimalReportCreateRequest(
                 "05551234567",
@@ -80,7 +80,7 @@ class AnimalReportServiceTest {
         );
 
         when(reverseGeocodingService.cozumle(40.1885, 29.0610))
-                .thenReturn(Optional.empty());
+                .thenReturn(Optional.of(new ReverseGeocodingService.IlIlce("Bursa", "Nilüfer")));
 
         AnimalReport savedReport = AnimalReport.builder()
                 .id(1L)
@@ -88,8 +88,8 @@ class AnimalReportServiceTest {
                 .type(ReportType.YARALI)
                 .note("Yaralı kedi")
                 .location(geometryFactory.createPoint(new Coordinate(29.0610, 40.1885)))
-                .city(null)
-                .district(null)
+                .city("Bursa")
+                .district("Nilüfer")
                 .status(ReportStatus.YENI)
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -100,6 +100,8 @@ class AnimalReportServiceTest {
 
         assertNotNull(response);
         assertEquals(1L, response.getId());
+        assertEquals("Bursa", response.getCity());
+        assertEquals("Nilüfer", response.getDistrict());
         assertEquals("YENI", response.getStatus());
         verify(animalReportRepository, times(1)).save(any(AnimalReport.class));
     }
