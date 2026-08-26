@@ -12,6 +12,8 @@ public record VetClinicPublicResponse(
         String district,
         String phone,
         String workingHours,
-        String photoUrl
+        String photoUrl,
+        /** Müşteri isteği göndermek için hedef ({@code User.uid}) -- klinik kartının kendi {@code id}'sinden FARKLI. */
+        Long vetUserId
 ) {
 }

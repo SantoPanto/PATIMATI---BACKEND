@@ -142,6 +142,25 @@ app:
     url: ${GEOCODING_URL:https://nominatim.openstreetmap.org/reverse}
     enabled: ${GEOCODING_ENABLED:true}
     timeout-ms: ${GEOCODING_TIMEOUT_MS:2500}
+  poi:
+    # Veteriner/petshop/barınak — OpenStreetMap Overpass API'sinden senkronize
+    # edilir (bkz. PoiSyncService). Kapalıyken/hata verdiğinde harita geri
+    # kalanı ETKİLENMEZ, yalnızca bu katman boş kalır.
+    overpass:
+      url: ${POI_OVERPASS_URL:https://overpass-api.de/api/interpreter}
+      enabled: ${POI_OVERPASS_ENABLED:true}
+      # Ülke çapında tek sorgu 30-90 sn sürebilir; Nominatim'den bilerek farklı.
+      timeout-ms: ${POI_OVERPASS_TIMEOUT_MS:120000}
+      # Türkiye kapsayan kutu (south,west,north,east). Yalnızca belirli
+      # illerle sınırlamak gerekirse bu dört değeri ortam değişkeniyle daraltın.
+      bbox-south: ${POI_BBOX_SOUTH:35.8}
+      bbox-west: ${POI_BBOX_WEST:25.6}
+      bbox-north: ${POI_BBOX_NORTH:42.3}
+      bbox-east: ${POI_BBOX_EAST:44.9}
+    sync:
+      # Her Pazartesi 03:00 — Overpass'ın fair-use politikası nedeniyle sık
+      # çalıştırılmaz. Anlık tetikleme: POST /api/admin/pois/sync.
+      cron: ${POI_SYNC_CRON:0 0 3 * * MON}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:4200,http://localhost:5173,https://patimati.me,https://www.patimati.me}
   storage:

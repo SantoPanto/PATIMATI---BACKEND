@@ -74,6 +74,14 @@ public class VetClinicService {
         return toResponse(vetClinicRepository.save(clinic));
     }
 
+    /** {@code VetDetailPage} için tekil görünüm -- bulunamazsa 404. */
+    @Transactional(readOnly = true)
+    public VetClinicPublicResponse getPublicById(Long id) {
+        VetClinic clinic = vetClinicRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Klinik bulunamadı: " + id));
+        return toPublicResponse(clinic);
+    }
+
     @Transactional(readOnly = true)
     public Page<VetClinicPublicResponse> listPublic(Pageable pageable, String cityFilter) {
         Page<VetClinic> page = (cityFilter == null || cityFilter.isBlank())
@@ -126,7 +134,8 @@ public class VetClinicService {
                 clinic.getDistrict(),
                 clinic.getPhone(),
                 clinic.getWorkingHours(),
-                resolvePhotoUrl(clinic.getPhotoReference())
+                resolvePhotoUrl(clinic.getPhotoReference()),
+                clinic.getUser().getUid()
         );
     }
 
