@@ -1,7 +1,14 @@
 import random
 
+# Aynı betik her koşuda aynı SQL'i üretsin: incelenebilir diff + tekrarlanabilir demo.
+random.seed(42)
+
 MIN_LAT, MAX_LAT = 40.1700, 40.2500
 MIN_LON, MAX_LON = 28.8500, 29.0000
+
+# Plan şartı: TÜM demo verisi tek demo hesabına bağlanır ki sonradan tek
+# anahtar (bu e-posta) üzerinden komple silinebilsin (demo_veri_temizle.sql).
+DEMO_EPOSTA = "demo-veri@patimati.me"
 
 PHOTO_URLS = {
     'CAT': ["https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800", "https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800"],
@@ -15,9 +22,16 @@ def generate_sql():
         "    demo_user_id BIGINT;",
         "    new_ad_id BIGINT;",
         "BEGIN",
-        "    SELECT uid INTO demo_user_id FROM users LIMIT 1;",
+        "    -- Sırasız 'FROM users LIMIT 1' burada rastgele GERÇEK bir kullanıcıya",
+        "    -- bağlıyordu: 500 sahte ilan o kişinin profiline düşerdi. Demo verisi",
+        "    -- yalnız kendi hesabına bağlanır; hesap yoksa açılır.",
+        f"    SELECT uid INTO demo_user_id FROM users WHERE email = '{DEMO_EPOSTA}';",
         "    IF demo_user_id IS NULL THEN",
-        "        RAISE EXCEPTION 'HATA: Veritabaninda hic kullanici yok!';",
+        "        -- password NULL: bu hesapla giriş yapılamaz (BCrypt eşleşmesi yok,",
+        "        -- google_id de NULL). Yalnızca demo ilanların sahibi olarak durur.",
+        "        INSERT INTO users (email, first_name, last_name, password, role, enabled)",
+        f"        VALUES ('{DEMO_EPOSTA}', 'PatiMati', 'Demo', NULL, 'USER', true)",
+        "        RETURNING uid INTO demo_user_id;",
         "    END IF;"
     ]
 
