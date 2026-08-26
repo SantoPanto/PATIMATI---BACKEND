@@ -5,7 +5,6 @@ import com.works.patimati.dto.response.AnimalReportResponse;
 import com.works.patimati.entity.AnimalReport;
 import com.works.patimati.entity.enums.ReportStatus;
 import com.works.patimati.entity.enums.ReportType;
-import com.works.patimati.municipality.MunicipalityScope;
 import com.works.patimati.municipality.MunicipalityScopeService;
 import com.works.patimati.repository.AnimalReportRepository;
 import com.works.patimati.repository.UserRepository;
@@ -17,22 +16,17 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
+import org.mockito.Answers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -53,7 +47,7 @@ class AnimalReportServiceTest {
     @Mock
     private NotificationService notificationService;
 
-    @Mock
+    @Mock(answers = Answers.RETURNS_DEEP_STUBS)
     private MunicipalityScopeService municipalityScopeService;
 
     @InjectMocks
@@ -106,8 +100,8 @@ class AnimalReportServiceTest {
     @Test
     @DisplayName("Farklı ilçedeki ihbar güncellenmek istendiğinde AccessDeniedException fırlatılmalıdır")
     void updateStatus_DifferentDistrict_ThrowsAccessDenied() {
-        when(municipalityScopeService.mevcutKapsam())
-                .thenReturn(new MunicipalityScope("Nilüfer", "Bursa", "Nilüfer Belediyesi", 5L));
+        when(municipalityScopeService.mevcutKapsam().ilce()).thenReturn("Nilüfer");
+        when(municipalityScopeService.mevcutKapsam().kurumKullaniciId()).thenReturn(5L);
 
         AnimalReport report = AnimalReport.builder()
                 .id(10L)
