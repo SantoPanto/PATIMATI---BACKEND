@@ -47,7 +47,9 @@ class AiAnahtarBasligiTest {
     void anahtarVarsaBaslikGonderilir() throws IOException {
         MockServerRestTemplateCustomizer duzenek = new MockServerRestTemplateCustomizer();
         AiMatchService servis = servis(duzenek, ANAHTAR);
-        MockRestServiceServer sunucu = duzenek.getServer();
+        org.springframework.web.client.RestTemplate restTemplate =
+                (org.springframework.web.client.RestTemplate) ReflectionTestUtils.getField(servis, "restTemplate");
+        MockRestServiceServer sunucu = duzenek.getServer(restTemplate);
 
         sunucu.expect(requestTo(AI_ADRESI + "/analyze"))
                 .andExpect(header("X-Api-Key", ANAHTAR))
@@ -65,13 +67,33 @@ class AiAnahtarBasligiTest {
     void anahtarYoksaBaslikEklenmez() throws IOException {
         MockServerRestTemplateCustomizer duzenek = new MockServerRestTemplateCustomizer();
         AiMatchService servis = servis(duzenek, "");
-        MockRestServiceServer sunucu = duzenek.getServer();
+        org.springframework.web.client.RestTemplate restTemplate =
+                (org.springframework.web.client.RestTemplate) ReflectionTestUtils.getField(servis, "restTemplate");
+        MockRestServiceServer sunucu = duzenek.getServer(restTemplate);
 
         sunucu.expect(requestTo(AI_ADRESI + "/analyze"))
                 .andExpect(headerDoesNotExist("X-Api-Key"))
                 .andRespond(withSuccess("{\"species\":\"cat\"}", MediaType.APPLICATION_JSON));
 
         servis.analyzeImage(fotograf());
+
+        sunucu.verify();
+    }
+
+    @Test
+    @DisplayName("analyzePet (pet raporu) da /analyze ucuna gider ve X-Api-Key başlığını taşır")
+    void analyzePetCagrisiDaAnalyzeUcuneGiderVeAnahtariTasir() throws IOException {
+        MockServerRestTemplateCustomizer duzenek = new MockServerRestTemplateCustomizer();
+        AiMatchService servis = servis(duzenek, ANAHTAR);
+        org.springframework.web.client.RestTemplate petRaporuRestTemplate =
+                (org.springframework.web.client.RestTemplate) ReflectionTestUtils.getField(servis, "petRaporuRestTemplate");
+        MockRestServiceServer sunucu = duzenek.getServer(petRaporuRestTemplate);
+
+        sunucu.expect(requestTo(AI_ADRESI + "/analyze"))
+                .andExpect(header("X-Api-Key", ANAHTAR))
+                .andRespond(withSuccess("{\"species\":\"cat\"}", MediaType.APPLICATION_JSON));
+
+        servis.analyzePet(fotograf(), null);
 
         sunucu.verify();
     }
@@ -85,7 +107,9 @@ class AiAnahtarBasligiTest {
         ReflectionTestUtils.setField(servis, "maxCandidates", 100);
         adaylariKur(adRepository);
 
-        MockRestServiceServer sunucu = duzenek.getServer();
+        org.springframework.web.client.RestTemplate restTemplate =
+                (org.springframework.web.client.RestTemplate) ReflectionTestUtils.getField(servis, "restTemplate");
+        MockRestServiceServer sunucu = duzenek.getServer(restTemplate);
         sunucu.expect(requestTo(AI_ADRESI + "/analyze"))
                 .andRespond(withSuccess("{\"embedding\":[0.1,0.2],\"labels\":[\"cat\"],\"species\":\"cat\"}",
                         MediaType.APPLICATION_JSON));
