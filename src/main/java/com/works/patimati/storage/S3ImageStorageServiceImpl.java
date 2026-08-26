@@ -11,6 +11,7 @@ import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
@@ -118,6 +119,32 @@ public class S3ImageStorageServiceImpl implements ImageStorageService {
                 : objectKey;
 
         return cleanDomain + "/" + cleanKey;
+    }
+
+    @Override
+    public byte[] readImage(String storageReference) {
+        String objectKey = extractDownloadObjectKey(storageReference);
+
+        GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                .bucket(bucketName)
+                .key(objectKey)
+                .build();
+
+        try {
+            return s3Client.getObjectAsBytes(getObjectRequest).asByteArray();
+        } catch (SdkException exception) {
+            log.error(
+                    "Fotoğraf Cloudflare R2 depolama servisinden okunamadı. Reference: {}, Bucket: {}, Hata: {}",
+                    storageReference,
+                    bucketName,
+                    exception.getMessage(),
+                    exception
+            );
+            throw new ImageStorageException(
+                    "Fotoğraf bulut depolamadan okunamadı",
+                    exception
+            );
+        }
     }
 
     @Override
@@ -256,6 +283,28 @@ public class S3ImageStorageServiceImpl implements ImageStorageService {
 
         // Doğrudan objectKey string'i ise (örn: ads/2026/08/...jpg)
         return storageReference;
+    }
+
+    /**
+     * CDN adresi saklanmış eski kayıtları nesne anahtarına dönüştürür. URL'in
+     * kendisine istek atılmaz; veri her zaman yapılandırılmış R2 bucket'ından okunur.
+     */
+    private String extractDownloadObjectKey(String storageReference) {
+        String objectKey = extractObjectKey(storageReference);
+
+        if (!objectKey.startsWith("http://") && !objectKey.startsWith("https://")) {
+            return objectKey;
+        }
+
+        try {
+            String path = URI.create(objectKey).getPath();
+            if (path == null || path.length() <= 1) {
+                throw new InvalidImageException("Fotoğraf depolama referansı geçersiz");
+            }
+            return path.substring(1);
+        } catch (IllegalArgumentException exception) {
+            throw new InvalidImageException("Fotoğraf depolama referansı geçersiz");
+        }
     }
 
     private void deleteImage(String storageReference) {
