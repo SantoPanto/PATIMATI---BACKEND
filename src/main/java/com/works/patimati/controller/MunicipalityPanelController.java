@@ -6,7 +6,9 @@ import com.works.patimati.service.MunicipalityPanelService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.constraints.Max;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -14,6 +16,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/municipality/panel")
 @RequiredArgsConstructor
+@Validated
 public class MunicipalityPanelController {
 
     private final MunicipalityPanelService service;
@@ -29,7 +32,7 @@ public class MunicipalityPanelController {
     public ResponseEntity<List<HeatmapPointDto>> getHeatmap(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
-            @RequestParam(defaultValue = "500") int limit) {
+            @RequestParam(defaultValue = "500") @Max(2000) int limit) {
         return ResponseEntity.ok(service.getHeatmap(startDate, endDate, limit));
     }
 }
