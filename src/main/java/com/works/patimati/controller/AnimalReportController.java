@@ -23,7 +23,6 @@ public class AnimalReportController {
 
     private final AnimalReportService animalReportService;
 
-    // C1: Halka açık ihbar oluşturma
     @PostMapping(value = "/api/public/reports", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<AnimalReportResponse> createPublicReport(
             @Valid @ModelAttribute AnimalReportCreateRequest request,
@@ -35,7 +34,6 @@ public class AnimalReportController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    // C2: Belediyenin kendi ilçesindeki ihbarları listelemesi
     @GetMapping("/api/municipality/reports")
     @PreAuthorize("hasAnyRole('INSTITUTION', 'ADMIN')")
     public ResponseEntity<Page<AnimalReportResponse>> getReports(
@@ -46,7 +44,6 @@ public class AnimalReportController {
         return ResponseEntity.ok(reports);
     }
 
-    // C2: İhbar durumunu güncelleme (YENI -> ISLEME_ALINDI -> TAMAMLANDI)
     @PatchMapping("/api/municipality/reports/{id}/status")
     @PreAuthorize("hasAnyRole('INSTITUTION', 'ADMIN')")
     public ResponseEntity<AnimalReportResponse> updateStatus(
