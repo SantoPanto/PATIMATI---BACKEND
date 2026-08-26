@@ -20,20 +20,18 @@ public class MunicipalityPanelController {
 
     @GetMapping("/stats")
     public ResponseEntity<MunicipalityStatsDto> getStats(
-            @RequestParam String district,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
         
-        return ResponseEntity.ok(service.getStats(district, startDate, endDate));
+        return ResponseEntity.ok(service.getStats(startDate, endDate));
     }
 
     @GetMapping("/heatmap")
     public ResponseEntity<List<HeatmapPointDto>> getHeatmap(
-            @RequestParam String district,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
             @RequestParam(defaultValue = "500") int limit) {
         
-        return ResponseEntity.ok(service.getHeatmap(district, startDate, endDate, limit));
+        return ResponseEntity.ok(service.getHeatmap(startDate, endDate, limit));
     }
 }
