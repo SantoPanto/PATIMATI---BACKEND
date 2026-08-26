@@ -115,6 +115,32 @@ public class S3ImageStorageService implements ImageStorageService {
     }
 
     @Override
+    public byte[] readImage(String storageReference) {
+        String objectKey = extractDownloadObjectKey(storageReference);
+
+        GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                .bucket(properties.bucket())
+                .key(objectKey)
+                .build();
+
+        try {
+            return s3Client.getObjectAsBytes(getObjectRequest).asByteArray();
+        } catch (SdkException exception) {
+            log.error(
+                    "Fotoğraf MinIO/S3 depolama servisinden okunamadı. Reference: {}, Bucket: {}, Hata: {}",
+                    storageReference,
+                    properties.bucket(),
+                    exception.getMessage(),
+                    exception
+            );
+            throw new ImageStorageException(
+                    "Fotoğraf bulut depolamadan okunamadı",
+                    exception
+            );
+        }
+    }
+
+    @Override
     public void deleteImages(Collection<String> storageReferences) {
         if (storageReferences == null || storageReferences.isEmpty()) {
             return;
@@ -257,6 +283,34 @@ public class S3ImageStorageService implements ImageStorageService {
 
         // Doğrudan objectKey string'i ise (örn: ads/2026/08/...jpg)
         return storageReference;
+    }
+
+    /**
+     * Eski kayıtlarda tam MinIO URL'i bulunabilmesine karşı URL yolunu güvenli
+     * biçimde nesne anahtarına çevirir. Ağ isteği yine yalnızca S3 istemcisiyle
+     * yapılandırılmış bucket'a yapılır.
+     */
+    private String extractDownloadObjectKey(String storageReference) {
+        String objectKey = extractObjectKey(storageReference);
+
+        if (!objectKey.startsWith("http://") && !objectKey.startsWith("https://")) {
+            return objectKey;
+        }
+
+        try {
+            String path = URI.create(objectKey).getPath();
+            if (path == null || path.length() <= 1) {
+                throw new InvalidImageException("Fotoğraf depolama referansı geçersiz");
+            }
+
+            String cleanPath = path.substring(1);
+            String bucketPrefix = properties.bucket() + "/";
+            return cleanPath.startsWith(bucketPrefix)
+                    ? cleanPath.substring(bucketPrefix.length())
+                    : cleanPath;
+        } catch (IllegalArgumentException exception) {
+            throw new InvalidImageException("Fotoğraf depolama referansı geçersiz");
+        }
     }
 
     private void deleteImage(String storageReference) {
