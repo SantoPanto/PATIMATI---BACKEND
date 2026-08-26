@@ -145,6 +145,13 @@
         "NOTIFICATION_FAILED"
       ]
     },
+    "MessageType": {
+      "kaynak": "src/main/java/com/works/patimati/entity/enums/MessageType.java",
+      "degerler": [
+        "TEXT",
+        "AD_SHARE"
+      ]
+    },
     "PetColor": {
       "kaynak": "src/main/java/com/works/patimati/entity/enums/PetColor.java",
       "degerler": [
