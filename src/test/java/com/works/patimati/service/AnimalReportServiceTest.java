@@ -16,7 +16,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
-import org.mockito.Answers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -47,7 +46,6 @@ class AnimalReportServiceTest {
     @Mock
     private NotificationService notificationService;
 
-    @Mock(answers = Answers.RETURNS_DEEP_STUBS)
     private MunicipalityScopeService municipalityScopeService;
 
     @InjectMocks
@@ -58,6 +56,17 @@ class AnimalReportServiceTest {
     @BeforeEach
     void setUp() {
         geometryFactory = new GeometryFactory();
+        municipalityScopeService = mock(MunicipalityScopeService.class, RETURNS_DEEP_STUBS);
+
+        // Mock servisi impl sınıfına manuel bağlama
+        animalReportService = new AnimalReportServiceImpl(
+                animalReportRepository,
+                userRepository,
+                imageStorageService,
+                reverseGeocodingService,
+                notificationService,
+                municipalityScopeService
+        );
     }
 
     @Test
