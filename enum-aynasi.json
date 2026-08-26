@@ -209,7 +209,7 @@
       ]
     },
     "ReportStatus": {
-      "kaynak": "src/main/java/com/works/patimati/entity/AnimalReport.java",
+      "kaynak": "src/main/java/com/works/patimati/entity/enums/ReportStatus.java",
       "degerler": [
         "YENI",
         "ISLEME_ALINDI",
@@ -217,7 +217,7 @@
       ]
     },
     "ReportType": {
-      "kaynak": "src/main/java/com/works/patimati/entity/AnimalReport.java",
+      "kaynak": "src/main/java/com/works/patimati/entity/enums/ReportType.java",
       "degerler": [
         "YARALI",
         "SAHIPSIZ",

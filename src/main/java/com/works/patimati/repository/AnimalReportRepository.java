@@ -1,6 +1,7 @@
 package com.works.patimati.repository;
 
 import com.works.patimati.entity.AnimalReport;
+import com.works.patimati.entity.enums.ReportStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -16,6 +17,6 @@ public interface AnimalReportRepository extends JpaRepository<AnimalReport, Long
 
     @Query("SELECT r FROM AnimalReport r WHERE LOWER(r.district) = LOWER(:ilce) AND r.status = :status")
     Page<AnimalReport> findAllByDistrictIgnoreCaseAndStatus(@Param("ilce") String ilce,
-                                                            @Param("status") AnimalReport.ReportStatus status,
+                                                            @Param("status") ReportStatus status,
                                                             Pageable pageable);
 }

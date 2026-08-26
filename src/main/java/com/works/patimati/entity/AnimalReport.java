@@ -1,5 +1,7 @@
 package com.works.patimati.entity;
 
+import com.works.patimati.entity.enums.ReportStatus;
+import com.works.patimati.entity.enums.ReportType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -30,7 +32,7 @@ public class AnimalReport {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private ReportType type; // YARALI, SAHIPSIZ, DIGER
+    private ReportType type;
 
     @Column(columnDefinition = "TEXT")
     private String note;
@@ -50,7 +52,7 @@ public class AnimalReport {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default
-    private ReportStatus status = ReportStatus.YENI; // YENI, ISLEME_ALINDI, TAMAMLANDI
+    private ReportStatus status = ReportStatus.YENI;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "handled_by_user_id")
@@ -63,12 +65,4 @@ public class AnimalReport {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-
-    public enum ReportType {
-        YARALI, SAHIPSIZ, DIGER
-    }
-
-    public enum ReportStatus {
-        YENI, ISLEME_ALINDI, TAMAMLANDI
-    }
 }
