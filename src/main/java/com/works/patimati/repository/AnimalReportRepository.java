@@ -4,14 +4,18 @@ import com.works.patimati.entity.AnimalReport;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public interface AnimalReportRepository extends JpaRepository<AnimalReport, Long> {
 
-    // Belediyenin kendi ilçesindeki ihbarları sayfalı getiren sorgu
-    Page<AnimalReport> findAllByDistrictIgnoreCase(String district, Pageable pageable);
+    @Query("SELECT r FROM AnimalReport r WHERE LOWER(r.district) = LOWER(:ilce)")
+    Page<AnimalReport> findAllByDistrictIgnoreCase(@Param("ilce") String ilce, Pageable pageable);
 
-    // Duruma göre filtrelenmiş sayfalı sorgu
-    Page<AnimalReport> findAllByDistrictIgnoreCaseAndStatus(String district, AnimalReport.ReportStatus status, Pageable pageable);
+    @Query("SELECT r FROM AnimalReport r WHERE LOWER(r.district) = LOWER(:ilce) AND r.status = :status")
+    Page<AnimalReport> findAllByDistrictIgnoreCaseAndStatus(@Param("ilce") String ilce,
+                                                            @Param("status") AnimalReport.ReportStatus status,
+                                                            Pageable pageable);
 }

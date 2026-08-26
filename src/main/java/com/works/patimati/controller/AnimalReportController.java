@@ -23,7 +23,7 @@ public class AnimalReportController {
 
     private final AnimalReportService animalReportService;
 
-    // C1: Halka açık ihbar bırakma ucu
+    // C1: Halka açık ihbar oluşturma
     @PostMapping(value = "/api/public/reports", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<AnimalReportResponse> createPublicReport(
             @Valid @ModelAttribute AnimalReportCreateRequest request,
@@ -35,15 +35,14 @@ public class AnimalReportController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    // C2: Belediyenin kendi ilçesindeki ihbarları listelediği kuyruk
+    // C2: Belediyenin kendi ilçesindeki ihbarları listelemesi
     @GetMapping("/api/municipality/reports")
     @PreAuthorize("hasAnyRole('INSTITUTION', 'ADMIN')")
     public ResponseEntity<Page<AnimalReportResponse>> getReports(
             @RequestParam(required = false) AnimalReport.ReportStatus status,
-            Pageable pageable,
-            @AuthenticationPrincipal UserDetails userDetails) {
+            Pageable pageable) {
 
-        Page<AnimalReportResponse> reports = animalReportService.getReportsForMunicipality(userDetails.getUsername(), status, pageable);
+        Page<AnimalReportResponse> reports = animalReportService.getReportsForMunicipality(status, pageable);
         return ResponseEntity.ok(reports);
     }
 
@@ -52,10 +51,9 @@ public class AnimalReportController {
     @PreAuthorize("hasAnyRole('INSTITUTION', 'ADMIN')")
     public ResponseEntity<AnimalReportResponse> updateStatus(
             @PathVariable Long id,
-            @RequestParam AnimalReport.ReportStatus status,
-            @AuthenticationPrincipal UserDetails userDetails) {
+            @RequestParam AnimalReport.ReportStatus status) {
 
-        AnimalReportResponse response = animalReportService.updateStatus(id, status, userDetails.getUsername());
+        AnimalReportResponse response = animalReportService.updateStatus(id, status);
         return ResponseEntity.ok(response);
     }
 }
