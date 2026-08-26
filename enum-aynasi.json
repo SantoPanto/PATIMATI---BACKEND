@@ -208,6 +208,22 @@
         "OWNER"
       ]
     },
+    "ReportStatus": {
+      "kaynak": "src/main/java/com/works/patimati/entity/AnimalReport.java",
+      "degerler": [
+        "YENI",
+        "ISLEME_ALINDI",
+        "TAMAMLANDI"
+      ]
+    },
+    "ReportType": {
+      "kaynak": "src/main/java/com/works/patimati/entity/AnimalReport.java",
+      "degerler": [
+        "YARALI",
+        "SAHIPSIZ",
+        "DIGER"
+      ]
+    },
     "Role": {
       "kaynak": "src/main/java/com/works/patimati/entity/User.java",
       "degerler": [
