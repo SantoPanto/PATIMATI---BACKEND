@@ -1,6 +1,7 @@
 package com.works.patimati.controller;
 
 import com.works.patimati.dto.HeatmapPointDto;
+import com.works.patimati.dto.MunicipalityReportStatsDto;
 import com.works.patimati.dto.MunicipalityStatsDto;
 import com.works.patimati.service.MunicipalityPanelService;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,13 @@ public class MunicipalityPanelController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
         return ResponseEntity.ok(service.getStats(startDate, endDate));
+    }
+
+    @GetMapping("/report-stats")
+    public ResponseEntity<MunicipalityReportStatsDto> getReportStats(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
+        return ResponseEntity.ok(service.getReportStats(startDate, endDate));
     }
 
     @GetMapping("/heatmap")
