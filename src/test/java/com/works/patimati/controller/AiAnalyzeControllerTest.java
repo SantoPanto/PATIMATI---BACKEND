@@ -41,6 +41,7 @@ class AiAnalyzeControllerTest {
                 Species.CAT,
                 0.9955,
                 null,
+                null,
                 0.4843,
                 CoatPattern.SOLID,
                 Set.of(PetColor.CREAM, PetColor.GRAY),

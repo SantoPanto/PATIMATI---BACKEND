@@ -49,6 +49,35 @@ class AiAnalyzeMapperTest {
     }
 
     @Test
+    @DisplayName("breed eşik altında null iken breed_top öneri olarak geçmeli (S5)")
+    void breedTopPassesThroughWhenBreedBelowThreshold() {
+        Map<String, Object> raw = new LinkedHashMap<>();
+        raw.put("species", "dog");
+        raw.put("species_confidence", 0.99);
+        raw.put("breed", null);
+        raw.put("breed_top", "Kangal");
+        raw.put("breed_confidence", 0.63);
+        raw.put("is_pet", true);
+
+        AiAnalyzeResponse response = mapper.toResponse(raw);
+
+        assertThat(response.breed()).isNull();
+        assertThat(response.breedTop()).isEqualTo("Kangal");
+        assertThat(response.breedConfidence()).isEqualTo(0.63);
+    }
+
+    @Test
+    @DisplayName("breed_top 'null' dizgesi ya da boşsa null'a indirgenmeli (parseBreed ile aynı arıtma)")
+    void breedTopSanitizedLikeBreed() {
+        Map<String, Object> raw = new LinkedHashMap<>();
+        raw.put("species", "dog");
+        raw.put("breed_top", "null");
+        raw.put("is_pet", true);
+
+        assertThat(mapper.toResponse(raw).breedTop()).isNull();
+    }
+
+    @Test
     @DisplayName("Büyük harf, köpek türü ve farklı desenler doğru haritalanmalı")
     void dogAndStripedPatternMappedCorrectly() {
         Map<String, Object> raw = new LinkedHashMap<>();

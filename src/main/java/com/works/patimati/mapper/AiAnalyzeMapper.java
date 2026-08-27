@@ -19,7 +19,7 @@ public class AiAnalyzeMapper {
 
     public AiAnalyzeResponse toResponse(Map<String, Object> raw) {
         if (raw == null || raw.isEmpty()) {
-            return new AiAnalyzeResponse(null, null, null, null, null, Set.of(), null);
+            return new AiAnalyzeResponse(null, null, null, null, null, null, Set.of(), null);
         }
 
         Species species = parseSpecies(raw.get("species"));
@@ -29,6 +29,10 @@ public class AiAnalyzeMapper {
         }
 
         String breed = parseBreed((String) raw.get("breed"));
+        String breedTop = parseBreed((String) raw.get("breed_top"));
+        if (breedTop == null) {
+            breedTop = parseBreed((String) raw.get("breedTop"));
+        }
         Double breedConfidence = toDouble(raw.get("breed_confidence"));
         if (breedConfidence == null) {
             breedConfidence = toDouble(raw.get("breedConfidence"));
@@ -51,6 +55,7 @@ public class AiAnalyzeMapper {
                 species,
                 speciesConfidence,
                 breed,
+                breedTop,
                 breedConfidence,
                 coatPattern,
                 colors,
