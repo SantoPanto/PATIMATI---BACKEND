@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -54,12 +55,41 @@ public class MunicipalityPanelService {
         List<HeatmapPointDto> heatmap = new ArrayList<>();
 
         for (Object[] row : results) {
-            Double lat = ((Number) row[0]).doubleValue();
-            Double lng = ((Number) row[1]).doubleValue();
-            String type = (String) row[2];
-            LocalDateTime createdAt = ((Timestamp) row[3]).toLocalDateTime();
-            heatmap.add(new HeatmapPointDto(lat, lng, type, createdAt));
+            heatmap.add(satirdanNokta(row));
         }
         return heatmap;
+    }
+
+    /** Paket-görünür: gerçek-DB testi bu hattı sürücünün GERÇEK tipiyle koşuyor. */
+    static HeatmapPointDto satirdanNokta(Object[] row) {
+        Double lat = ((Number) row[0]).doubleValue();
+        Double lng = ((Number) row[1]).doubleValue();
+        String type = (String) row[2];
+        return new HeatmapPointDto(lat, lng, type, zamanaCevir(row[3]));
+    }
+
+    /**
+     * Native sorgudaki {@code created_at} kolonu {@code timestamp with time zone};
+     * Hibernate 6 + PostgreSQL bunu {@code Instant} verir — düz {@code (Timestamp)}
+     * cast'i gerçek veritabanında {@code ClassCastException}/500'dü (27.08, yerel
+     * uçtan uca ölçüm). Sürücü/ORM sürümüne göre tip değişebildiği için dönüşüm
+     * tek tek tanınan tiplere bakar; tanınmayan tipte SESSİZCE bozuk tarih
+     * üretmek yerine açık hata fırlatır.
+     */
+    private static LocalDateTime zamanaCevir(Object deger) {
+        if (deger instanceof Instant an) {
+            return LocalDateTime.ofInstant(an, ZoneId.systemDefault());
+        }
+        if (deger instanceof Timestamp ts) {
+            return ts.toLocalDateTime();
+        }
+        if (deger instanceof OffsetDateTime odt) {
+            return odt.toLocalDateTime();
+        }
+        if (deger instanceof LocalDateTime ldt) {
+            return ldt;
+        }
+        throw new IllegalStateException(
+                "heatmap created_at beklenmeyen tipte: " + deger.getClass().getName());
     }
 }
