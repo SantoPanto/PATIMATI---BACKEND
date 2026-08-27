@@ -176,11 +176,11 @@ public class AiMatchService {
      * İlan oluşturma ekranı için AI analiz sonucunu frontend sözleşmesine dönüştürerek döner.
      */
     public AiAnalyzeResponse analyzeImageForFrontend(MultipartFile file) throws IOException {
-        return analyzeImageForFrontend(file, null);
-    }
-
-    public AiAnalyzeResponse analyzeImageForFrontend(MultipartFile file, String kullaniciNotu) throws IOException {
-        Map<String, Object> raw = analyzePet(file, kullaniciNotu);
+        // Oto-doldur BİLEREK klasik /analyze zincirindedir: AiAnalyzeMapper
+        // yalnız /analyze şemasını (species/breed_top/pattern/labels) okur;
+        // analyzePet'in rapor şeması (tur/irk/desen) bu anahtarları içermez ve
+        // Gemini'ye bağımlıdır -- oto-doldur LLM'siz de çalışmak zorunda.
+        Map<String, Object> raw = analyzeImage(file);
         if (raw == null) {
             return null;
         }

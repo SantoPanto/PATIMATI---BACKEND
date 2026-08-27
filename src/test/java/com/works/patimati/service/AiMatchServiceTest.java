@@ -308,4 +308,27 @@ class AiMatchServiceTest {
         assertFalse(AiMatchService.esikGecti(Map.of("match", "true")));
         assertFalse(AiMatchService.esikGecti(null));
     }
+    @Test
+    @DisplayName("Oto-doldur klasik /analyze ucunda kalır — rapor (/analyze_pet) şeması mapper'la uyumsuz ve Gemini'ye bağımlı")
+    void otoDoldurKlasikAnalyzeUcundaKalir() throws Exception {
+        Map<String, Object> klasikCevap = new HashMap<>();
+        klasikCevap.put("species", "dog");
+        klasikCevap.put("species_confidence", 0.93);
+        klasikCevap.put("breed", "golden retriever");
+        klasikCevap.put("breed_top", "golden retriever");
+        klasikCevap.put("breed_confidence", 0.82);
+        klasikCevap.put("pattern", "solid");
+        klasikCevap.put("is_pet", true);
+        analyzeCevabi(klasikCevap);
+
+        com.works.patimati.dto.ai.AiAnalyzeResponse sonuc = aiMatchService.analyzeImageForFrontend(
+                new MockMultipartFile("file", "golden.jpg", "image/jpeg", new byte[]{1, 2, 3}));
+
+        assertNotNull(sonuc);
+        assertEquals(com.works.patimati.entity.enums.Species.DOG, sonuc.species());
+        assertEquals("golden retriever", sonuc.breedTop());
+        assertEquals(com.works.patimati.entity.enums.CoatPattern.SOLID, sonuc.coatPattern());
+        assertEquals(Boolean.TRUE, sonuc.isPet());
+        verify(restTemplate, never()).postForEntity(contains("/analyze_pet"), any(), any(Class.class));
+    }
 }
