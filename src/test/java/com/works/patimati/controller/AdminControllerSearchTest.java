@@ -72,7 +72,7 @@ class AdminControllerSearchTest {
     void getAllUsers_withSearchAndSort_passesParametersToService() throws Exception {
         UserDetailForAdminDTO dto = new UserDetailForAdminDTO(
                 1L, "Ahmet", "Yılmaz", "ahmet@test.com", "5551234567",
-                true, true, User.Role.USER, Instant.now()
+                true, User.Role.USER, Instant.now()
         );
 
         when(adminService.getAllUsers(eq("ahmet"), any(Pageable.class)))

@@ -14,7 +14,6 @@ public record UserDetailForAdminDTO(
         String lastName,
         String email,
         String phoneNumber,
-        boolean isEmailVerified,
         boolean enabled,
         User.Role role,
         Instant createdAt
