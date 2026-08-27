@@ -1,0 +1,322 @@
+[
+  {
+    "hash": "0af10de1",
+    "full_hash": "0af10de1b6bf6cef2fa5776551eef14443e9f868",
+    "author": "Fatih Şahin <fatihpanto@gmail.com>",
+    "date": "2026-07-21T22:21:33+03:00",
+    "subject": "Initial commit",
+    "stat": "0af10de Initial commit\n README.md | 1 +\n 1 file changed, 1 insertion(+)"
+  },
+  {
+    "hash": "f77eb4d9",
+    "full_hash": "f77eb4d942011acbf5738430b1ca32b162998bac",
+    "author": "SantoPanto <fatihpanto@gmail.com>",
+    "date": "2026-07-24T11:29:04+03:00",
+    "subject": "feat: PatiMati Modüler Monolit Spring Boot proje kurulumu",
+    "stat": "f77eb4d feat: PatiMati Modüler Monolit Spring Boot proje kurulumu\n .gitattributes                                     |   2 +\n .gitignore                                         |  33 +++\n .mvn/wrapper/maven-wrapper.properties              |   3 +\n mvnw                                               | 295 +++++++++++++++++++++\n mvnw.cmd                                           | 189 +++++++++++++\n pom.xml                                            | 167 ++++++++++++\n .../com/works/patimati/PatiMatiApplication.java    |  13 +\n src/main/resources/application.properties          |   1 +\n .../works/patimati/PatiMatiApplicationTests.java   |  13 +\n 9 files changed, 716 insertions(+)"
+  },
+  {
+    "hash": "d77dcb0a",
+    "full_hash": "d77dcb0a2a0d064cd4ba5e52b0fa76a9466ac7dd",
+    "author": "SantoPanto <fatihpanto@gmail.com>",
+    "date": "2026-07-24T11:31:30+03:00",
+    "subject": "Merge branch 'main' of https://github.com/SantoPanto/PATIMATI---BACKEND",
+    "stat": "d77dcb0 Merge branch 'main' of https://github.com/SantoPanto/PATIMATI---BACKEND\n\n README.md | 1 +\n 1 file changed, 1 insertion(+)"
+  },
+  {
+    "hash": "d2e1eb21",
+    "full_hash": "d2e1eb212776ad1c7a69cd54dd7640980b29f5f8",
+    "author": "Fatih Şahin <fatihpanto@gmail.com>",
+    "date": "2026-07-24T11:38:06+03:00",
+    "subject": "Update project name in README.md",
+    "stat": "d2e1eb2 Update project name in README.md\n README.md | 2 +-\n 1 file changed, 1 insertion(+), 1 deletion(-)"
+  },
+  {
+    "hash": "59c6c78b",
+    "full_hash": "59c6c78b2900052e2d225b65234da546a2f407d3",
+    "author": "SantoPanto <fatihpanto@gmail.com>",
+    "date": "2026-07-25T19:06:26+03:00",
+    "subject": "Jtw token sistemi eklendi. Google auth hizmetleri ve kullanıcı entitiy sınıfları oluşturuldu. Kullanıcı gereksinimleri ve repostorysi oluşturuldu",
+    "stat": "59c6c78 Jtw token sistemi eklendi. Google auth hizmetleri ve kullanıcı entitiy sınıfları oluşturuldu. Kullanıcı gereksinimleri ve repostorysi oluşturuldu\n pom.xml                                            | 11 ++-\n .../com/works/patimati/config/SecurityConfig.java  | 84 +++++++++++++++++++++\n .../works/patimati/controller/AuthController.java  | 66 +++++++++++++++++\n .../java/com/works/patimati/dto/AuthResponse.java  | 14 ++++\n .../com/works/patimati/dto/GoogleAuthRequest.java  | 12 +++\n src/main/java/com/works/patimati/entity/User.java  | 39 ++++++++++\n .../works/patimati/repository/UserRepository.java  | 15 ++++\n .../com/works/patimati/security/JwtAuthFilter.java | 78 ++++++++++++++++++++\n .../com/works/patimati/security/JwtService.java    | 86 ++++++++++++++++++++++\n .../security/OAuth2LoginSuccessHandler.java        | 61 +++++++++++++++\n src/main/resources/application.properties          |  1 -\n src/main/resources/application.yml                 | 22 ++++++\n 12 files changed, 485 insertions(+), 4 deletions(-)"
+  },
+  {
+    "hash": "f6b3a80c",
+    "full_hash": "f6b3a80c294f09c5418b95473bbdce935128cc6c",
+    "author": "Fatih Şahin <fatihpanto@gmail.com>",
+    "date": "2026-07-25T19:08:27+03:00",
+    "subject": "Merge pull request #1 from SantoPanto/jwt",
+    "stat": "f6b3a80 Merge pull request #1 from SantoPanto/jwt\n\n pom.xml                                            | 11 ++-\n .../com/works/patimati/config/SecurityConfig.java  | 84 +++++++++++++++++++++\n .../works/patimati/controller/AuthController.java  | 66 +++++++++++++++++\n .../java/com/works/patimati/dto/AuthResponse.java  | 14 ++++\n .../com/works/patimati/dto/GoogleAuthRequest.java  | 12 +++\n src/main/java/com/works/patimati/entity/User.java  | 39 ++++++++++\n .../works/patimati/repository/UserRepository.java  | 15 ++++\n .../com/works/patimati/security/JwtAuthFilter.java | 78 ++++++++++++++++++++\n .../com/works/patimati/security/JwtService.java    | 86 ++++++++++++++++++++++\n .../security/OAuth2LoginSuccessHandler.java        | 61 +++++++++++++++\n src/main/resources/application.properties          |  1 -\n src/main/resources/application.yml                 | 22 ++++++\n 12 files changed, 485 insertions(+), 4 deletions(-)"
+  },
+  {
+    "hash": "d9d9c6ff",
+    "full_hash": "d9d9c6ffa2544d0e2173b4d30f49d416feb5b3f2",
+    "author": "Fatih Şahin <fatihpanto@gmail.com>",
+    "date": "2026-07-25T19:09:06+03:00",
+    "subject": "Merge pull request #2 from SantoPanto/main",
+    "stat": "d9d9c6f Merge pull request #2 from SantoPanto/main\n\n .gitattributes                                     |   2 +\n .gitignore                                         |  33 +++\n .mvn/wrapper/maven-wrapper.properties              |   3 +\n README.md                                          |   2 +-\n mvnw                                               | 295 +++++++++++++++++++++\n mvnw.cmd                                           | 189 +++++++++++++\n pom.xml                                            | 172 ++++++++++++\n .../com/works/patimati/PatiMatiApplication.java    |  13 +\n .../com/works/patimati/config/SecurityConfig.java  |  84 ++++++\n .../works/patimati/controller/AuthController.java  |  66 +++++\n .../java/com/works/patimati/dto/AuthResponse.java  |  14 +\n .../com/works/patimati/dto/GoogleAuthRequest.java  |  12 +\n src/main/java/com/works/patimati/entity/User.java  |  39 +++\n .../works/patimati/repository/UserRepository.java  |  15 ++\n .../com/works/patimati/security/JwtAuthFilter.java |  78 ++++++\n .../com/works/patimati/security/JwtService.java    |  86 ++++++\n .../security/OAuth2LoginSuccessHandler.java        |  61 +++++\n src/main/resources/application.yml                 |  22 ++\n .../works/patimati/PatiMatiApplicationTests.java   |  13 +\n 19 files changed, 1198 insertions(+), 1 deletion(-)"
+  },
+  {
+    "hash": "ebb259db",
+    "full_hash": "ebb259dbce045e775d705b12f636eb69a4e6b12c",
+    "author": "SantoPanto <fatihpanto@gmail.com>",
+    "date": "2026-07-26T16:17:59+03:00",
+    "subject": "Login ve Request güvenlik önlemleri alındı ve Google bağlantısı düzenlendi",
+    "stat": "ebb259d Login ve Request güvenlik önlemleri alındı ve Google bağlantısı düzenlendi\n .../com/works/patimati/config/SecurityConfig.java  |  7 ++\n .../works/patimati/controller/AuthController.java  | 88 ++++++++++++++++++++--\n .../com/works/patimati/dto/GoogleAuthRequest.java  | 17 ++++-\n .../java/com/works/patimati/dto/LoginRequest.java  | 20 +++++\n .../com/works/patimati/dto/RegisterRequest.java    | 30 ++++++++\n src/main/java/com/works/patimati/entity/User.java  | 20 ++++-\n .../com/works/patimati/service/UserService.java    |  4 +\n 7 files changed, 174 insertions(+), 12 deletions(-)"
+  },
+  {
+    "hash": "2a7ca0b0",
+    "full_hash": "2a7ca0b074273a61a35a7b14ee249cd1a98d6f80",
+    "author": "SantoPanto <fatihpanto@gmail.com>",
+    "date": "2026-07-26T16:34:12+03:00",
+    "subject": "Servis yapısı güncellendi logout sistemi eklendi, controllerda geçici olarak yapılmış yapılar servis kısmına alındı",
+    "stat": "2a7ca0b Servis yapısı güncellendi logout sistemi eklendi, controllerda geçici olarak yapılmış yapılar servis kısmına alındı\n pom.xml                                            |   8 ++\n .../works/patimati/controller/AuthController.java  | 140 -------------------\n .../works/patimati/controller/UserController.java  |  43 ++++++\n .../com/works/patimati/service/UserService.java    | 149 ++++++++++++++++++++-\n 4 files changed, 199 insertions(+), 141 deletions(-)"
+  },
+  {
+    "hash": "4873cd8e",
+    "full_hash": "4873cd8e3094b8440ccb93f801b3e7eba393ab79",
+    "author": "SantoPanto <fatihpanto@gmail.com>",
+    "date": "2026-07-26T16:53:02+03:00",
+    "subject": "flyway eklentisi kuruldu, location için geography'ye geçildi, gist indeksi eklendi ve jwt güvenliği sağlandı",
+    "stat": "4873cd8 flyway eklentisi kuruldu, location için geography'ye geçildi, gist indeksi eklendi ve jwt güvenliği sağlandı\n .github/workflows/ci.yml                           | 25 ++++++++++++++\n src/main/resources/application.yml                 | 40 +++++++++++++++-------\n .../resources/db/migration/V1__init_schema.sql     | 15 ++++++++\n 3 files changed, 68 insertions(+), 12 deletions(-)"
+  },
+  {
+    "hash": "d6f4bb1a",
+    "full_hash": "d6f4bb1afbaa34b1c75ba11da4bc3176e3167d4f",
+    "author": "Fatih Şahin <fatihpanto@gmail.com>",
+    "date": "2026-07-26T17:12:00+03:00",
+    "subject": "Merge branch 'develop' into jwt",
+    "stat": "d6f4bb1 Merge branch 'develop' into jwt\n\n README.md                                          |  2 +-\n .../works/patimati/controller/AdController.java    | 37 ++++++++++++\n src/main/java/com/works/patimati/entity/Ad.java    | 44 +++++++++++++++\n src/main/java/com/works/patimati/entity/User.java  |  4 ++\n .../works/patimati/repository/AdRepository.java    | 18 ++++++\n .../works/patimati/repository/UserRepository.java  |  8 +++\n .../java/com/works/patimati/service/AdService.java | 65 ++++++++++++++++++++++\n src/main/resources/application.yml                 |  2 +-\n 8 files changed, 178 insertions(+), 2 deletions(-)"
+  },
+  {
+    "hash": "7fbabfa8",
+    "full_hash": "7fbabfa8293492d35f818e17974738842735e7d6",
+    "author": "Fatih Şahin <fatihpanto@gmail.com>",
+    "date": "2026-07-26T17:12:11+03:00",
+    "subject": "Merge pull request #5 from SantoPanto/jwt",
+    "stat": "7fbabfa Merge pull request #5 from SantoPanto/jwt\n\n .github/workflows/ci.yml                           |  25 ++++\n pom.xml                                            |   8 ++\n .../com/works/patimati/config/SecurityConfig.java  |   7 +\n .../works/patimati/controller/AuthController.java  |  66 ---------\n .../works/patimati/controller/UserController.java  |  43 ++++++\n .../com/works/patimati/dto/GoogleAuthRequest.java  |  17 ++-\n .../java/com/works/patimati/dto/LoginRequest.java  |  20 +++\n .../com/works/patimati/dto/RegisterRequest.java    |  30 ++++\n src/main/java/com/works/patimati/entity/User.java  |  21 ++-\n .../com/works/patimati/service/UserService.java    | 151 +++++++++++++++++++++\n src/main/resources/application.yml                 |  49 +++----\n .../resources/db/migration/V1__init_schema.sql     |  15 ++\n 12 files changed, 356 insertions(+), 96 deletions(-)"
+  },
+  {
+    "hash": "c285bfe4",
+    "full_hash": "c285bfe4700e912190f3d87492819c17c3126a49",
+    "author": "SantoPanto <fatihpanto@gmail.com>",
+    "date": "2026-07-26T19:07:51+03:00",
+    "subject": "flyway ve sql yapısı entegresi sağlandı, Dosya uyumsuzlukları giderildi, datasource dosyaları gizliye alındı",
+    "stat": "c285bfe flyway ve sql yapısı entegresi sağlandı, Dosya uyumsuzlukları giderildi, datasource dosyaları gizliye alındı\n .github/workflows/ci.yml                           | 30 ++++++++++++++++++---\n .../security/OAuth2LoginSuccessHandler.java        | 11 ++++----\n src/main/resources/application.yml                 | 22 +++++++++------\n .../resources/db/migration/V1__init_schema.sql     | 31 ++++++++++++++--------\n 4 files changed, 66 insertions(+), 28 deletions(-)"
+  },
+  {
+    "hash": "f0e2c0c9",
+    "full_hash": "f0e2c0c99ce4432e3c25b625df5cbaf6ab3295dd",
+    "author": "Fatih Şahin <fatihpanto@gmail.com>",
+    "date": "2026-07-27T12:17:41+03:00",
+    "subject": "Merge pull request #6 from SantoPanto/ad-management",
+    "stat": "f0e2c0c Merge pull request #6 from SantoPanto/ad-management\n\n src/main/java/com/works/patimati/entity/Ad.java    | 36 ++++++++++++-\n .../com/works/patimati/entity/enums/AgeGroup.java  |  9 ++++\n .../works/patimati/entity/enums/CoatPattern.java   | 12 +++++\n .../com/works/patimati/entity/enums/EyeColor.java  | 12 +++++\n .../com/works/patimati/entity/enums/PetColor.java  | 13 +++++\n .../com/works/patimati/entity/enums/PetGender.java |  7 +++\n .../patimati/entity/enums/PresenceStatus.java      |  7 +++\n .../com/works/patimati/entity/enums/Species.java   |  7 +++\n src/main/resources/application.yml                 |  2 +-\n .../db/migration/V2__extend_ads_for_management.sql | 28 ++++++++++\n .../V3__add_pet_profile_fields_to_ads.sql          | 62 ++++++++++++++++++++++\n 11 files changed, 193 insertions(+), 2 deletions(-)"
+  },
+  {
+    "hash": "9b319114",
+    "full_hash": "9b319114f41a207796a34b4a56a27334d4670547",
+    "author": "SantoPanto <fatihpanto@gmail.com>",
+    "date": "2026-07-27T17:54:17+03:00",
+    "subject": "User register ve login güvenlikleri sağlandı, Global expection yönetimi hazırlandı ve sql sorguları düzenlendi.",
+    "stat": "9b31911 User register ve login güvenlikleri sağlandı, Global expection yönetimi hazırlandı ve sql sorguları düzenlendi.\n pom.xml                                            |  4 ++\n .../com/works/patimati/config/SecurityConfig.java  | 58 +++++++++++++++-------\n .../config/ValidationExceptionHandler.java         | 29 +++++++++++\n .../com/works/patimati/dto/RegisterRequest.java    | 24 ++++-----\n src/main/java/com/works/patimati/entity/User.java  |  5 +-\n .../works/patimati/repository/UserRepository.java  |  2 +\n .../com/works/patimati/service/UserService.java    |  9 ++++\n 7 files changed, 98 insertions(+), 33 deletions(-)"
+  },
+  {
+    "hash": "28c6820a",
+    "full_hash": "28c6820ae77557d7d6767e3b7920877590652b79",
+    "author": "Fatih Şahin <fatihpanto@gmail.com>",
+    "date": "2026-07-28T13:12:10+03:00",
+    "subject": "Merge pull request #7 from SantoPanto/ad-management",
+    "stat": "28c6820 Merge pull request #7 from SantoPanto/ad-management\n\n pom.xml                                            |  25 +-\n .../java/com/works/patimati/config/S3Config.java   |  82 +++++++\n .../works/patimati/config/S3StorageProperties.java |  52 ++++\n .../works/patimati/controller/AdController.java    | 158 +++++++++++--\n .../com/works/patimati/dto/ad/AdCreateRequest.java |  82 +++++++\n .../java/com/works/patimati/dto/ad/AdResponse.java |  46 ++++\n .../com/works/patimati/dto/ad/AdUpdateRequest.java |  82 +++++++\n src/main/java/com/works/patimati/entity/Ad.java    |  81 ++++++-\n .../patimati/exception/GlobalExceptionHandler.java | 156 ++++++++++++\n .../exception/ResourceNotFoundException.java       |   8 +\n .../java/com/works/patimati/mapper/AdMapper.java   | 211 +++++++++++++++++\n .../works/patimati/repository/AdRepository.java    |  32 ++-\n .../java/com/works/patimati/service/AdService.java | 209 ++++++++++++++--\n .../patimati/storage/ImageStorageException.java    |   8 +\n .../patimati/storage/ImageStorageService.java      |  24 ++\n .../patimati/storage/InvalidImageException.java    |   8 +\n .../patimati/storage/S3ImageStorageService.java    | 263 +++++++++++++++++++++\n .../patimati/controller/AdControllerTest.java      | 242 +++++++++++++++++++\n .../com/works/patimati/mapper/AdMapperTest.java    | 118 +++++++++\n .../com/works/patimati/service/AdServiceTest.java  | 190 +++++++++++++++\n .../storage/S3ImageStorageServiceTest.java         | 184 ++++++++++++++\n 21 files changed, 2218 insertions(+), 43 deletions(-)"
+  },
+  {
+    "hash": "7a796ec9",
+    "full_hash": "7a796ec96e1e35b00254fd5ad62eaedeb6abf1c9",
+    "author": "SantoPanto <fatihpanto@gmail.com>",
+    "date": "2026-07-28T14:31:37+03:00",
+    "subject": "Şifremi unuttum servisleri yazıldı ve sql sorguları oluşturuldu.",
+    "stat": "7a796ec Şifremi unuttum servisleri yazıldı ve sql sorguları oluşturuldu.\n .../com/works/patimati/config/SecurityConfig.java  |  4 +-\n .../works/patimati/controller/UserController.java  | 16 +++-\n .../works/patimati/dto/ForgotPasswordRequest.java  | 12 +++\n .../works/patimati/dto/ResetPasswordRequest.java   | 15 ++++\n .../works/patimati/entity/PasswordResetToken.java  | 34 ++++++++\n .../repository/PasswordResetTokenRepository.java   | 15 ++++\n .../com/works/patimati/security/JwtAuthFilter.java | 11 +++\n .../patimati/service/PasswordResetService.java     | 99 ++++++++++++++++++++++\n src/main/resources/application.yml                 | 11 ++-\n .../V4__create_password_reset_tokens_table.sql     | 13 +++\n 10 files changed, 224 insertions(+), 6 deletions(-)"
+  },
+  {
+    "hash": "69464c50",
+    "full_hash": "69464c508be80fe5ab1950f08f782de3e3f22702",
+    "author": "Fatih Şahin <fatihpanto@gmail.com>",
+    "date": "2026-07-28T14:32:36+03:00",
+    "subject": "Merge pull request #8 from SantoPanto/develop",
+    "stat": "69464c5 Merge pull request #8 from SantoPanto/develop\n\n .github/workflows/ci.yml                           |  30 ++-\n pom.xml                                            |  29 ++-\n .../java/com/works/patimati/config/S3Config.java   |  82 +++++++\n .../works/patimati/config/S3StorageProperties.java |  52 ++++\n .../com/works/patimati/config/SecurityConfig.java  |  62 +++--\n .../config/ValidationExceptionHandler.java         |  29 +++\n .../works/patimati/controller/AdController.java    | 158 +++++++++++--\n .../works/patimati/controller/UserController.java  |  16 +-\n .../works/patimati/dto/ForgotPasswordRequest.java  |  12 +\n .../com/works/patimati/dto/RegisterRequest.java    |  24 +-\n .../works/patimati/dto/ResetPasswordRequest.java   |  15 ++\n .../com/works/patimati/dto/ad/AdCreateRequest.java |  82 +++++++\n .../java/com/works/patimati/dto/ad/AdResponse.java |  46 ++++\n .../com/works/patimati/dto/ad/AdUpdateRequest.java |  82 +++++++\n src/main/java/com/works/patimati/entity/Ad.java    | 109 ++++++++-\n .../works/patimati/entity/PasswordResetToken.java  |  34 +++\n src/main/java/com/works/patimati/entity/User.java  |   5 +-\n .../com/works/patimati/entity/enums/AgeGroup.java  |   9 +\n .../works/patimati/entity/enums/CoatPattern.java   |  12 +\n .../com/works/patimati/entity/enums/EyeColor.java  |  12 +\n .../com/works/patimati/entity/enums/PetColor.java  |  13 +\n .../com/works/patimati/entity/enums/PetGender.java |   7 +\n .../patimati/entity/enums/PresenceStatus.java      |   7 +\n .../com/works/patimati/entity/enums/Species.java   |   7 +\n .../patimati/exception/GlobalExceptionHandler.java | 156 ++++++++++++\n .../exception/ResourceNotFoundException.java       |   8 +\n .../java/com/works/patimati/mapper/AdMapper.java   | 211 +++++++++++++++++\n .../works/patimati/repository/AdRepository.java    |  32 ++-\n .../repository/PasswordResetTokenRepository.java   |  15 ++\n .../works/patimati/repository/UserRepository.java  |   2 +\n .../com/works/patimati/security/JwtAuthFilter.java |  11 +\n .../security/OAuth2LoginSuccessHandler.java        |  11 +-\n .../java/com/works/patimati/service/AdService.java | 209 ++++++++++++++--\n .../patimati/service/PasswordResetService.java     |  99 ++++++++\n .../com/works/patimati/service/UserService.java    |   9 +\n .../patimati/storage/ImageStorageException.java    |   8 +\n .../patimati/storage/ImageStorageService.java      |  24 ++\n .../patimati/storage/InvalidImageException.java    |   8 +\n .../patimati/storage/S3ImageStorageService.java    | 263 +++++++++++++++++++++\n src/main/resources/application.yml                 |  31 ++-\n .../resources/db/migration/V1__init_schema.sql     |  31 ++-\n .../db/migration/V2__extend_ads_for_management.sql |  28 +++\n .../V3__add_pet_profile_fields_to_ads.sql          |  62 +++++\n .../V4__create_password_reset_tokens_table.sql     |  13 +\n .../patimati/controller/AdControllerTest.java      | 242 +++++++++++++++++++\n .../com/works/patimati/mapper/AdMapperTest.java    | 118 +++++++++\n .../com/works/patimati/service/AdServiceTest.java  | 190 +++++++++++++++\n .../storage/S3ImageStorageServiceTest.java         | 184 ++++++++++++++\n 48 files changed, 2793 insertions(+), 106 deletions(-)"
+  },
+  {
+    "hash": "b56b71ce",
+    "full_hash": "b56b71ce9e59026db9696bd8fe3c40dc2b08fb18",
+    "author": "SantoPanto <fatihpanto@gmail.com>",
+    "date": "2026-07-29T13:51:30+03:00",
+    "subject": "Raporlama sistemi oluşturuldu, Enum sistemiyle konular belirlendi, test için ilanların değiştirilmesi bekleniyor.",
+    "stat": "b56b71c Raporlama sistemi oluşturuldu, Enum sistemiyle konular belirlendi, test için ilanların değiştirilmesi bekleniyor.\n pom.xml                                            |   4 -\n .../patimati/controller/ComplaintController.java   |  40 ++++++++\n .../patimati/dto/complaint/ComplaintRequest.java   |  28 ++++++\n .../patimati/dto/complaint/ComplaintResponse.java  |  19 ++++\n .../java/com/works/patimati/entity/Complaint.java  |  62 ++++++++++++\n .../patimati/entity/enums/ComplaintReason.java     |   9 ++\n .../patimati/entity/enums/ComplaintStatus.java     |   7 ++\n .../patimati/repository/ComplaintRepository.java   |  36 +++++++\n .../works/patimati/service/ComplaintService.java   | 109 +++++++++++++++++++++\n 9 files changed, 310 insertions(+), 4 deletions(-)"
+  },
+  {
+    "hash": "5f996c0d",
+    "full_hash": "5f996c0d2d8c593405ee8a2b0698c70bc7b24300",
+    "author": "Fatih Şahin <fatihpanto@gmail.com>",
+    "date": "2026-07-29T13:53:02+03:00",
+    "subject": "Merge pull request #10 from SantoPanto/jwt",
+    "stat": "5f996c0 Merge pull request #10 from SantoPanto/jwt\n\n pom.xml                                            |   4 -\n .../patimati/controller/ComplaintController.java   |  40 ++++++++\n .../patimati/dto/complaint/ComplaintRequest.java   |  28 ++++++\n .../patimati/dto/complaint/ComplaintResponse.java  |  19 ++++\n .../java/com/works/patimati/entity/Complaint.java  |  62 ++++++++++++\n .../patimati/entity/enums/ComplaintReason.java     |   9 ++\n .../patimati/entity/enums/ComplaintStatus.java     |   7 ++\n .../patimati/repository/ComplaintRepository.java   |  36 +++++++\n .../works/patimati/service/ComplaintService.java   | 109 +++++++++++++++++++++\n 9 files changed, 310 insertions(+), 4 deletions(-)"
+  },
+  {
+    "hash": "516fc4c8",
+    "full_hash": "516fc4c8d8011d568a3c1644331d0f16bd3cedb0",
+    "author": "SantoPanto <fatihpanto@gmail.com>",
+    "date": "2026-07-29T14:02:28+03:00",
+    "subject": "Expection yönetimi birleştirildi ve securityconfig dosyası json formatına göre düzenlendi",
+    "stat": "516fc4c Expection yönetimi birleştirildi ve securityconfig dosyası json formatına göre düzenlendi\n .../com/works/patimati/config/SecurityConfig.java  | 22 +++++++++++++---\n .../config/ValidationExceptionHandler.java         | 29 ----------------------\n 2 files changed, 18 insertions(+), 33 deletions(-)"
+  },
+  {
+    "hash": "ccd85351",
+    "full_hash": "ccd8535181456a15f2fdb72c0a14a71f49699b46",
+    "author": "SantoPanto <fatihpanto@gmail.com>",
+    "date": "2026-07-29T15:00:16+03:00",
+    "subject": "Logout işlemi için bildirim durdurma eklendi",
+    "stat": "ccd8535 Logout işlemi için bildirim durdurma eklendi\n .../java/com/works/patimati/service/UserService.java | 20 ++++++++++++++++++--\n 1 file changed, 18 insertions(+), 2 deletions(-)"
+  },
+  {
+    "hash": "450468e6",
+    "full_hash": "450468e6547b5f93961a4bb50224cc240ea380dd",
+    "author": "Fatih Şahin <fatihpanto@gmail.com>",
+    "date": "2026-07-29T15:04:11+03:00",
+    "subject": "Merge pull request #11 from SantoPanto/jwt",
+    "stat": "450468e Merge pull request #11 from SantoPanto/jwt\n\n .../com/works/patimati/config/SecurityConfig.java  | 22 +++++++++++++---\n .../config/ValidationExceptionHandler.java         | 29 ----------------------\n .../com/works/patimati/service/UserService.java    | 20 +++++++++++++--\n 3 files changed, 36 insertions(+), 35 deletions(-)"
+  },
+  {
+    "hash": "1d0fa5ce",
+    "full_hash": "1d0fa5ce7613cf245a51f5003c0ac1a79940f222",
+    "author": "SantoPanto <fatihpanto@gmail.com>",
+    "date": "2026-07-29T16:29:03+03:00",
+    "subject": "Google Auth kısmında google tarafından alınan isim google kurallarınca düzenlendi ve isim soyisim bölünümü 'verilen isim' ve 'aile ismi' şeklinde parçlanıp hazırlandı. Default user değeri enabled!",
+    "stat": "1d0fa5c Google Auth kısmında google tarafından alınan isim google kurallarınca düzenlendi ve isim soyisim bölünümü 'verilen isim' ve 'aile ismi' şeklinde parçlanıp hazırlandı. Default user değeri enabled!\n .../security/OAuth2LoginSuccessHandler.java        | 32 +++++++++++++++++-----\n 1 file changed, 25 insertions(+), 7 deletions(-)"
+  },
+  {
+    "hash": "9edb13aa",
+    "full_hash": "9edb13aa582df01057a012f8799036de1d6f894c",
+    "author": "Fatih Şahin <fatihpanto@gmail.com>",
+    "date": "2026-07-29T16:29:39+03:00",
+    "subject": "Merge pull request #12 from SantoPanto/jwt",
+    "stat": "9edb13a Merge pull request #12 from SantoPanto/jwt\n\n .../security/OAuth2LoginSuccessHandler.java        | 32 +++++++++++++++++-----\n 1 file changed, 25 insertions(+), 7 deletions(-)"
+  },
+  {
+    "hash": "57a51f30",
+    "full_hash": "57a51f30576d065ec7a0a564f4ed9963cc655bab",
+    "author": "Fatih Şahin <fatihpanto@gmail.com>",
+    "date": "2026-07-30T14:11:27+03:00",
+    "subject": "Merge pull request #16 from SantoPanto/feature/ad-refactoring",
+    "stat": "57a51f3 Merge pull request #16 from SantoPanto/feature/ad-refactoring\n\n .../works/patimati/controller/AdController.java    | 28 ++-----\n .../java/com/works/patimati/service/AdService.java | 88 +++++++++-------------\n 2 files changed, 43 insertions(+), 73 deletions(-)"
+  },
+  {
+    "hash": "5d705179",
+    "full_hash": "5d7051798e1fde55b3a13739b8f87c3c74e62bef",
+    "author": "Fatih Şahin <fatihpanto@gmail.com>",
+    "date": "2026-07-30T16:32:25+03:00",
+    "subject": "Merge pull request #17 from SantoPanto/feature/ai-kuyruk-koprusu",
+    "stat": "5d70517 Merge pull request #17 from SantoPanto/feature/ai-kuyruk-koprusu\n\n pom.xml                                            |  27 +++\n .../com/works/patimati/ai/AiAnalysisListener.java  | 175 ++++++++++++++\n .../com/works/patimati/ai/AiAnalysisPublisher.java | 261 +++++++++++++++++++++\n .../java/com/works/patimati/ai/AiCandidateRow.java |  17 ++\n .../com/works/patimati/ai/AiMatchNotifier.java     |  95 ++++++++\n .../java/com/works/patimati/ai/AiRabbitConfig.java | 152 ++++++++++++\n .../works/patimati/ai/dto/AiAnalysisRequest.java   |  29 +++\n .../works/patimati/ai/dto/AiAnalysisResult.java    | 114 +++++++++\n .../com/works/patimati/ai/dto/AiCandidate.java     |  30 +++\n src/main/java/com/works/patimati/entity/Ad.java    |  65 +++++\n .../com/works/patimati/entity/enums/AiStatus.java  |  17 ++\n .../works/patimati/repository/AdRepository.java    |  49 ++++\n .../java/com/works/patimati/service/AdService.java |   9 +\n src/main/resources/application.yml                 |  22 ++\n .../db/migration/V5__add_ai_fields_to_ads.sql      |  45 ++++\n 15 files changed, 1107 insertions(+)"
+  },
+  {
+    "hash": "6de16124",
+    "full_hash": "6de161245c89abf4e3c652e60c2b5ef73f31552e",
+    "author": "Fatih Şahin <fatihpanto@gmail.com>",
+    "date": "2026-07-30T17:38:12+03:00",
+    "subject": "Merge pull request #18 from SantoPanto/fix/test-derlemesi",
+    "stat": "6de1612 Merge pull request #18 from SantoPanto/fix/test-derlemesi\n\n .../works/patimati/controller/AdController.java    | 27 +++++++++++++++---\n .../java/com/works/patimati/service/AdService.java | 32 ++++++++++++++++++++--\n .../com/works/patimati/service/AdServiceTest.java  | 10 ++++++-\n 3 files changed, 62 insertions(+), 7 deletions(-)"
+  },
+  {
+    "hash": "0b0fc40e",
+    "full_hash": "0b0fc40e6ef3f272dd16f43e5450547e37c1dcdb",
+    "author": "Fatih Şahin <fatihpanto@gmail.com>",
+    "date": "2026-07-31T10:27:32+03:00",
+    "subject": "Merge pull request #19 from SantoPanto/websocket-messaging",
+    "stat": "0b0fc40 Merge pull request #19 from SantoPanto/websocket-messaging\n\n .../com/works/patimati/config/WebSocketConfig.java | 72 ++++++++++++++++++\n .../works/patimati/config/WebSocketProperties.java | 28 +++++++\n src/main/resources/application.yml                 |  7 +-\n .../works/patimati/config/WebSocketConfigTest.java | 88 ++++++++++++++++++++++\n 4 files changed, 194 insertions(+), 1 deletion(-)"
+  },
+  {
+    "hash": "7eef6053",
+    "full_hash": "7eef605362cbdb2ce91b75c238eefb7041fc8732",
+    "author": "Fatih Şahin <fatihpanto@gmail.com>",
+    "date": "2026-07-31T16:28:04+03:00",
+    "subject": "Merge pull request #20 from SantoPanto/websocket-messaging",
+    "stat": "7eef605 Merge pull request #20 from SantoPanto/websocket-messaging\n\n .../com/works/patimati/config/SecurityConfig.java  |  12 +-\n .../com/works/patimati/config/WebSocketConfig.java |  25 ++-\n .../security/WebSocketChannelInterceptor.java      | 132 ++++++++++++++\n .../works/patimati/config/WebSocketConfigTest.java |  26 ++-\n .../security/WebSocketChannelInterceptorTest.java  | 195 +++++++++++++++++++++\n 5 files changed, 386 insertions(+), 4 deletions(-)"
+  },
+  {
+    "hash": "bfb2aa51",
+    "full_hash": "bfb2aa51414a652681721424fab16db215030af9",
+    "author": "SantoPanto <fatihpanto@gmail.com>",
+    "date": "2026-08-03T10:36:39+03:00",
+    "subject": "Userlist oluşturuldu ve servisler ayağa kaldırıldı. Şikayet isteğinde ufak bir bugfix yapıldı !Önemli not: List şu anda genel kullanıcıya açık ileride admin'e döndürülmesi gerekli!!!",
+    "stat": "bfb2aa5 Userlist oluşturuldu ve servisler ayağa kaldırıldı. Şikayet isteğinde ufak bir bugfix yapıldı !Önemli not: List şu anda genel kullanıcıya açık ileride admin'e döndürülmesi gerekli!!!\n .../works/patimati/controller/UserController.java  |   9 +\n .../works/patimati/dto/User/UserResponseDTO.java   |  22 +++\n .../patimati/entity/enums/ComplaintReason.java     |  30 +++-\n .../patimati/exception/GlobalExceptionHandler.java |  72 +++++++-\n .../com/works/patimati/service/UserService.java    |  12 ++\n .../controller/ComplaintControllerTest.java        | 182 +++++++++++++++++++++\n .../patimati/entity/enums/ComplaintReasonTest.java |  38 +++++\n 7 files changed, 361 insertions(+), 4 deletions(-)"
+  },
+  {
+    "hash": "54ca2741",
+    "full_hash": "54ca27413f24cd44532e6de50652507666b626fe",
+    "author": "SantoPanto <fatihpanto@gmail.com>",
+    "date": "2026-08-04T10:16:13+03:00",
+    "subject": "Şikayet bölümü oluşturuldu ve birim testleri yapıldı",
+    "stat": "54ca274 Şikayet bölümü oluşturuldu ve birim testleri yapıldı\n .../patimati/controller/ComplaintController.java   |  46 ++++-\n .../dto/complaint/AdComplaintRequestDTO.java       |  41 +++++\n ...ntRequest.java => UserComplaintRequestDTO.java} |  18 +-\n .../patimati/exception/GlobalExceptionHandler.java |  34 +++-\n .../works/patimati/service/ComplaintService.java   | 124 +++++++++----\n .../controller/ComplaintControllerTest.java        | 109 +++++++++--\n .../patimati/service/ComplaintServiceTest.java     | 205 +++++++++++++++++++++\n 7 files changed, 509 insertions(+), 68 deletions(-)"
+  },
+  {
+    "hash": "80984d67",
+    "full_hash": "80984d670b043251558632e134c76d04bfbe1130",
+    "author": "SantoPanto <fatihpanto@gmail.com>",
+    "date": "2026-08-04T11:40:08+03:00",
+    "subject": "İlan servisine ilanları listeleme özelliği eklendi. İlanları oluşturmada kullanılan firebase veya fotoğraf kontrolleri geçici olarak askıya alındı ve ilan ai status için bir enum dosyası oluşturuldu. İlanların ve şikayetlerin testleri gerçekleştirildi ve sistemsel geliştirmeler planlanıyor. Önemli not: Askıya alınan önlemler ilerde sunucu düzeyine çıkıldığında mutlaka yeniden fonksiyonel hale getirilmelidir.",
+    "stat": "80984d6 İlan servisine ilanları listeleme özelliği eklendi. İlanları oluşturmada kullanılan firebase veya fotoğraf kontrolleri geçici olarak askıya alındı ve ilan ai status için bir enum dosyası oluşturuldu. İlanların ve şikayetlerin testleri gerçekleştirildi ve sistemsel geliştirmeler planlanıyor. Önemli not: Askıya alınan önlemler ilerde sunucu düzeyine çıkıldığında mutlaka yeniden fonksiyonel hale getirilmelidir.\n .../com/works/patimati/config/SecurityConfig.java  |  3 +-\n .../works/patimati/controller/AdController.java    |  6 +++\n src/main/java/com/works/patimati/entity/Ad.java    |  9 ++++-\n .../com/works/patimati/entity/enums/AiStatus.java  |  7 ++++\n .../java/com/works/patimati/service/AdService.java | 44 ++++++++++++++++++----\n 5 files changed, 59 insertions(+), 10 deletions(-)"
+  },
+  {
+    "hash": "6db493dc",
+    "full_hash": "6db493dc50613d86614f44ba88abc358c7364132",
+    "author": "Fatih Şahin <fatihpanto@gmail.com>",
+    "date": "2026-08-04T11:43:15+03:00",
+    "subject": "Merge branch 'develop' into jwt",
+    "stat": "6db493d Merge branch 'develop' into jwt\n\n pom.xml                                            |  27 +++\n .../com/works/patimati/ai/AiAnalysisListener.java  | 175 ++++++++++++++\n .../com/works/patimati/ai/AiAnalysisPublisher.java | 261 +++++++++++++++++++++\n .../java/com/works/patimati/ai/AiCandidateRow.java |  17 ++\n .../com/works/patimati/ai/AiMatchNotifier.java     |  95 ++++++++\n .../java/com/works/patimati/ai/AiRabbitConfig.java | 152 ++++++++++++\n .../works/patimati/ai/dto/AiAnalysisRequest.java   |  29 +++\n .../works/patimati/ai/dto/AiAnalysisResult.java    | 114 +++++++++\n .../com/works/patimati/ai/dto/AiCandidate.java     |  30 +++\n .../com/works/patimati/config/SecurityConfig.java  |  10 +\n .../com/works/patimati/config/WebSocketConfig.java |  93 ++++++++\n .../works/patimati/config/WebSocketProperties.java |  28 +++\n .../works/patimati/controller/AdController.java    |  35 +--\n src/main/java/com/works/patimati/entity/Ad.java    |  65 +++++\n .../com/works/patimati/entity/enums/AiStatus.java  |   2 +-\n .../works/patimati/repository/AdRepository.java    |  49 ++++\n .../security/WebSocketChannelInterceptor.java      | 132 +++++++++++\n .../java/com/works/patimati/service/AdService.java |  64 +++--\n src/main/resources/application.yml                 |  29 ++-\n .../db/migration/V5__add_ai_fields_to_ads.sql      |  45 ++++\n .../works/patimati/config/WebSocketConfigTest.java | 112 +++++++++\n .../security/WebSocketChannelInterceptorTest.java  | 195 +++++++++++++++\n .../com/works/patimati/service/AdServiceTest.java  |  10 +-\n 23 files changed, 1726 insertions(+), 43 deletions(-)"
+  },
+  {
+    "hash": "de428912",
+    "full_hash": "de4289125482b72ae0483311fde5abb121e74bea",
+    "author": "Fatih Şahin <fatihpanto@gmail.com>",
+    "date": "2026-08-04T11:47:04+03:00",
+    "subject": "Merge pull request #22 from SantoPanto/jwt",
+    "stat": "de42891 Merge pull request #22 from SantoPanto/jwt\n\n .../com/works/patimati/config/SecurityConfig.java  |   1 +\n .../works/patimati/controller/AdController.java    |   8 +-\n .../patimati/controller/ComplaintController.java   |  46 +++-\n .../works/patimati/controller/UserController.java  |   9 +\n .../works/patimati/dto/User/UserResponseDTO.java   |  22 ++\n .../dto/complaint/AdComplaintRequestDTO.java       |  41 ++++\n ...ntRequest.java => UserComplaintRequestDTO.java} |  18 +-\n src/main/java/com/works/patimati/entity/Ad.java    |   9 +-\n .../com/works/patimati/entity/enums/AiStatus.java  |  14 +-\n .../patimati/entity/enums/ComplaintReason.java     |  30 ++-\n .../patimati/exception/GlobalExceptionHandler.java | 102 ++++++++-\n .../java/com/works/patimati/service/AdService.java |  77 ++++---\n .../works/patimati/service/ComplaintService.java   | 124 ++++++----\n .../com/works/patimati/service/UserService.java    |  12 +\n .../controller/ComplaintControllerTest.java        | 253 +++++++++++++++++++++\n .../patimati/entity/enums/ComplaintReasonTest.java |  38 ++++\n .../patimati/service/ComplaintServiceTest.java     | 205 +++++++++++++++++\n 17 files changed, 916 insertions(+), 93 deletions(-)"
+  },
+  {
+    "hash": "84b4edab",
+    "full_hash": "84b4edab41e1487db6e5df64df6487f27c285e99",
+    "author": "SantoPanto <fatihpanto@gmail.com>",
+    "date": "2026-08-04T13:36:21+03:00",
+    "subject": "Şikayet oluşturma ilan ve kişi özelinde ikiye ayrıldı ve servisleri data tablosuyla beraber tekrar oluşturuldu",
+    "stat": "84b4eda Şikayet oluşturma ilan ve kişi özelinde ikiye ayrıldı ve servisleri data tablosuyla beraber tekrar oluşturuldu\n .../patimati/controller/ComplaintController.java   |  27 +--\n .../com/works/patimati/entity/AdComplaint.java     |  78 ++++++++\n .../java/com/works/patimati/entity/Complaint.java  |  62 -------\n .../com/works/patimati/entity/UserComplaint.java   |  76 ++++++++\n .../patimati/repository/AdComplaintRepository.java |  41 +++++\n .../patimati/repository/ComplaintRepository.java   |  36 ----\n .../repository/UserComplaintRepository.java        |  41 +++++\n .../works/patimati/service/AdComplaintService.java |  98 ++++++++++\n .../works/patimati/service/ComplaintService.java   | 155 ----------------\n .../patimati/service/UserComplaintService.java     |  91 +++++++++\n src/main/resources/application.yml                 |   2 +-\n .../V7__create_decoupled_complaint_tables.sql      |  37 ++++\n .../controller/ComplaintControllerTest.java        |  27 +--\n .../patimati/service/AdComplaintServiceTest.java   | 143 ++++++++++++++\n .../patimati/service/ComplaintServiceTest.java     | 205 ---------------------\n .../patimati/service/UserComplaintServiceTest.java | 110 +++++++++++\n 16 files changed, 746 insertions(+), 483 deletions(-)"
+  },
+  {
+    "hash": "375a63d0",
+    "full_hash": "375a63d09e5362f2893a60f67e86b7953658641d",
+    "author": "SantoPanto <fatihpanto@gmail.com>",
+    "date": "2026-08-04T13:36:58+03:00",
+    "subject": "Merge branch 'jwt' of https://github.com/SantoPanto/PATIMATI---BACKEND into jwt",
+    "stat": "375a63d Merge branch 'jwt' of https://github.com/SantoPanto/PATIMATI---BACKEND into jwt\n\n pom.xml                                            |  27 +++\n .../com/works/patimati/ai/AiAnalysisListener.java  | 175 ++++++++++++++\n .../com/works/patimati/ai/AiAnalysisPublisher.java | 261 +++++++++++++++++++++\n .../java/com/works/patimati/ai/AiCandidateRow.java |  17 ++\n .../com/works/patimati/ai/AiMatchNotifier.java     |  95 ++++++++\n .../java/com/works/patimati/ai/AiRabbitConfig.java | 152 ++++++++++++\n .../works/patimati/ai/dto/AiAnalysisRequest.java   |  29 +++\n .../works/patimati/ai/dto/AiAnalysisResult.java    | 114 +++++++++\n .../com/works/patimati/ai/dto/AiCandidate.java     |  30 +++\n .../com/works/patimati/config/SecurityConfig.java  |  10 +\n .../com/works/patimati/config/WebSocketConfig.java |  93 ++++++++\n .../works/patimati/config/WebSocketProperties.java |  28 +++\n .../works/patimati/controller/AdController.java    |  35 +--\n src/main/java/com/works/patimati/entity/Ad.java    |  65 +++++\n .../com/works/patimati/entity/enums/AiStatus.java  |   2 +-\n .../works/patimati/repository/AdRepository.java    |  49 ++++\n .../security/WebSocketChannelInterceptor.java      | 132 +++++++++++\n .../java/com/works/patimati/service/AdService.java |  64 +++--\n src/main/resources/application.yml                 |  29 ++-\n .../db/migration/V5__add_ai_fields_to_ads.sql      |  45 ++++\n .../works/patimati/config/WebSocketConfigTest.java | 112 +++++++++\n .../security/WebSocketChannelInterceptorTest.java  | 195 +++++++++++++++\n .../com/works/patimati/service/AdServiceTest.java  |  10 +-\n 23 files changed, 1726 insertions(+), 43 deletions(-)"
+  },
+  {
+    "hash": "78aa7d36",
+    "full_hash": "78aa7d36cfd3160923256085916903279c0f0243",
+    "author": "Fatih Şahin <fatihpanto@gmail.com>",
+    "date": "2026-08-04T13:39:40+03:00",
+    "subject": "Merge pull request #23 from SantoPanto/jwt",
+    "stat": "78aa7d3 Merge pull request #23 from SantoPanto/jwt\n\n .../patimati/controller/ComplaintController.java   |  27 +--\n .../com/works/patimati/entity/AdComplaint.java     |  78 ++++++++\n .../java/com/works/patimati/entity/Complaint.java  |  62 -------\n .../com/works/patimati/entity/UserComplaint.java   |  76 ++++++++\n .../patimati/repository/AdComplaintRepository.java |  41 +++++\n .../patimati/repository/ComplaintRepository.java   |  36 ----\n .../repository/UserComplaintRepository.java        |  41 +++++\n .../works/patimati/service/AdComplaintService.java |  98 ++++++++++\n .../works/patimati/service/ComplaintService.java   | 155 ----------------\n .../patimati/service/UserComplaintService.java     |  91 +++++++++\n src/main/resources/application.yml                 |   2 +-\n .../V7__create_decoupled_complaint_tables.sql      |  37 ++++\n .../controller/ComplaintControllerTest.java        |  27 +--\n .../patimati/service/AdComplaintServiceTest.java   | 143 ++++++++++++++\n .../patimati/service/ComplaintServiceTest.java     | 205 ---------------------\n .../patimati/service/UserComplaintServiceTest.java | 110 +++++++++++\n 16 files changed, 746 insertions(+), 483 deletions(-)"
+  },
+  {
+    "hash": "99980eb3",
+    "full_hash": "99980eb3e25a81e68804783e627f2a004cf7eb47",
+    "author": "Fatih Şahin <fatihpanto@gmail.com>",
+    "date": "2026-08-04T13:41:58+03:00",
+    "subject": "Remove comments for uid field in User class",
+    "stat": "99980eb Remove comments for uid field in User class\n src/main/java/com/works/patimati/entity/User.java | 7 +------\n 1 file changed, 1 insertion(+), 6 deletions(-)"
+  },
+  {
+    "hash": "910f365c",
+    "full_hash": "910f365c8e7142a06d94720284a333274c18d6d7",
+    "author": "Fatih Şahin <fatihpanto@gmail.com>",
+    "date": "2026-08-04T13:42:40+03:00",
+    "subject": "Merge pull request #21 from SantoPanto/websocket-messaging",
+    "stat": "910f365 Merge pull request #21 from SantoPanto/websocket-messaging\n\n .../java/com/works/patimati/entity/Message.java    | 105 +++++++++++++++++++++\n src/main/java/com/works/patimati/entity/User.java  |   2 +-\n .../patimati/repository/MessageRepository.java     |  62 ++++++++++++\n .../db/migration/V6__create_messages_table.sql     |  67 +++++++++++++\n .../com/works/patimati/entity/MessageTest.java     |  79 ++++++++++++++++\n 5 files changed, 314 insertions(+), 1 deletion(-)"
+  }
+]

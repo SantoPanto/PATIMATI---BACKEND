@@ -1,0 +1,206 @@
+[
+  {
+    "full_hash": "1f283e81fd56c5f2ba128803393a7255d4cff901",
+    "hash": "1f283e81",
+    "author_name": "Fatih Şahin",
+    "author_email": "fatihpanto@gmail.com",
+    "date": "2026-07-24T11:49:09+03:00",
+    "parents": [],
+    "is_merge": false,
+    "subject": "Initial commit",
+    "raw_message": "Initial commit",
+    "name_status": ""
+  },
+  {
+    "full_hash": "14eff144352d1f51f129b469bbbf3b4ff8ec3dee",
+    "hash": "14eff144",
+    "author_name": "Fatih Şahin",
+    "author_email": "fatihpanto@gmail.com",
+    "date": "2026-08-17T09:38:06+03:00",
+    "parents": [
+      "09256250945b48598e873207f290f9d575f547d0",
+      "175e41bde01b0b86ec6c1cc08fb68ff5873ab120"
+    ],
+    "is_merge": true,
+    "subject": "Merge pull request #19 from SantoPanto/fix/docker-giris-noktasi",
+    "raw_message": "Merge pull request #19 from SantoPanto/fix/docker-giris-noktasi",
+    "name_status": ""
+  },
+  {
+    "full_hash": "0b8a86406639fa0490ba21208f71286ef411697a",
+    "hash": "0b8a8640",
+    "author_name": "Fatih Şahin",
+    "author_email": "fatihpanto@gmail.com",
+    "date": "2026-08-17T09:38:24+03:00",
+    "parents": [
+      "14eff144352d1f51f129b469bbbf3b4ff8ec3dee",
+      "822e18c7ab9cc87c82ac26ba494b9c4637575c8a"
+    ],
+    "is_merge": true,
+    "subject": "Merge pull request #18 from SantoPanto/feature/nlp-rabbitmq",
+    "raw_message": "Merge pull request #18 from SantoPanto/feature/nlp-rabbitmq",
+    "name_status": ""
+  },
+  {
+    "full_hash": "3003e3fe8c4138389e53eae36fd656dbd619c3c7",
+    "hash": "3003e3fe",
+    "author_name": "Fatih Şahin",
+    "author_email": "fatihpanto@gmail.com",
+    "date": "2026-08-17T09:38:46+03:00",
+    "parents": [
+      "0b8a86406639fa0490ba21208f71286ef411697a",
+      "a7592aa9c60ec0a6d18c0c430fc745ebf75daf64"
+    ],
+    "is_merge": true,
+    "subject": "Merge pull request #9 from SantoPanto/feature/paket-2-degerlendirme",
+    "raw_message": "Merge pull request #9 from SantoPanto/feature/paket-2-degerlendirme",
+    "name_status": ""
+  },
+  {
+    "full_hash": "60c9e3b4c7510fd45839a711f8401764a8ef47c3",
+    "hash": "60c9e3b4",
+    "author_name": "Fatih Şahin",
+    "author_email": "fatihpanto@gmail.com",
+    "date": "2026-08-19T13:23:26+03:00",
+    "parents": [
+      "e92c12d84f809d0dae87fb79f89e7571a601f0f6"
+    ],
+    "is_merge": false,
+    "subject": "Update AMQP_URL to use rabbitmq service",
+    "raw_message": "Update AMQP_URL to use rabbitmq service",
+    "name_status": "M\t.env.example"
+  },
+  {
+    "full_hash": "d8b8b368a07136852da94765eab6d91a475ab9bc",
+    "hash": "d8b8b368",
+    "author_name": "Fatih Şahin",
+    "author_email": "fatihpanto@gmail.com",
+    "date": "2026-08-20T10:28:16+03:00",
+    "parents": [
+      "45b65a2f4919a5bc46d8eeb856e1c0a8cec35a0d",
+      "7a536ccf506a2671f698a788ada6894153e8c551"
+    ],
+    "is_merge": true,
+    "subject": "Merge pull request #23 from SantoPanto/fix/e3-varsayilan-kimlik-modeli",
+    "raw_message": "Merge pull request #23 from SantoPanto/fix/e3-varsayilan-kimlik-modeli",
+    "name_status": ""
+  },
+  {
+    "full_hash": "3af3884e0bbc3b3cbf2f32c048ebc0423381664f",
+    "hash": "3af3884e",
+    "author_name": "Fatih Şahin",
+    "author_email": "fatihpanto@gmail.com",
+    "date": "2026-08-20T10:29:36+03:00",
+    "parents": [
+      "259b0a3b7ca302c89d0c3071cbd9167a4eb80ffc",
+      "d8b8b368a07136852da94765eab6d91a475ab9bc"
+    ],
+    "is_merge": true,
+    "subject": "Merge branch 'main' into fix/m25-kimlik-kilidi-varsayilan-reddet",
+    "raw_message": "Merge branch 'main' into fix/m25-kimlik-kilidi-varsayilan-reddet",
+    "name_status": ""
+  },
+  {
+    "full_hash": "7c8d581246394e9b805fc991e658c71d1c6de5c5",
+    "hash": "7c8d5812",
+    "author_name": "Fatih Şahin",
+    "author_email": "fatihpanto@gmail.com",
+    "date": "2026-08-20T10:29:45+03:00",
+    "parents": [
+      "d8b8b368a07136852da94765eab6d91a475ab9bc",
+      "3af3884e0bbc3b3cbf2f32c048ebc0423381664f"
+    ],
+    "is_merge": true,
+    "subject": "Merge pull request #24 from SantoPanto/fix/m25-kimlik-kilidi-varsayilan-reddet",
+    "raw_message": "Merge pull request #24 from SantoPanto/fix/m25-kimlik-kilidi-varsayilan-reddet",
+    "name_status": ""
+  },
+  {
+    "full_hash": "33cb71175071dcd43e570bda8e8bc1737c83bed3",
+    "hash": "33cb7117",
+    "author_name": "Fatih Şahin",
+    "author_email": "fatihpanto@gmail.com",
+    "date": "2026-08-20T10:30:19+03:00",
+    "parents": [
+      "7c8d581246394e9b805fc991e658c71d1c6de5c5",
+      "09647e3f3214c6206708b6c061f10469eb9623a2"
+    ],
+    "is_merge": true,
+    "subject": "Merge pull request #25 from SantoPanto/fix/m5-hayvansiz-fotografa-tur-atanmasin",
+    "raw_message": "Merge pull request #25 from SantoPanto/fix/m5-hayvansiz-fotografa-tur-atanmasin",
+    "name_status": ""
+  },
+  {
+    "full_hash": "6f50363fd104610ddabe16f1621dc65e84f5e443",
+    "hash": "6f50363f",
+    "author_name": "Fatih Şahin",
+    "author_email": "fatihpanto@gmail.com",
+    "date": "2026-08-20T10:36:09+03:00",
+    "parents": [
+      "33cb71175071dcd43e570bda8e8bc1737c83bed3",
+      "2ef55e4000fb47d9731c60585e5c91a9b6b7d6fb"
+    ],
+    "is_merge": true,
+    "subject": "Merge pull request #26 from SantoPanto/feat/m4-skor-ayarlanabilir-olcum",
+    "raw_message": "Merge pull request #26 from SantoPanto/feat/m4-skor-ayarlanabilir-olcum",
+    "name_status": ""
+  },
+  {
+    "full_hash": "a769b4b8c717889b6e8e642f566f7a2098e74eb9",
+    "hash": "a769b4b8",
+    "author_name": "SantoPanto",
+    "author_email": "fatihpanto@gmail.com",
+    "date": "2026-08-21T12:08:29+03:00",
+    "parents": [
+      "78181c2a410a4b0c7fa58105c04a01f0e3cf82c8"
+    ],
+    "is_merge": false,
+    "subject": "Beyazliste izinleri fotoğraf yükleme analizi için güncellendi.",
+    "raw_message": "Beyazliste izinleri fotoğraf yükleme analizi için güncellendi.",
+    "name_status": "M\t.env.example\nM\tapp/indirici.py\nM\ttests/test_indirici.py"
+  },
+  {
+    "full_hash": "2ebb46124610072aea521eed31acfb086d47017e",
+    "hash": "2ebb4612",
+    "author_name": "Fatih Şahin",
+    "author_email": "fatihpanto@gmail.com",
+    "date": "2026-08-21T12:27:19+03:00",
+    "parents": [
+      "a769b4b8c717889b6e8e642f566f7a2098e74eb9",
+      "9b3876ffaf7a6d9bf728f8842e2c172cba1dbcd4"
+    ],
+    "is_merge": true,
+    "subject": "Merge pull request #28 from SantoPanto/chore/tasma-etiketli-kume",
+    "raw_message": "Merge pull request #28 from SantoPanto/chore/tasma-etiketli-kume",
+    "name_status": ""
+  },
+  {
+    "full_hash": "a4994ceec3a1519e584df80c07b9f0bc2b50dbca",
+    "hash": "a4994cee",
+    "author_name": "SantoPanto",
+    "author_email": "fatihpanto@gmail.com",
+    "date": "2026-08-23T09:27:10+03:00",
+    "parents": [
+      "a769b4b8c717889b6e8e642f566f7a2098e74eb9"
+    ],
+    "is_merge": false,
+    "subject": "Eksik kütüphane eklendi",
+    "raw_message": "Eksik kütüphane eklendi",
+    "name_status": "M\trequirements.txt"
+  },
+  {
+    "full_hash": "b82f96a1673b9492372ad70c28d1b781d606eb76",
+    "hash": "b82f96a1",
+    "author_name": "SantoPanto",
+    "author_email": "fatihpanto@gmail.com",
+    "date": "2026-08-23T09:27:25+03:00",
+    "parents": [
+      "a4994ceec3a1519e584df80c07b9f0bc2b50dbca",
+      "eef60ed6bfb9ef9b4158ca0b829072ec3b266650"
+    ],
+    "is_merge": true,
+    "subject": "Merge branch 'main' of https://github.com/SantoPanto/PATIMATI-AI",
+    "raw_message": "Merge branch 'main' of https://github.com/SantoPanto/PATIMATI-AI",
+    "name_status": ""
+  }
+]
