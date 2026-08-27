@@ -199,9 +199,11 @@ public class BusinessApplicationService {
     }
 
     /**
-     * Onaylanmış bir başvuru kaydını arşivden temizler -- kullanıcının rolünü
-     * veya {@link #createBusinessCard} ile oluşturulan iş kartını ETKİLEMEZ,
-     * yalnızca bu başvuru satırını siler.
+     * Onaylanmış bir başvuruyu kurumun kendisiyle birlikte tamamen kaldırır:
+     * {@link #createBusinessCard} ile oluşturulan VetClinic/PetShop/Shelter
+     * kartı (ve buna bağlı yorum/ürün satırları, DB'de {@code ON DELETE CASCADE})
+     * silinir, kullanıcının rolü tekrar {@code USER}'a döner, ardından başvuru
+     * kaydı silinir.
      */
     @Transactional
     public void delete(Long id) {
@@ -210,7 +212,30 @@ public class BusinessApplicationService {
         if (application.getStatus() != BusinessApplicationStatus.ONAYLANDI) {
             throw new BusinessException("Yalnızca onaylanmış başvurular silinebilir.");
         }
+
+        User owner = application.getApplicant();
+        deleteBusinessCard(application.getBusinessType(), owner);
+
+        // Sadece hâlâ bu başvurunun verdiği roldeyse USER'a döndür -- rol
+        // aradan geçen sürede başka bir yolla değiştiyse (ör. ADMIN'e
+        // yükseltildiyse) üzerine yazmayalım.
+        if (owner.getRole() == toRole(application.getBusinessType())) {
+            owner.setRole(User.Role.USER);
+            userRepository.save(owner);
+        }
+
         businessApplicationRepository.delete(application);
+    }
+
+    private void deleteBusinessCard(BusinessType businessType, User owner) {
+        switch (businessType) {
+            case VET -> vetClinicRepository.findByUser_Uid(owner.getUid())
+                    .ifPresent(vetClinicRepository::delete);
+            case PETSHOP -> petShopRepository.findByUser_Uid(owner.getUid())
+                    .ifPresent(petShopRepository::delete);
+            case BARINAK -> shelterRepository.findByUser_Uid(owner.getUid())
+                    .ifPresent(shelterRepository::delete);
+        }
     }
 
     private void createBusinessCard(BusinessApplication application) {
