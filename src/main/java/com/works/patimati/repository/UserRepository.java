@@ -15,6 +15,8 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 
     Optional<User> findByGoogleId(String googleId);
 
+    List<User> findAllByRole(User.Role role);
+
     boolean existsByPhone(String phone);
 
     boolean existsByPhoneAndEmailNot(String phone, String email);
