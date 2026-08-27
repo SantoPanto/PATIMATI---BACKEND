@@ -147,6 +147,45 @@ class IsiHaritasiZamanTipiTest {
         assertThat(kategoriler()).containsExactlyInAnyOrder("LOST", "SIGHTING");
     }
 
+    @Test
+    @DisplayName("null ilçe (yönetici görünümü) süzgeçsiz tarar; dolu ilçe süzgeci BOZULMAZ")
+    void nullIlceSuzgecsizTararDoluIlceKilitliKalir() {
+        // Benzersiz koordinatlar: gerçek/demo verinin aralığının dışında —
+        // süzgeçsiz sorgu tüm tabloyu tarayacağı için iddia koordinatla kurulur.
+        double enlem2 = 41.4321;
+        double boylam2 = 30.9876;
+        String ikinciIlce = OLCUM_ILCESI + "-Ikinci";
+
+        User sahip = entityManager.persistFlushFind(kullanici());
+        entityManager.persistFlushFind(ilan(sahip));
+        entityManager.persistFlushFind(ilanTaslagi(sahip)
+                .adType(Ad.AdType.FOUND)
+                .district(ikinciIlce)
+                .location(geometryFactory.createPoint(new Coordinate(boylam2, enlem2)))
+                .build());
+
+        Instant bas = Instant.now().minus(1, ChronoUnit.HOURS);
+        Instant son = Instant.now().plus(1, ChronoUnit.HOURS);
+
+        // null ilçe: iki farklı ilçenin noktası da dönmeli (CAST'li SQL'in
+        // gerçek PostgreSQL'de null parametreyle koştuğunun kanıtı).
+        var hepsi = repository.getHeatmapPoints(null, bas, son, 10_000);
+        var koordinatlar = hepsi.stream()
+                .map(satir -> ((Number) satir[0]).doubleValue() + "," + ((Number) satir[1]).doubleValue())
+                .collect(Collectors.toSet());
+        assertThat(koordinatlar).contains(ENLEM + "," + BOYLAM, enlem2 + "," + boylam2);
+
+        // Dolu ilçe: kurum süzgeci REGRESYONU — ikinci ilçenin noktası SIZMAZ.
+        var yalnizBirinci = repository.getHeatmapPoints(OLCUM_ILCESI, bas, son, 10_000);
+        assertThat(yalnizBirinci).hasSize(1);
+
+        // Sayaç sorgusunun (JPQL) null yolu da aynı sözleşmede.
+        assertThat(repository.countAdsByDistrictAndType(null, Ad.AdType.FOUND, bas, son))
+                .isGreaterThanOrEqualTo(1);
+        assertThat(repository.countAdsByDistrictAndType(OLCUM_ILCESI, Ad.AdType.FOUND, bas, son))
+                .isZero();
+    }
+
     /** Ölçüm ilçesinin son 1 saatteki harita kategorileri. */
     private Set<String> kategoriler() {
         return repository.getHeatmapPoints(

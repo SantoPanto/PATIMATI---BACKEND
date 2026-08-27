@@ -36,9 +36,12 @@ import java.util.Optional;
  * ayrı ayrı küçültülürse aynı ilçe eşleşmeyebilir. Bu yüzden kapsam çözücü HAM
  * (yalnız kırpılmış) değeri verir, kıyası tek motorda — veritabanında — yapın.
  *
- * <p><b>Boş kapsam "hepsini göster" DEĞİLDİR:</b> ilçe çözülemezse istek
- * reddedilir. Sessizce filtresiz sorguya düşmek, tek bir yanlış yapılandırılmış
- * kurum hesabına ülkenin tamamını açardı.
+ * <p><b>Boş kapsam KURUMDA "hepsini göster" DEĞİLDİR:</b> kurum hesabının
+ * ilçesi çözülemezse istek reddedilir; sessizce filtresiz sorguya düşmek, tek
+ * bir yanlış yapılandırılmış kurum hesabına ülkenin tamamını açardı. Tek
+ * istisna İLÇESİZ YÖNETİCİ: denetleyici roldür, kapsamı bilinçli olarak
+ * tüm ilçelerdir ({@link BelediyeKapsami#tumIlceler()}); sorgular süzgeci
+ * o durumda atlar.
  */
 @Service
 public class MunicipalityScopeService {
@@ -55,9 +58,19 @@ public class MunicipalityScopeService {
      * @param kurumKullaniciId kurum hesabının users.uid'i (kuyruk atamalarında lazım)
      * @param kurumAdi         panel başlığında gösterilecek ad; null olabilir
      * @param il               kurumun ili; null olabilir (kapsamı ilçe belirler)
-     * @param ilce             KAPSAM — sorguların filtreleyeceği ilçe, asla boş değil
+     * @param ilce             KAPSAM — sorguların filtreleyeceği ilçe. Kurum
+     *                         hesabında asla boş değil; yalnız İLÇESİZ YÖNETİCİDE
+     *                         null olur ve {@link #tumIlceler()} true döner.
      */
     public record BelediyeKapsami(Long kurumKullaniciId, String kurumAdi, String il, String ilce) {
+
+        /**
+         * Denetleyici görünüm: kapsam bir ilçeyle SINIRLI DEĞİL. Yalnızca
+         * ilçesiz ADMIN'de true — sorgular ilçe süzgecini o zaman atlar.
+         */
+        public boolean tumIlceler() {
+            return ilce == null;
+        }
     }
 
     /**
@@ -70,11 +83,6 @@ public class MunicipalityScopeService {
     public BelediyeKapsami mevcutKapsam() {
         User kullanici = oturumSahibi();
 
-        // ADMIN de kabul ediliyor: prova ve sunumda paneli kurum hesabı açmadan
-        // görebilmek gerekiyor (SecurityConfig'de de böyle yazılı). Ama muafiyet
-        // DEĞİL — yöneticinin de institution_district'i dolu olmalı, yoksa
-        // aşağıdaki kontrol onu da reddeder. Yani "ilçesiz kapsam" hiç kimsede
-        // oluşmuyor.
         User.Role rol = kullanici.getRole();
         if (rol != User.Role.INSTITUTION && rol != User.Role.ADMIN) {
             throw new AccessDeniedException(
@@ -83,6 +91,19 @@ public class MunicipalityScopeService {
 
         String ilce = kirp(kullanici.getInstitutionDistrict());
         if (ilce == null) {
+            // KURUM için ilçesizlik hâlâ RET: sessizce filtresiz sorguya düşmek,
+            // tek bir yanlış yapılandırılmış kurum hesabına ülkenin tamamını
+            // açardı. YÖNETİCİ ise denetleyicidir ve zaten /api/admin altında
+            // her kullanıcıyı/ilanı görüyor — belediye panelinde de TÜM
+            // İLÇELERİ görmesi bilinçli ürün kararı (27.08, Fatih'in isteği).
+            // İlçesi atanmış yönetici o ilçeyle sınırlı kalır (prova senaryosu).
+            if (rol == User.Role.ADMIN) {
+                return new BelediyeKapsami(
+                        kullanici.getUid(),
+                        kirp(kullanici.getInstitutionName()),
+                        kirp(kullanici.getInstitutionCity()),
+                        null);
+            }
             throw new AccessDeniedException(
                     "Hesabınıza ilçe atanmamış. Belediye panelini kullanabilmek için "
                             + "yöneticiden hesabınıza il/ilçe tanımlanmasını isteyin.");
@@ -95,7 +116,11 @@ public class MunicipalityScopeService {
                 ilce);
     }
 
-    /** Yalnız ilçe gerekiyorsa kısayol. Aynı kontrollerden geçer. */
+    /**
+     * Yalnız ilçe gerekiyorsa kısayol. Aynı kontrollerden geçer.
+     * ⚠ İlçesiz yöneticide {@code null} döner (tüm ilçeler) — süzgeç kuracak
+     * çağıran {@code null}'ı "sınırsız" okumalı.
+     */
     @Transactional(readOnly = true)
     public String mevcutIlce() {
         return mevcutKapsam().ilce();

@@ -97,11 +97,20 @@ public class AnimalReportServiceImpl implements AnimalReportService {
     @Transactional(readOnly = true)
     public Page<AnimalReportResponse> getReportsForMunicipality(ReportStatus status, Pageable pageable) {
         var scope = municipalityScopeService.mevcutKapsam();
-        String ilce = scope.ilce();
 
-        Page<AnimalReport> reports = (status != null)
-                ? animalReportRepository.findAllByDistrictIgnoreCaseAndStatus(ilce, status, pageable)
-                : animalReportRepository.findAllByDistrictIgnoreCase(ilce, pageable);
+        // İlçesiz yönetici (tumIlceler) bütün kuyruğu görür; kurum hesabı
+        // her zaman kendi ilçesine kilitli (MunicipalityScopeService'e bak).
+        Page<AnimalReport> reports;
+        if (scope.tumIlceler()) {
+            reports = (status != null)
+                    ? animalReportRepository.findAllByStatus(status, pageable)
+                    : animalReportRepository.findAll(pageable);
+        } else {
+            String ilce = scope.ilce();
+            reports = (status != null)
+                    ? animalReportRepository.findAllByDistrictIgnoreCaseAndStatus(ilce, status, pageable)
+                    : animalReportRepository.findAllByDistrictIgnoreCase(ilce, pageable);
+        }
 
         return reports.map(this::mapToResponse);
     }
@@ -122,7 +131,8 @@ public class AnimalReportServiceImpl implements AnimalReportService {
                 && reportDistrict.toLowerCase(java.util.Locale.forLanguageTag("tr"))
                 .equals(kurumIlcesi.toLowerCase(java.util.Locale.forLanguageTag("tr")));
 
-        if (!districtMatches) {
+        // İlçesiz yönetici (tumIlceler) her ilçenin ihbarına müdahale edebilir.
+        if (!scope.tumIlceler() && !districtMatches) {
             throw new AccessDeniedException("Bu ilçeye ait ihbara müdahale yetkiniz bulunmamaktadır");
         }
 
