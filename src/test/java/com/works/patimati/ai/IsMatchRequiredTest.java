@@ -66,7 +66,7 @@ class IsMatchRequiredTest {
                 "Kayıp Kedi", "Açıklama", Ad.AdType.LOST, Species.CAT, "Tekir",
                 Set.of(PetColor.BLACK), null, null, null, null, null, null,
                 null, null, null, null, "2026-08-22", null,
-                new BigDecimal("41.0"), new BigDecimal("29.0"), null, null, null, null
+                new BigDecimal("41.0"), new BigDecimal("29.0"), null, null, null, null, null
         );
 
         assertThat(request.isMatchRequired()).isTrue();

@@ -101,7 +101,15 @@ public record AdCreateRequest(
          * entity'sindeki alan javadoc'u). Varsayılan false: sessizce izin
          * verilmiş sayılmaz.
          */
-        Boolean instagramShareConsent
+        Boolean instagramShareConsent,
+
+        /**
+         * Kayıp afişinin (PDF) başkalarınca indirilebilmesine ilan verirken
+         * verilen izin. Null → false: sessizce izin verilmiş sayılmaz
+         * ({@code Ad.isPosterAllowed} varsayılanıyla aynı felsefe); ilan
+         * formu kutuyu açıkça gönderir.
+         */
+        Boolean isPosterAllowed
 ) {
     public AdCreateRequest {
         if (isMatchRequired == null) {
