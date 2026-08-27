@@ -208,9 +208,14 @@ public class S3ImageStorageService implements ImageStorageService {
         }
 
         String contentType = image.getContentType();
+        // Mobil tarayıcı/dosya seçiciler JPEG'i çoğu kez application/octet-stream
+        // beyanıyla gönderir (ekip canlı testi, 28.08). Beyan istemcinin elindedir;
+        // gerçek güvence alttaki imza denetimi -- octet-stream kapıdan geçer,
+        // JPEG olmayan içerik imzada yine reddedilir.
         if (contentType == null
                 || (!JPEG_CONTENT_TYPE.equalsIgnoreCase(contentType)
-                && !"image/jpg".equalsIgnoreCase(contentType))) {
+                && !"image/jpg".equalsIgnoreCase(contentType)
+                && !"application/octet-stream".equalsIgnoreCase(contentType))) {
             throw new InvalidImageException(
                     "Yalnızca JPEG formatındaki fotoğraflar yüklenebilir"
             );

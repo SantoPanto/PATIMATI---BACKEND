@@ -112,6 +112,39 @@ class S3ImageStorageServiceTest {
     }
 
     @Test
+    void telefonYuklemesiOctetStreamBeyaniylaGelirse_ImzaGecerliyseKabulEdilir() {
+        // Mobil tarayıcı/dosya seçiciler JPEG'i çoğu kez application/octet-stream
+        // beyanıyla gönderir; beyan reddedilirse telefondan hiç fotoğraf yüklenemez.
+        byte[] jpegBytes = {
+                (byte) 0xFF,
+                (byte) 0xD8,
+                (byte) 0xFF,
+                0x00
+        };
+
+        MockMultipartFile image = new MockMultipartFile(
+                "images",
+                "1000061590.jpg",
+                "application/octet-stream",
+                jpegBytes
+        );
+
+        when(s3Client.putObject(
+                any(PutObjectRequest.class),
+                any(RequestBody.class)
+        )).thenReturn(PutObjectResponse.builder().build());
+
+        List<String> references = storageService.uploadImages(List.of(image));
+
+        assertThat(references).hasSize(1);
+
+        ArgumentCaptor<PutObjectRequest> requestCaptor =
+                ArgumentCaptor.forClass(PutObjectRequest.class);
+        verify(s3Client).putObject(requestCaptor.capture(), any(RequestBody.class));
+        assertThat(requestCaptor.getValue().contentType()).isEqualTo("image/jpeg");
+    }
+
+    @Test
     void shouldRejectAFileThatIsNotJpeg() {
         MockMultipartFile image = new MockMultipartFile(
                 "images",
