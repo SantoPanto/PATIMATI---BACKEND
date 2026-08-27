@@ -11,6 +11,7 @@ import com.works.patimati.repository.PetShopRepository;
 import com.works.patimati.repository.PointOfInterestRepository;
 import com.works.patimati.repository.ShelterRepository;
 import com.works.patimati.repository.VetClinicRepository;
+import com.works.patimati.storage.ImageStorageService;
 import lombok.RequiredArgsConstructor;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
@@ -33,6 +34,7 @@ public class PoiService {
     private final VetClinicRepository vetClinicRepository;
     private final PetShopRepository petShopRepository;
     private final ShelterRepository shelterRepository;
+    private final ImageStorageService imageStorageService;
     private final GeometryFactory geometryFactory =
             new GeometryFactory(new PrecisionModel(), WGS_84_SRID);
 
@@ -67,19 +69,19 @@ public class PoiService {
 
         if (wants(types, PoiType.VETERINARY)) {
             vetClinicRepository.findNearby(origin, radiusInMeters).stream()
-                    .map(PoiService::toResponse)
+                    .map(this::toResponse)
                     .forEach(results::add);
         }
 
         if (wants(types, PoiType.PET_SHOP)) {
             petShopRepository.findNearby(origin, radiusInMeters).stream()
-                    .map(PoiService::toResponse)
+                    .map(this::toResponse)
                     .forEach(results::add);
         }
 
         if (wants(types, PoiType.SHELTER)) {
             shelterRepository.findNearby(origin, radiusInMeters).stream()
-                    .map(PoiService::toResponse)
+                    .map(this::toResponse)
                     .forEach(results::add);
         }
 
@@ -103,8 +105,13 @@ public class PoiService {
                 poi.getPhone(),
                 poi.getOpeningHours(),
                 poi.getSource(),
+                null,
                 null
         );
+    }
+
+    private String resolvePhotoUrl(String photoReference) {
+        return photoReference == null ? null : imageStorageService.createTemporaryReadUrl(photoReference);
     }
 
     // Platform hesaplarının ID'leri points_of_interest ile AYNI sayı
@@ -114,7 +121,7 @@ public class PoiService {
     // negatiflenir. Gerçek hesap kimliği zaten `refId`de taşınıyor, `id`
     // yalnızca listede/haritada benzersiz bir anahtar.
 
-    private static PoiResponse toResponse(VetClinic clinic) {
+    private PoiResponse toResponse(VetClinic clinic) {
         Point location = clinic.getLocation();
 
         return new PoiResponse(
@@ -127,11 +134,12 @@ public class PoiService {
                 clinic.getPhone(),
                 clinic.getWorkingHours(),
                 PoiSource.PLATFORM,
-                clinic.getId()
+                clinic.getId(),
+                resolvePhotoUrl(clinic.getPhotoReference())
         );
     }
 
-    private static PoiResponse toResponse(PetShop petShop) {
+    private PoiResponse toResponse(PetShop petShop) {
         Point location = petShop.getLocation();
 
         return new PoiResponse(
@@ -144,11 +152,12 @@ public class PoiService {
                 petShop.getPhone(),
                 petShop.getWorkingHours(),
                 PoiSource.PLATFORM,
-                petShop.getId()
+                petShop.getId(),
+                resolvePhotoUrl(petShop.getPhotoReference())
         );
     }
 
-    private static PoiResponse toResponse(Shelter shelter) {
+    private PoiResponse toResponse(Shelter shelter) {
         Point location = shelter.getLocation();
 
         return new PoiResponse(
@@ -161,7 +170,8 @@ public class PoiService {
                 shelter.getPhone(),
                 shelter.getWorkingHours(),
                 PoiSource.PLATFORM,
-                shelter.getId()
+                shelter.getId(),
+                resolvePhotoUrl(shelter.getPhotoReference())
         );
     }
 }
