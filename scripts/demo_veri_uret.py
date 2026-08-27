@@ -21,6 +21,7 @@ def generate_sql():
         "DECLARE",
         "    demo_user_id BIGINT;",
         "    new_ad_id BIGINT;",
+        "    bulunan_id BIGINT;",
         "BEGIN",
         "    -- Sırasız 'FROM users LIMIT 1' burada rastgele GERÇEK bir kullanıcıya",
         "    -- bağlıyordu: 500 sahte ilan o kişinin profiline düşerdi. Demo verisi",
@@ -45,16 +46,21 @@ def generate_sql():
         lines.append(f"    VALUES ('Demo İlan {i}', 'Bursa Nilüfer demo verisi.', '{ad_type}', '{species}', 'MIXED_OR_UNKNOWN', 'UNKNOWN', 'UNKNOWN', 'UNKNOWN', 'UNKNOWN', 'UNKNOWN', 'UNKNOWN', 'UNKNOWN', 'DONE', ST_SetSRID(ST_MakePoint({lon}, {lat}), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'NONE', NOW() - INTERVAL '{random.randint(1, 30)} days', NOW()) RETURNING id INTO new_ad_id;")
         lines.append(f"    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, '{photo_url}', 0);")
 
+    # Panelin reunionCount sorgusu "resolution_status kavuşma + resolved_by_ad_id
+    # DOLU" ister (MunicipalityPanelRepository.countReunionsByDistrict) — çift
+    # bağlanmazsa 100 "kavuşan" ilan basılıp sayaç yine 0 gösterir (27.08 yerel
+    # uçtan uca ölçümünde böyle çıktı). Bu yüzden önce bulunan ilan basılır,
+    # kayıp ilan ona bağlanır; gerçek üründeki akışın aynısı.
     for i in range(1, 51):
         lat, lon = round(random.uniform(MIN_LAT, MAX_LAT), 6), round(random.uniform(MIN_LON, MAX_LON), 6)
         photo_url = random.choice(PHOTO_URLS['CAT'])
 
         lines.append(f"    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)")
-        lines.append(f"    VALUES ('Kavuşan Kayıp {i}', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint({lon}, {lat}), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;")
-        lines.append(f"    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, '{photo_url}', 0);")
+        lines.append(f"    VALUES ('Kavuşan Bulunan {i}', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint({lon}, {lat}), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;")
+        lines.append(f"    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, '{photo_url}', 0);")
 
-        lines.append(f"    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)")
-        lines.append(f"    VALUES ('Kavuşan Bulunan {i}', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint({lon}, {lat}), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;")
+        lines.append(f"    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)")
+        lines.append(f"    VALUES ('Kavuşan Kayıp {i}', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint({lon}, {lat}), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;")
         lines.append(f"    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, '{photo_url}', 0);")
 
     lines.append("END $$;")

@@ -2,6 +2,7 @@ DO $$
 DECLARE
     demo_user_id BIGINT;
     new_ad_id BIGINT;
+    bulunan_id BIGINT;
 BEGIN
     -- Sırasız 'FROM users LIMIT 1' burada rastgele GERÇEK bir kullanıcıya
     -- bağlıyordu: 500 sahte ilan o kişinin profiline düşerdi. Demo verisi
@@ -1215,303 +1216,303 @@ BEGIN
     VALUES ('Demo İlan 400', 'Bursa Nilüfer demo verisi.', 'ADOPTION', 'CAT', 'MIXED_OR_UNKNOWN', 'UNKNOWN', 'UNKNOWN', 'UNKNOWN', 'UNKNOWN', 'UNKNOWN', 'UNKNOWN', 'UNKNOWN', 'DONE', ST_SetSRID(ST_MakePoint(28.991778, 40.237736), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'NONE', NOW() - INTERVAL '14 days', NOW()) RETURNING id INTO new_ad_id;
     INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
     INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 1', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.944605, 40.180999), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
+    VALUES ('Kavuşan Bulunan 1', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.944605, 40.180999), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 1', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.944605, 40.180999), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
     INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
     INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 1', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.944605, 40.180999), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 2', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.851371, 40.226574), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
+    VALUES ('Kavuşan Bulunan 2', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.851371, 40.226574), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 2', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.851371, 40.226574), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
     INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
     INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 2', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.851371, 40.226574), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
+    VALUES ('Kavuşan Bulunan 3', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.942675, 40.199856), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 3', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.942675, 40.199856), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
     INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
     INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 3', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.942675, 40.199856), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
+    VALUES ('Kavuşan Bulunan 4', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.85236, 40.222743), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 4', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.85236, 40.222743), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
     INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
     INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 3', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.942675, 40.199856), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
+    VALUES ('Kavuşan Bulunan 5', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.929413, 40.170948), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 5', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.929413, 40.170948), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
     INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
     INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 4', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.85236, 40.222743), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
+    VALUES ('Kavuşan Bulunan 6', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.893003, 40.212859), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 6', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.893003, 40.212859), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
     INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
     INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 4', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.85236, 40.222743), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
+    VALUES ('Kavuşan Bulunan 7', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.986466, 40.234493), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 7', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.986466, 40.234493), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
+    VALUES ('Kavuşan Bulunan 8', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.928658, 40.243444), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 8', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.928658, 40.243444), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
+    VALUES ('Kavuşan Bulunan 9', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.928968, 40.185355), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 9', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.928968, 40.185355), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
     INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
     INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 5', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.929413, 40.170948), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
+    VALUES ('Kavuşan Bulunan 10', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.909534, 40.191386), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 10', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.909534, 40.191386), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
     INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
     INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 5', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.929413, 40.170948), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
+    VALUES ('Kavuşan Bulunan 11', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.91885, 40.246744), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 11', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.91885, 40.246744), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
+    VALUES ('Kavuşan Bulunan 12', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.883879, 40.249219), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 12', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.883879, 40.249219), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
+    VALUES ('Kavuşan Bulunan 13', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.978733, 40.222299), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 13', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.978733, 40.222299), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
+    VALUES ('Kavuşan Bulunan 14', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.90689, 40.17748), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 14', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.90689, 40.17748), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
     INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
     INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 6', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.893003, 40.212859), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
+    VALUES ('Kavuşan Bulunan 15', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.851418, 40.174489), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 15', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.851418, 40.174489), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
+    VALUES ('Kavuşan Bulunan 16', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.976799, 40.176615), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 16', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.976799, 40.176615), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
     INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
     INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 6', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.893003, 40.212859), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
+    VALUES ('Kavuşan Bulunan 17', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.978694, 40.215269), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 17', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.978694, 40.215269), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
+    VALUES ('Kavuşan Bulunan 18', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.987873, 40.241583), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 18', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.987873, 40.241583), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
+    VALUES ('Kavuşan Bulunan 19', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.980218, 40.186913), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 19', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.980218, 40.186913), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
     INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
     INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 7', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.986466, 40.234493), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 7', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.986466, 40.234493), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 8', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.928658, 40.243444), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 8', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.928658, 40.243444), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 9', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.928968, 40.185355), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
+    VALUES ('Kavuşan Bulunan 20', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.988624, 40.191688), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 20', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.988624, 40.191688), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
     INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
     INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 9', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.928968, 40.185355), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
+    VALUES ('Kavuşan Bulunan 21', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.934526, 40.241945), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 21', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.934526, 40.241945), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
+    VALUES ('Kavuşan Bulunan 22', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.977564, 40.184348), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 22', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.977564, 40.184348), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
+    VALUES ('Kavuşan Bulunan 23', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.938055, 40.246918), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 23', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.938055, 40.246918), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
     INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
     INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 10', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.909534, 40.191386), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
+    VALUES ('Kavuşan Bulunan 24', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.894892, 40.24431), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 24', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.894892, 40.24431), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
+    VALUES ('Kavuşan Bulunan 25', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.977416, 40.215336), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 25', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.977416, 40.215336), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
     INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
     INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 10', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.909534, 40.191386), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
+    VALUES ('Kavuşan Bulunan 26', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.960962, 40.200708), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 26', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.960962, 40.200708), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
+    VALUES ('Kavuşan Bulunan 27', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.996148, 40.210063), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 27', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.996148, 40.210063), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
+    VALUES ('Kavuşan Bulunan 28', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.884822, 40.177815), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 28', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.884822, 40.177815), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
+    VALUES ('Kavuşan Bulunan 29', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.965351, 40.197247), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 29', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.965351, 40.197247), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
     INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
     INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 11', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.91885, 40.246744), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 11', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.91885, 40.246744), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 12', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.883879, 40.249219), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 12', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.883879, 40.249219), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 13', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.978733, 40.222299), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 13', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.978733, 40.222299), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 14', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.90689, 40.17748), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
+    VALUES ('Kavuşan Bulunan 30', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.898956, 40.247514), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 30', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.898956, 40.247514), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
     INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
     INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 14', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.90689, 40.17748), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
+    VALUES ('Kavuşan Bulunan 31', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.917583, 40.232684), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 31', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.917583, 40.232684), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
+    VALUES ('Kavuşan Bulunan 32', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.991171, 40.198465), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 32', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.991171, 40.198465), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
     INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
     INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 15', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.851418, 40.174489), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 15', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.851418, 40.174489), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 16', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.976799, 40.176615), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
+    VALUES ('Kavuşan Bulunan 33', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.937881, 40.184859), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 33', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.937881, 40.184859), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
     INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
     INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 16', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.976799, 40.176615), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
+    VALUES ('Kavuşan Bulunan 34', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.942792, 40.176856), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 34', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.942792, 40.176856), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
+    VALUES ('Kavuşan Bulunan 35', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.862306, 40.227049), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 35', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.862306, 40.227049), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
+    VALUES ('Kavuşan Bulunan 36', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.967584, 40.2004), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 36', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.967584, 40.2004), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
+    VALUES ('Kavuşan Bulunan 37', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.897502, 40.229172), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 37', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.897502, 40.229172), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
+    VALUES ('Kavuşan Bulunan 38', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.991444, 40.177322), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 38', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.991444, 40.177322), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
     INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
     INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 17', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.978694, 40.215269), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
+    VALUES ('Kavuşan Bulunan 39', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.890465, 40.198793), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 39', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.890465, 40.198793), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
     INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
     INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 17', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.978694, 40.215269), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 18', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.987873, 40.241583), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 18', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.987873, 40.241583), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 19', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.980218, 40.186913), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
+    VALUES ('Kavuşan Bulunan 40', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.914647, 40.176984), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 40', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.914647, 40.176984), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
     INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
     INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 19', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.980218, 40.186913), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
+    VALUES ('Kavuşan Bulunan 41', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.863443, 40.178263), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 41', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.863443, 40.178263), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
+    VALUES ('Kavuşan Bulunan 42', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.967666, 40.217754), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 42', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.967666, 40.217754), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
     INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
     INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 20', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.988624, 40.191688), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
+    VALUES ('Kavuşan Bulunan 43', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.912072, 40.170987), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 43', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.912072, 40.170987), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
+    VALUES ('Kavuşan Bulunan 44', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.93393, 40.227988), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 44', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.93393, 40.227988), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
+    VALUES ('Kavuşan Bulunan 45', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.875437, 40.215757), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 45', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.875437, 40.215757), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
     INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
     INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 20', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.988624, 40.191688), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
+    VALUES ('Kavuşan Bulunan 46', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.890338, 40.18356), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 46', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.890338, 40.18356), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
     INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
     INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 21', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.934526, 40.241945), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 21', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.934526, 40.241945), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 22', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.977564, 40.184348), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 22', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.977564, 40.184348), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 23', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.938055, 40.246918), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
+    VALUES ('Kavuşan Bulunan 47', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.85949, 40.20945), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 47', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.85949, 40.20945), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
     INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
     INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 23', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.938055, 40.246918), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
+    VALUES ('Kavuşan Bulunan 48', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.894963, 40.192077), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 48', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.894963, 40.192077), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
+    VALUES ('Kavuşan Bulunan 49', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.991633, 40.19889), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 49', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.991633, 40.19889), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
     INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
     INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 24', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.894892, 40.24431), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 24', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.894892, 40.24431), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 25', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.977416, 40.215336), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 25', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.977416, 40.215336), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 26', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.960962, 40.200708), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 26', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.960962, 40.200708), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 27', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.996148, 40.210063), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 27', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.996148, 40.210063), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 28', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.884822, 40.177815), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 28', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.884822, 40.177815), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 29', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.965351, 40.197247), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 29', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.965351, 40.197247), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 30', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.898956, 40.247514), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 30', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.898956, 40.247514), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 31', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.917583, 40.232684), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 31', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.917583, 40.232684), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 32', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.991171, 40.198465), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 32', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.991171, 40.198465), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 33', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.937881, 40.184859), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 33', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.937881, 40.184859), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 34', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.942792, 40.176856), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 34', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.942792, 40.176856), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 35', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.862306, 40.227049), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 35', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.862306, 40.227049), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 36', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.967584, 40.2004), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 36', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.967584, 40.2004), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 37', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.897502, 40.229172), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 37', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.897502, 40.229172), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 38', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.991444, 40.177322), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 38', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.991444, 40.177322), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 39', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.890465, 40.198793), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 39', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.890465, 40.198793), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 40', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.914647, 40.176984), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 40', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.914647, 40.176984), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 41', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.863443, 40.178263), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 41', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.863443, 40.178263), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 42', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.967666, 40.217754), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 42', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.967666, 40.217754), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 43', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.912072, 40.170987), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 43', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.912072, 40.170987), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 44', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.93393, 40.227988), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 44', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.93393, 40.227988), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 45', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.875437, 40.215757), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 45', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.875437, 40.215757), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 46', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.890338, 40.18356), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 46', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.890338, 40.18356), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 47', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.85949, 40.20945), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 47', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.85949, 40.20945), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 48', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.894963, 40.192077), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 48', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.894963, 40.192077), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 49', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.991633, 40.19889), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 49', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.991633, 40.19889), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Kayıp 50', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.879332, 40.217505), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
-    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
-    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, created_at, updated_at)
-    VALUES ('Kavuşan Bulunan 50', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.879332, 40.217505), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO new_ad_id;
+    VALUES ('Kavuşan Bulunan 50', 'Demo', 'FOUND', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.879332, 40.217505), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', NOW(), NOW()) RETURNING id INTO bulunan_id;
+    INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (bulunan_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
+    INSERT INTO ads (title, description, ad_type, species, ai_status, location, city, district, user_id, active, resolution_status, resolved_by_ad_id, created_at, updated_at)
+    VALUES ('Kavuşan Kayıp 50', 'Demo', 'LOST', 'CAT', 'DONE', ST_SetSRID(ST_MakePoint(28.879332, 40.217505), 4326), 'Bursa', 'Nilüfer', demo_user_id, true, 'FOUND', bulunan_id, NOW(), NOW()) RETURNING id INTO new_ad_id;
     INSERT INTO ad_photo_urls (ad_id, photo_url, photo_order) VALUES (new_ad_id, 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800', 0);
 END $$;
