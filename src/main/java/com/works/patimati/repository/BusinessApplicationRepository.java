@@ -15,6 +15,8 @@ public interface BusinessApplicationRepository extends JpaRepository<BusinessApp
 
     Page<BusinessApplication> findAllByStatus(BusinessApplicationStatus status, Pageable pageable);
 
+    Page<BusinessApplication> findAllByBusinessType(BusinessType businessType, Pageable pageable);
+
     Page<BusinessApplication> findAllByStatusAndBusinessType(
             BusinessApplicationStatus status, BusinessType businessType, Pageable pageable);
 

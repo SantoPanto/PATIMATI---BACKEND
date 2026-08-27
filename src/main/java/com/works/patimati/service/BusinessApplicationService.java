@@ -66,6 +66,12 @@ public class BusinessApplicationService {
                 || applicant.getRole() == User.Role.BARINAK || applicant.getRole() == User.Role.ADMIN) {
             throw new BusinessException("Zaten bir işletme/yönetici hesabınız var.");
         }
+        if (applicant.getRole() == User.Role.INSTITUTION) {
+            // 27.08 inceleme bulgusu: kurum (belediye) hesabı başvurabiliyordu
+            // ve ONAY rolün üstüne yazdığı için belediye yetkisi sessizce
+            // silinirdi. Belediye hesabı işletmeye dönüştürülmez.
+            throw new BusinessException("Kurum (belediye) hesabı işletme başvurusu yapamaz.");
+        }
         if (businessApplicationRepository.existsByApplicant_UidAndStatus(applicant.getUid(), BusinessApplicationStatus.BEKLEMEDE)) {
             throw new BusinessException("Zaten incelenmekte olan bir başvurunuz var.");
         }
@@ -122,9 +128,13 @@ public class BusinessApplicationService {
             page = businessApplicationRepository.findAll(pageable);
         } else if (type == null) {
             page = businessApplicationRepository.findAllByStatus(status, pageable);
+        } else if (status == null) {
+            // 27.08 inceleme bulgusu: yalnız tür süzülürken durum sessizce
+            // BEKLEMEDE'ye zorlanıyordu — "tüm VET başvuruları" yalnız
+            // bekleyenleri gösteriyordu.
+            page = businessApplicationRepository.findAllByBusinessType(type, pageable);
         } else {
-            page = businessApplicationRepository.findAllByStatusAndBusinessType(
-                    status == null ? BusinessApplicationStatus.BEKLEMEDE : status, type, pageable);
+            page = businessApplicationRepository.findAllByStatusAndBusinessType(status, type, pageable);
         }
         return page.map(this::toResponse);
     }
@@ -139,6 +149,14 @@ public class BusinessApplicationService {
         application.setDecidedByAdmin(admin);
 
         User applicant = application.getApplicant();
+        if (applicant.getRole() != User.Role.USER) {
+            // Başvuru ile onay arasında rol değişmiş olabilir (örn. hesap bu
+            // arada kuruma yükseltildi ya da başka başvurusu onaylandı).
+            // Rolün üstüne sessizce yazmak yetki siler — açık hata daha doğru.
+            throw new BusinessException(
+                    "Başvuru sahibinin rolü bu arada değişmiş (" + applicant.getRole()
+                            + "); onaylamadan önce başvuruyu reddedin ya da hesabı kontrol edin.");
+        }
         applicant.setRole(toRole(application.getBusinessType()));
         userRepository.save(applicant);
 
@@ -193,7 +211,9 @@ public class BusinessApplicationService {
                     .workingHours(application.getWorkingHours())
                     .photoReference(application.getPhotoReference())
                     .location(application.getLocation())
-                    .animalTypes(application.getAnimalTypes())
+                    // Yüklenmiş entity'nin PersistentSet'i ikinci bir entity'ye
+                    // verilemez ("shared references to a collection") — kopya.
+                    .animalTypes(new java.util.LinkedHashSet<>(application.getAnimalTypes()))
                     .build());
             case PETSHOP -> petShopRepository.save(PetShop.builder()
                     .user(owner)
