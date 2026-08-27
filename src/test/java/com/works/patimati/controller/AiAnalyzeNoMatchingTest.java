@@ -42,6 +42,7 @@ class AiAnalyzeNoMatchingTest {
                 Species.DOG,
                 0.98,
                 "Golden Retriever",
+                "Golden Retriever",
                 0.95,
                 CoatPattern.SOLID,
                 Set.of(PetColor.GOLDEN),

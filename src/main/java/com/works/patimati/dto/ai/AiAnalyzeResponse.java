@@ -17,6 +17,12 @@ public record AiAnalyzeResponse(
         Species species,
         Double speciesConfidence,
         String breed,
+        /**
+         * Eşikten bağımsız en iyi cins tahmini (AI #38). {@code breed} güven
+         * eşiğinin altındayken de doludur -- FE bunu "düşük güvenli öneri"
+         * olarak formda kullanır; hayvan değilse null.
+         */
+        String breedTop,
         Double breedConfidence,
         CoatPattern coatPattern,
         Set<PetColor> colors,
