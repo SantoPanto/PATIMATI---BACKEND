@@ -19,6 +19,8 @@ public record InstagramPublishQueueAdminResponse(
         String suggestedCaption,
         InstagramPublishStatus status,
         String failureReason,
-        Instant createdAt
+        Instant createdAt,
+        /** Yalnızca status=PUBLISHED iken dolu -- gerçek Instagram gönderisinin bağlantısı. */
+        String igPermalink
 ) {
 }
