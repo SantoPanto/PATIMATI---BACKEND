@@ -80,7 +80,6 @@ public class AdminServiceImpl implements AdminService {
                         user.getEmail(),
                         user.getPhone(),
                         user.isEnabled(),
-                        user.isEnabled(),
                         user.getRole(),
                         user.getCreatedAt()
                 ));
