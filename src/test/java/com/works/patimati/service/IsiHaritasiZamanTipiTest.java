@@ -2,8 +2,12 @@ package com.works.patimati.service;
 
 import com.works.patimati.dto.HeatmapPointDto;
 import com.works.patimati.entity.Ad;
+import com.works.patimati.entity.AdSighting;
+import com.works.patimati.entity.AnimalReport;
 import com.works.patimati.entity.User;
+import com.works.patimati.entity.enums.AdResolutionStatus;
 import com.works.patimati.entity.enums.AiStatus;
+import com.works.patimati.entity.enums.ReportType;
 import com.works.patimati.entity.enums.Species;
 import com.works.patimati.repository.MunicipalityPanelRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -22,8 +26,11 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
@@ -95,6 +102,64 @@ class IsiHaritasiZamanTipiTest {
                 .isNotNull();
     }
 
+    @Test
+    @DisplayName("kavuşmuş ilan haritada REUNION kategorisiyle döner (sayaçla aynı tanım)")
+    void kavusmusIlanReunionKategorisiyleDoner() {
+        User sahip = entityManager.persistFlushFind(kullanici());
+        Ad bulunan = entityManager.persistFlushFind(
+                ilanTaslagi(sahip).adType(Ad.AdType.FOUND).build());
+        entityManager.persistFlushFind(ilanTaslagi(sahip)
+                .resolutionStatus(AdResolutionStatus.FOUND)
+                .resolvedByAdId(bulunan.getId())
+                .build());
+
+        assertThat(kategoriler())
+                .as("kavuşan LOST ilan REUNION olmalı; bağsız FOUND ilan kendi tipiyle kalmalı")
+                .containsExactlyInAnyOrder("REUNION", "FOUND");
+    }
+
+    @Test
+    @DisplayName("vatandaş ihbarı haritada kendi türüyle döner (YARALI)")
+    void vatandasIhbariKendiTuruyleDoner() {
+        entityManager.persistFlushFind(AnimalReport.builder()
+                .reporterContact("05550001122")
+                .type(ReportType.YARALI)
+                .location(geometryFactory.createPoint(new Coordinate(BOYLAM, ENLEM)))
+                .city("Ölçüm")
+                .district(OLCUM_ILCESI)
+                .build());
+
+        assertThat(kategoriler()).containsExactly("YARALI");
+    }
+
+    @Test
+    @DisplayName("görülme bildirimi bağlı ilanın ilçesiyle SIGHTING döner")
+    void gorulmeBildirimiSightingDoner() {
+        User sahip = entityManager.persistFlushFind(kullanici());
+        Ad kayip = entityManager.persistFlushFind(ilan(sahip));
+        entityManager.persistFlushFind(AdSighting.builder()
+                .ad(kayip)
+                .reporterContact("05550003344")
+                .location(geometryFactory.createPoint(new Coordinate(BOYLAM + 0.01, ENLEM + 0.01)))
+                .createdAt(OffsetDateTime.now())
+                .build());
+
+        assertThat(kategoriler()).containsExactlyInAnyOrder("LOST", "SIGHTING");
+    }
+
+    /** Ölçüm ilçesinin son 1 saatteki harita kategorileri. */
+    private Set<String> kategoriler() {
+        return repository.getHeatmapPoints(
+                        OLCUM_ILCESI,
+                        Instant.now().minus(1, ChronoUnit.HOURS),
+                        Instant.now().plus(1, ChronoUnit.HOURS),
+                        50)
+                .stream()
+                .map(MunicipalityPanelService::satirdanNokta)
+                .map(HeatmapPointDto::getType)
+                .collect(Collectors.toSet());
+    }
+
     private User kullanici() {
         return User.builder()
                 .email("isi-zaman-olcum-" + System.nanoTime() + "@ornek.com")
@@ -106,6 +171,10 @@ class IsiHaritasiZamanTipiTest {
     }
 
     private Ad ilan(User sahip) {
+        return ilanTaslagi(sahip).build();
+    }
+
+    private Ad.AdBuilder ilanTaslagi(User sahip) {
         return Ad.builder()
                 .title("Isı zaman tipi ölçümü")
                 .description("Gerçek sürücü tipi ölçümü")
@@ -118,8 +187,7 @@ class IsiHaritasiZamanTipiTest {
                 .photoUrls(List.of("s3://patimati/test/isi.jpg"))
                 .user(sahip)
                 .active(true)
-                .suspended(false)
-                .build();
+                .suspended(false);
     }
 
     // ---------------------------------------------------------------------
