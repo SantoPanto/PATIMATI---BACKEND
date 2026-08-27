@@ -39,7 +39,9 @@ class ComplaintControllerTest {
         adComplaintService = mock(AdComplaintService.class);
 
         mockMvc = MockMvcBuilders
-                .standaloneSetup(new ComplaintController(userComplaintService, adComplaintService))
+                .standaloneSetup(new ComplaintController(
+                        userComplaintService, adComplaintService,
+                        mock(com.works.patimati.service.MyComplaintsService.class)))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }

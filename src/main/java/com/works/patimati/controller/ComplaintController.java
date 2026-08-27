@@ -2,8 +2,10 @@ package com.works.patimati.controller;
 
 import com.works.patimati.dto.complaint.AdComplaintRequestDTO;
 import com.works.patimati.dto.complaint.ComplaintResponse;
+import com.works.patimati.dto.complaint.MyComplaintResponse;
 import com.works.patimati.dto.complaint.UserComplaintRequestDTO;
 import com.works.patimati.service.AdComplaintService;
+import com.works.patimati.service.MyComplaintsService;
 import com.works.patimati.service.UserComplaintService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +30,16 @@ public class ComplaintController {
 
     private final UserComplaintService userComplaintService;
     private final AdComplaintService adComplaintService;
+    private final MyComplaintsService myComplaintsService;
+
+    /**
+     * "Şikayetlerim" (S7): oturum sahibinin üç tablodan birleşik şikayet listesi.
+     * GET /api/complaints/mine — en yeni üstte.
+     */
+    @GetMapping("/mine")
+    public ResponseEntity<java.util.List<MyComplaintResponse>> myComplaints(Authentication authentication) {
+        return ResponseEntity.ok(myComplaintsService.benimSikayetlerim(authentication.getName()));
+    }
 
     /**
      * Kullanıcı Profil Şikayeti Uç Noktası.

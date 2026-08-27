@@ -39,4 +39,7 @@ public interface UserComplaintRepository extends JpaRepository<UserComplaint, Lo
      * Belirli bir statüdeki tüm kullanıcı şikayetlerini listeler.
      */
     List<UserComplaint> findByStatus(ComplaintStatus status);
+
+    /** "Şikayetlerim" (S7): kullanıcının kendi açtıkları, en yeni üstte. */
+    List<UserComplaint> findByReporterIdOrderByCreatedAtDesc(Long reporterId);
 }
