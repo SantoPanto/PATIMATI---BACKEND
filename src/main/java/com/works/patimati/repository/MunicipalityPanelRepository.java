@@ -29,11 +29,56 @@ public interface MunicipalityPanelRepository extends JpaRepository<Ad, Long> {
         @Param("endDate") Instant endDate
     );
 
-    @Query(value = "SELECT ST_Y(a.location) as lat, ST_X(a.location) as lng, a.ad_type as type, a.created_at as created_at FROM ads a WHERE LOWER(a.district) = LOWER(:district) AND a.created_at BETWEEN :startDate AND :endDate LIMIT :limitCount", nativeQuery = true)
+    /**
+     * Yoğunluk haritası noktaları — üç kaynaktan (27.08 kullanıcı geri
+     * bildirimi: haritada ihbarlar ve kavuşanlar görünmüyordu, plan §6 da
+     * {@code ad_sightings}'i sayıyordu):
+     *
+     * <ul>
+     *   <li><b>ads</b> — kavuşmuş ilan (kavuşma statüsü + {@code resolved_by_ad_id}
+     *       dolu; {@code countReunionsByDistrict} ile aynı tanım) {@code REUNION}
+     *       kategorisiyle, kalanlar kendi {@code ad_type}'ıyla;</li>
+     *   <li><b>animal_reports</b> — vatandaş ihbarları kendi türüyle
+     *       (YARALI/SAHIPSIZ/DIGER); ilçe kendi sütunundan;</li>
+     *   <li><b>ad_sightings</b> — "gördüm" bildirimleri {@code SIGHTING}
+     *       kategorisiyle; tabloda ilçe olmadığından bağlı İLANIN ilçesiyle
+     *       süzülür (görülme komşu ilçeye taşabilir — bilinçli yaklaşıklık).</li>
+     * </ul>
+     *
+     * <p>{@code ORDER BY created_at DESC} bilinçli: eski sorguda sırasız LIMIT
+     * hangi satırların döneceğini belirsiz bırakıyordu; şimdi limit "en yeni N"
+     * anlamına geliyor.
+     */
+    @Query(value = """
+            SELECT t.lat, t.lng, t.kategori, t.created_at FROM (
+                SELECT ST_Y(a.location) AS lat, ST_X(a.location) AS lng,
+                       CASE WHEN a.resolution_status IN ('FOUND','ADOPTED')
+                                 AND a.resolved_by_ad_id IS NOT NULL
+                            THEN 'REUNION' ELSE a.ad_type END AS kategori,
+                       a.created_at AS created_at
+                FROM ads a
+                WHERE LOWER(a.district) = LOWER(:district)
+                  AND a.location IS NOT NULL
+                  AND a.created_at BETWEEN :startDate AND :endDate
+                UNION ALL
+                SELECT ST_Y(r.location), ST_X(r.location), r.type, r.created_at
+                FROM animal_reports r
+                WHERE LOWER(r.district) = LOWER(:district)
+                  AND r.created_at BETWEEN :startDate AND :endDate
+                UNION ALL
+                SELECT ST_Y(s.location), ST_X(s.location), 'SIGHTING', s.created_at
+                FROM ad_sightings s
+                JOIN ads bagli ON bagli.id = s.ad_id
+                WHERE LOWER(bagli.district) = LOWER(:district)
+                  AND s.created_at BETWEEN :startDate AND :endDate
+            ) t
+            ORDER BY t.created_at DESC
+            LIMIT :limitCount
+            """, nativeQuery = true)
     List<Object[]> getHeatmapPoints(
-        @Param("district") String district, 
-        @Param("startDate") Instant startDate, 
-        @Param("endDate") Instant endDate, 
+        @Param("district") String district,
+        @Param("startDate") Instant startDate,
+        @Param("endDate") Instant endDate,
         @Param("limitCount") int limitCount
     );
 }
