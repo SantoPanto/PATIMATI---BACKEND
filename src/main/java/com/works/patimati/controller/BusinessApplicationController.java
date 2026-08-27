@@ -84,11 +84,14 @@ public class BusinessApplicationController {
         return ResponseEntity.ok(businessApplicationService.reject(id, authentication.getName(), body.reason()));
     }
 
-    /** Yalnızca onaylanmış (ONAYLANDI) başvurular silinebilir -- bkz. {@link BusinessApplicationService#delete}. */
+    /**
+     * Yalnızca onaylanmış (ONAYLANDI) başvurular silinebilir -- kurumu (iş
+     * kartı + sahibinin rolü) da birlikte kaldırır, bkz. {@link BusinessApplicationService#delete}.
+     */
     @DeleteMapping("/api/admin/business-applications/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, String>> delete(@PathVariable @Min(1) Long id) {
         businessApplicationService.delete(id);
-        return ResponseEntity.ok(Map.of("message", "Başvuru silindi."));
+        return ResponseEntity.ok(Map.of("message", "Kurum silindi."));
     }
 }
