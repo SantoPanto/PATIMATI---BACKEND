@@ -11,6 +11,7 @@ import com.works.patimati.repository.PetShopRepository;
 import com.works.patimati.repository.PointOfInterestRepository;
 import com.works.patimati.repository.ShelterRepository;
 import com.works.patimati.repository.VetClinicRepository;
+import com.works.patimati.storage.ImageStorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.geom.Coordinate;
@@ -44,6 +45,7 @@ class PoiServiceTest {
     private VetClinicRepository vetClinicRepository;
     private PetShopRepository petShopRepository;
     private ShelterRepository shelterRepository;
+    private ImageStorageService imageStorageService;
     private PoiService service;
 
     @BeforeEach
@@ -52,7 +54,8 @@ class PoiServiceTest {
         vetClinicRepository = mock(VetClinicRepository.class);
         petShopRepository = mock(PetShopRepository.class);
         shelterRepository = mock(ShelterRepository.class);
-        service = new PoiService(poiRepository, vetClinicRepository, petShopRepository, shelterRepository);
+        imageStorageService = mock(ImageStorageService.class);
+        service = new PoiService(poiRepository, vetClinicRepository, petShopRepository, shelterRepository, imageStorageService);
 
         when(poiRepository.findNearby(any(), anyDouble())).thenReturn(List.of());
         when(vetClinicRepository.findNearby(any(), anyDouble())).thenReturn(List.of());
