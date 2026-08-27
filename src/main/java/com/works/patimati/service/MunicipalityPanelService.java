@@ -1,7 +1,11 @@
 package com.works.patimati.service;
 
 import com.works.patimati.dto.HeatmapPointDto;
+import com.works.patimati.dto.MunicipalityReportStatsDto;
 import com.works.patimati.dto.MunicipalityStatsDto;
+import com.works.patimati.entity.enums.ReportStatus;
+import com.works.patimati.entity.enums.ReportType;
+import com.works.patimati.repository.AnimalReportRepository;
 import com.works.patimati.entity.Ad.AdType;
 import com.works.patimati.entity.enums.AdResolutionStatus;
 import com.works.patimati.repository.MunicipalityPanelRepository;
@@ -14,6 +18,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -23,6 +28,7 @@ import java.util.List;
 public class MunicipalityPanelService {
 
     private final MunicipalityPanelRepository repository;
+    private final AnimalReportRepository animalReportRepository;
     private final MunicipalityScopeService municipalityScopeService;
 
     /** İlçesiz yöneticinin panel başlığı — FE district'i olduğu gibi basıyor. */
@@ -48,6 +54,56 @@ public class MunicipalityPanelService {
         stats.setAdoptionCount(adoption);
         stats.setReunionCount(reunion);
         return stats;
+    }
+
+    /**
+     * "İhbar analizi" (S6): durum + tür kırılımı ve günlük seri. Kapsam
+     * {@link #getStats} ile aynı sözleşmede çözülür.
+     */
+    public MunicipalityReportStatsDto getReportStats(LocalDateTime startDate, LocalDateTime endDate) {
+        String district = municipalityScopeService.mevcutKapsam().ilce();
+
+        MunicipalityReportStatsDto dto = new MunicipalityReportStatsDto();
+        dto.setDistrict(district != null ? district : TUM_ILCELER_ETIKETI);
+
+        for (Object[] satir : animalReportRepository.durumaGoreSay(district, startDate, endDate)) {
+            long adet = ((Number) satir[1]).longValue();
+            switch ((ReportStatus) satir[0]) {
+                case YENI -> dto.setYeniCount(adet);
+                case ISLEME_ALINDI -> dto.setIslemeAlindiCount(adet);
+                case TAMAMLANDI -> dto.setTamamlandiCount(adet);
+            }
+        }
+
+        for (Object[] satir : animalReportRepository.tureGoreSay(district, startDate, endDate)) {
+            long adet = ((Number) satir[1]).longValue();
+            switch ((ReportType) satir[0]) {
+                case YARALI -> dto.setYaraliCount(adet);
+                case SAHIPSIZ -> dto.setSahipsizCount(adet);
+                case DIGER -> dto.setDigerCount(adet);
+            }
+        }
+
+        for (Object[] satir : animalReportRepository.gunlukIhbarSayilari(district, startDate, endDate)) {
+            dto.getDaily().add(new MunicipalityReportStatsDto.GunlukSayi(
+                    gunecevir(satir[0]), ((Number) satir[1]).longValue()));
+        }
+        return dto;
+    }
+
+    /**
+     * Paket-görünür: gerçek-DB testi gün kolonunu sürücünün GERÇEK tipiyle
+     * sınar -- {@link #zamanaCevir}'deki 27.08 dersinin tarih hâli.
+     */
+    static LocalDate gunecevir(Object deger) {
+        if (deger instanceof LocalDate g) {
+            return g;
+        }
+        if (deger instanceof java.sql.Date d) {
+            return d.toLocalDate();
+        }
+        throw new IllegalStateException(
+                "günlük seri gün kolonu beklenmeyen tipte: " + deger.getClass().getName());
     }
 
     public List<HeatmapPointDto> getHeatmap(LocalDateTime startDate, LocalDateTime endDate, int limit) {
