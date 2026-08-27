@@ -27,4 +27,7 @@ public interface AdoptionComplaintRepository extends JpaRepository<AdoptionCompl
     List<AdoptionComplaint> findByAdIdAndStatus(Long adId, ComplaintStatus status);
 
     List<AdoptionComplaint> findByStatus(ComplaintStatus status);
+
+    /** "Şikayetlerim" (S7): kullanıcının kendi açtıkları, en yeni üstte. */
+    List<AdoptionComplaint> findByReporterIdOrderByCreatedAtDesc(Long reporterId);
 }

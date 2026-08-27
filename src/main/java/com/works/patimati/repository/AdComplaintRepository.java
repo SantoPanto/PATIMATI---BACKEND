@@ -39,4 +39,7 @@ public interface AdComplaintRepository extends JpaRepository<AdComplaint, Long>,
      * Belirli bir statüdeki tüm ilan şikayetlerini listeler.
      */
     List<AdComplaint> findByStatus(ComplaintStatus status);
+
+    /** "Şikayetlerim" (S7): kullanıcının kendi açtıkları, en yeni üstte. */
+    List<AdComplaint> findByReporterIdOrderByCreatedAtDesc(Long reporterId);
 }
