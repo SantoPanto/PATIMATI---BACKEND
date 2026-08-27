@@ -59,6 +59,7 @@ class AdMapperTest {
                 null,
                 null,
                 null,
+                null,
                 null
         );
 
@@ -214,5 +215,30 @@ class AdMapperTest {
                 .active(aktif)
                 .suspended(askida)
                 .build();
+    }
+    @Test
+    @DisplayName("Afiş izni ilan oluşturmadan taşınır; verilmemişse kapalı kalır")
+    void afisIzniOlusturmadanTasinir() {
+        AdCreateRequest izinli = new AdCreateRequest(
+                "Kayıp kedi", null, Ad.AdType.LOST, Species.CAT,
+                null, null, null, null, null,
+                null, null, null,
+                null, null, null,
+                null, "2026-08-20", null,
+                new BigDecimal("40.190000"), new BigDecimal("29.060000"),
+                null, null, null, null, true
+        );
+        assertThat(adMapper.toEntity(izinli).getIsPosterAllowed()).isTrue();
+
+        AdCreateRequest izinsiz = new AdCreateRequest(
+                "Kayıp kedi", null, Ad.AdType.LOST, Species.CAT,
+                null, null, null, null, null,
+                null, null, null,
+                null, null, null,
+                null, "2026-08-20", null,
+                new BigDecimal("40.190000"), new BigDecimal("29.060000"),
+                null, null, null, null, null
+        );
+        assertThat(adMapper.toEntity(izinsiz).getIsPosterAllowed()).isFalse();
     }
 }

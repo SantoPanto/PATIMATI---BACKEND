@@ -76,7 +76,7 @@ class AdCreationMatchingPipelineTest {
                 "Kayıp Kedi Tekir", "Açıklama", Ad.AdType.LOST, Species.CAT, "Tekir",
                 null, null, null, null, null, null, null,
                 null, null, null, null, "2026-08-22", null,
-                new BigDecimal("41.0"), new BigDecimal("29.0"), null, null, null, null
+                new BigDecimal("41.0"), new BigDecimal("29.0"), null, null, null, null, null
         );
 
         MockMultipartFile file = new MockMultipartFile("images", "cat.jpg", "image/jpeg", new byte[]{1, 2, 3});
@@ -111,7 +111,7 @@ class AdCreationMatchingPipelineTest {
                 "Kayıp Kedi", "Açıklama", Ad.AdType.LOST, Species.CAT, "Tekir",
                 null, null, null, null, null, null, null,
                 null, null, null, null, "2026-08-22", null,
-                new BigDecimal("41.0"), new BigDecimal("29.0"), null, null, null, null
+                new BigDecimal("41.0"), new BigDecimal("29.0"), null, null, null, null, null
         );
 
         // Boş fotoğraf listesi -> InvalidImageException fırlatmalı
@@ -151,7 +151,7 @@ class AdCreationMatchingPipelineTest {
                 "Kayıp Köpek", "Açıklama", Ad.AdType.LOST, Species.DOG, "Golden",
                 null, null, null, null, null, null, null,
                 null, null, null, null, "2026-08-22", null,
-                new BigDecimal("41.0"), new BigDecimal("29.0"), null, null, null, null
+                new BigDecimal("41.0"), new BigDecimal("29.0"), null, null, null, null, null
         );
 
         MockMultipartFile file = new MockMultipartFile("images", "dog.jpg", "image/jpeg", new byte[]{1, 2, 3});
