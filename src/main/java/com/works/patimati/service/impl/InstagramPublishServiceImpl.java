@@ -8,6 +8,7 @@ import com.works.patimati.entity.enums.InstagramPublishStatus;
 import com.works.patimati.entity.enums.PetColor;
 import com.works.patimati.entity.enums.Species;
 import com.works.patimati.exception.ResourceNotFoundException;
+import com.works.patimati.instagram.ByteArrayMultipartFile;
 import com.works.patimati.instagram.InstagramGraphClient;
 import com.works.patimati.instagram.InstagramGraphResult;
 import com.works.patimati.repository.AdInstagramPublicationRepository;
@@ -22,10 +23,18 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +49,11 @@ public class InstagramPublishServiceImpl implements InstagramPublishService {
 
     private static final Set<Ad.AdType> ELIGIBLE_AD_TYPES =
             Set.of(Ad.AdType.LOST, Ad.AdType.FOUND, Ad.AdType.ADOPTION, Ad.AdType.HELP);
+
+    /** Instagram Content Publishing API'nin kabul ettiği en-boy oranı aralığı (4:5 -- 1.91:1). */
+    private static final double INSTAGRAM_MIN_ASPECT_RATIO = 0.8;
+    private static final double INSTAGRAM_MAX_ASPECT_RATIO = 1.91;
+    private static final String CROPPED_PHOTO_KEY_PREFIX = "instagram-crops";
 
     private static final Map<PetColor, String> RENK_TR = new EnumMap<>(PetColor.class);
     static {
@@ -109,7 +123,7 @@ public class InstagramPublishServiceImpl implements InstagramPublishService {
                     publication.getId(), publication.getAdId(), "(İlan silinmiş)",
                     null, null, null, publication.getSuggestedCaption(),
                     publication.getStatus(), publication.getFailureReason(),
-                    publication.getCreatedAt());
+                    publication.getCreatedAt(), publication.getIgPermalink());
         }
 
         String firstPhotoUrl = ad.getPhotoUrls() == null || ad.getPhotoUrls().isEmpty()
@@ -126,7 +140,8 @@ public class InstagramPublishServiceImpl implements InstagramPublishService {
                 publication.getSuggestedCaption(),
                 publication.getStatus(),
                 publication.getFailureReason(),
-                publication.getCreatedAt()
+                publication.getCreatedAt(),
+                publication.getIgPermalink()
         );
     }
 
@@ -147,8 +162,9 @@ public class InstagramPublishServiceImpl implements InstagramPublishService {
                 .orElseThrow(() -> new ResourceNotFoundException("İlan bulunamadı: " + publication.getAdId()));
 
         InstagramGraphResult result;
+        List<String> geciciKirpilmisReferanslar = new ArrayList<>();
         try {
-            List<String> photoUrls = toDownloadableUrls(ad.getPhotoUrls());
+            List<String> photoUrls = toInstagramCompatibleUrls(ad.getPhotoUrls(), geciciKirpilmisReferanslar);
             result = instagramGraphClient.publish(photoUrls, finalCaption);
         } catch (RuntimeException e) {
             // Fotoğraf adresi üretilemedi gibi Graph API'ye HİÇ ULAŞMADAN
@@ -157,6 +173,13 @@ public class InstagramPublishServiceImpl implements InstagramPublishService {
             log.error("İlan Instagram'a gönderilirken beklenmeyen hata (adId={}): {}",
                     ad.getId(), e.getMessage(), e);
             result = InstagramGraphResult.failure("Beklenmeyen hata: " + e.getMessage());
+        } finally {
+            // Instagram container'ları oluşturulup FINISHED'a kadar beklendiği
+            // (pollUntilFinished) için Meta'nın bu URL'leri fiilen indirdiği an
+            // burasıdır -- geçici kırpılmış kopyalar artık gerekmiyor.
+            if (!geciciKirpilmisReferanslar.isEmpty()) {
+                imageStorageService.deleteImages(geciciKirpilmisReferanslar);
+            }
         }
 
         Long adminId = userRepository.findByEmail(adminEmail).map(User::getUid).orElse(null);
@@ -257,10 +280,76 @@ public class InstagramPublishServiceImpl implements InstagramPublishService {
         };
     }
 
-    /** {@code AiAnalysisPublisher.toDownloadableUrls} ile AYNI amaç/desen. */
-    private List<String> toDownloadableUrls(List<String> storageReferences) {
-        return storageReferences.stream()
-                .map(imageStorageService::createTemporaryReadUrl)
-                .collect(Collectors.toList());
+    /**
+     * Instagram Content Publishing API yalnız 4:5 (dikey) ile 1.91:1 (yatay)
+     * arasındaki en-boy oranını kabul ediyor -- aralık dışındaki bir fotoğraf
+     * gönderilince Meta "The aspect ratio is not supported" hatasıyla
+     * reddediyor (gerçek kullanıcıdan gelen rapor, 2026-08-28). Aralık
+     * dışında kalan her fotoğraf, Meta'ya gönderilmeden hemen önce ORTADAN
+     * kırpılıp aralığa getirilir -- ilanın kendi kayıtlı fotoğrafı/kartı
+     * DEĞİŞMEZ, yalnızca Instagram'a giden geçici kopya kırpılır. Kırpılan
+     * her kopyanın depo referansı {@code tempReferencesOut}'a eklenir ki
+     * çağıran (publish) Meta'nın indirmesi bittikten sonra silebilsin.
+     */
+    private List<String> toInstagramCompatibleUrls(List<String> storageReferences, List<String> tempReferencesOut) {
+        List<String> urls = new ArrayList<>();
+        for (String reference : storageReferences) {
+            String urlReference = reference;
+            try {
+                byte[] cropped = kirpInstagramOranina(imageStorageService.readImage(reference));
+                if (cropped != null) {
+                    MultipartFile croppedFile = new ByteArrayMultipartFile(
+                            "photo", "instagram-kirpilmis.jpg", MediaType.IMAGE_JPEG_VALUE, cropped);
+                    String croppedReference = imageStorageService
+                            .uploadImages(List.of(croppedFile), CROPPED_PHOTO_KEY_PREFIX)
+                            .get(0);
+                    tempReferencesOut.add(croppedReference);
+                    urlReference = croppedReference;
+                }
+            } catch (RuntimeException | IOException e) {
+                // Kırpma başarısız olsa bile orijinal fotoğrafla denemeye devam
+                // ediyoruz -- Instagram yine reddedebilir ama sessizce çökmüyoruz.
+                log.warn("Instagram için en-boy oranı düzeltilemedi, orijinal fotoğraf kullanılacak (reference={}): {}",
+                        reference, e.toString());
+            }
+            urls.add(imageStorageService.createTemporaryReadUrl(urlReference));
+        }
+        return urls;
+    }
+
+    /** @return kırpılmış JPEG byte'ları; oran zaten uygunsa ya da görsel çözümlenemiyorsa {@code null}. */
+    private byte[] kirpInstagramOranina(byte[] orijinalBytes) throws IOException {
+        BufferedImage image = ImageIO.read(new ByteArrayInputStream(orijinalBytes));
+        if (image == null) {
+            return null;
+        }
+
+        int width = image.getWidth();
+        int height = image.getHeight();
+        double oran = (double) width / height;
+
+        int kirpilmisGenislik = width;
+        int kirpilmisYukseklik = height;
+        if (oran < INSTAGRAM_MIN_ASPECT_RATIO) {
+            // Çok dikey (ör. 9:16 hikaye kırpımı) -- yüksekliği azaltarak 4:5'e getir.
+            kirpilmisYukseklik = (int) Math.round(width / INSTAGRAM_MIN_ASPECT_RATIO);
+        } else if (oran > INSTAGRAM_MAX_ASPECT_RATIO) {
+            // Çok yatay (ör. panorama) -- genişliği azaltarak 1.91:1'e getir.
+            kirpilmisGenislik = (int) Math.round(height * INSTAGRAM_MAX_ASPECT_RATIO);
+        } else {
+            return null;
+        }
+
+        int x = Math.max(0, (width - kirpilmisGenislik) / 2);
+        int y = Math.max(0, (height - kirpilmisYukseklik) / 2);
+        BufferedImage kirpilmis = image.getSubimage(
+                x, y,
+                Math.min(kirpilmisGenislik, width - x),
+                Math.min(kirpilmisYukseklik, height - y)
+        );
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ImageIO.write(kirpilmis, "jpg", out);
+        return out.toByteArray();
     }
 }
