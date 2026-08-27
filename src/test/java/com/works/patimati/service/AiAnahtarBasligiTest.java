@@ -90,17 +90,19 @@ class AiAnahtarBasligiTest {
     }
 
     @Test
-    @DisplayName("analyzePet (pet raporu) da /analyze ucuna gider ve X-Api-Key başlığını taşır")
-    void analyzePetCagrisiDaAnalyzeUcuneGiderVeAnahtariTasir() throws IOException {
+    @DisplayName("analyzePet (pet raporu) /analyze_pet ucuna gider ve X-Api-Key başlığını taşır")
+    void analyzePetCagrisiAnalyzePetUcuneGiderVeAnahtariTasir() throws IOException {
         MockServerRestTemplateCustomizer duzenek = new MockServerRestTemplateCustomizer();
         AiMatchService servis = servis(duzenek, ANAHTAR);
         org.springframework.web.client.RestTemplate petRaporuRestTemplate =
                 (org.springframework.web.client.RestTemplate) ReflectionTestUtils.getField(servis, "petRaporuRestTemplate");
         MockRestServiceServer sunucu = duzenek.getServer(petRaporuRestTemplate);
 
-        sunucu.expect(requestTo(AI_ADRESI + "/analyze"))
+        // "Ben Neyim?" 2026-08-27'de AI'ın LLM tabanlı zengin rapor ucuna
+        // (/analyze_pet, AI #33) geçti -- /analyze'a geri kayarsa bu test düşer.
+        sunucu.expect(requestTo(AI_ADRESI + "/analyze_pet"))
                 .andExpect(header("X-Api-Key", ANAHTAR))
-                .andRespond(withSuccess("{\"species\":\"cat\"}", MediaType.APPLICATION_JSON));
+                .andRespond(withSuccess("{\"gecerli\":true}", MediaType.APPLICATION_JSON));
 
         servis.analyzePet(fotograf(), null);
 
