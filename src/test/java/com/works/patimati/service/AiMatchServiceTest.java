@@ -53,8 +53,8 @@ class AiMatchServiceTest {
 
     @BeforeEach
     void setUp() {
-        when(restTemplateBuilder.setConnectTimeout(any(Duration.class))).thenReturn(restTemplateBuilder);
-        when(restTemplateBuilder.setReadTimeout(any(Duration.class))).thenReturn(restTemplateBuilder);
+        when(restTemplateBuilder.connectTimeout(any(Duration.class))).thenReturn(restTemplateBuilder);
+        when(restTemplateBuilder.readTimeout(any(Duration.class))).thenReturn(restTemplateBuilder);
         when(restTemplateBuilder.build()).thenReturn(restTemplate);
 
         aiMatchService = new AiMatchService(adRepository, adService, restTemplateBuilder, new com.works.patimati.mapper.AiAnalyzeMapper());
@@ -153,6 +153,18 @@ class AiMatchServiceTest {
 
         List<MatchedAdResponseDTO> results =
                 aiMatchService.matchImages(List.of(file), "ADOPTION", null, null);
+
+        assertTrue(results.isEmpty());
+        verify(restTemplate, never()).postForEntity(eq("http://localhost:8000/match"), any(), any(Class.class));
+    }
+
+    @Test
+    void helpListingType_gecerliAmaKarsitiYok_bosListeDoner_matchCagrilmaz() throws Exception {
+        MultipartFile file = new MockMultipartFile("file", "test.jpg", "image/jpeg", "dummy".getBytes());
+        analyzeCevabi(tamAnaliz());
+
+        List<MatchedAdResponseDTO> results =
+                aiMatchService.matchImages(List.of(file), "HELP", null, null);
 
         assertTrue(results.isEmpty());
         verify(restTemplate, never()).postForEntity(eq("http://localhost:8000/match"), any(), any(Class.class));

@@ -14,7 +14,8 @@
       "degerler": [
         "LOST",
         "FOUND",
-        "ADOPTION"
+        "ADOPTION",
+        "HELP"
       ]
     },
     "AgeGroup": {
@@ -34,6 +35,21 @@
         "DONE",
         "FAILED",
         "NOT_APPLICABLE"
+      ]
+    },
+    "AnimalType": {
+      "kaynak": "src/main/java/com/works/patimati/entity/enums/AnimalType.java",
+      "degerler": [
+        "DOG",
+        "CAT",
+        "BIRD",
+        "RABBIT",
+        "RODENT",
+        "REPTILE",
+        "FISH",
+        "FARM_ANIMAL",
+        "EXOTIC",
+        "OTHER"
       ]
     },
     "CandidateKind": {
@@ -152,6 +168,13 @@
         "AD_SHARE"
       ]
     },
+    "NoteAuthorType": {
+      "kaynak": "src/main/java/com/works/patimati/entity/enums/NoteAuthorType.java",
+      "degerler": [
+        "VET",
+        "OWNER"
+      ]
+    },
     "PetColor": {
       "kaynak": "src/main/java/com/works/patimati/entity/enums/PetColor.java",
       "degerler": [
@@ -172,6 +195,22 @@
         "UNKNOWN",
         "FEMALE",
         "MALE"
+      ]
+    },
+    "PoiSource": {
+      "kaynak": "src/main/java/com/works/patimati/entity/enums/PoiSource.java",
+      "degerler": [
+        "OSM",
+        "MANUAL",
+        "PLATFORM"
+      ]
+    },
+    "PoiType": {
+      "kaynak": "src/main/java/com/works/patimati/entity/enums/PoiType.java",
+      "degerler": [
+        "VETERINARY",
+        "PET_SHOP",
+        "SHELTER"
       ]
     },
     "PresenceStatus": {
@@ -230,6 +269,9 @@
         "GUEST",
         "USER",
         "ADMIN",
+        "VET",
+        "PETSHOP",
+        "BARINAK",
         "INSTITUTION"
       ]
     },
@@ -247,6 +289,14 @@
         "POST_TAG",
         "CAPTION_MENTION",
         "COMMENT_MENTION"
+      ]
+    },
+    "VetCustomerRequestStatus": {
+      "kaynak": "src/main/java/com/works/patimati/entity/enums/VetCustomerRequestStatus.java",
+      "degerler": [
+        "PENDING",
+        "ACCEPTED",
+        "REJECTED"
       ]
     }
   }

@@ -1,6 +1,7 @@
 package com.works.patimati.dto.ad;
 
 import com.works.patimati.entity.Ad;
+import com.works.patimati.entity.User;
 import com.works.patimati.entity.enums.AdResolutionStatus;
 import com.works.patimati.entity.enums.AgeGroup;
 import com.works.patimati.entity.enums.AiStatus;
@@ -48,6 +49,12 @@ public record AdResponse(
         String district,
         Long ownerId,
         String ownerDisplayName,
+        /**
+         * İlanı açan kullanıcının rolü -- barınak hesabından açılan
+         * sahiplendirme ilanlarında kart üstünde "Barınak" etiketi
+         * gösterebilmek için (bkz. `AdCard.tsx`). Sahip silinmişse null.
+         */
+        User.Role ownerRole,
         boolean active,
 
         /*

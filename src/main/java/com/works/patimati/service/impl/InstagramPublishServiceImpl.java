@@ -39,7 +39,7 @@ public class InstagramPublishServiceImpl implements InstagramPublishService {
     private static final Logger log = LoggerFactory.getLogger(InstagramPublishServiceImpl.class);
 
     private static final Set<Ad.AdType> ELIGIBLE_AD_TYPES =
-            Set.of(Ad.AdType.LOST, Ad.AdType.FOUND, Ad.AdType.ADOPTION);
+            Set.of(Ad.AdType.LOST, Ad.AdType.FOUND, Ad.AdType.ADOPTION, Ad.AdType.HELP);
 
     private static final Map<PetColor, String> RENK_TR = new EnumMap<>(PetColor.class);
     static {
@@ -230,6 +230,7 @@ public class InstagramPublishServiceImpl implements InstagramPublishService {
             case LOST -> "Kayıp";
             case FOUND -> "Bulundu";
             case ADOPTION -> "Sahiplendirme";
+            case HELP -> "Yardım";
         };
 
         StringBuilder metin = new StringBuilder();

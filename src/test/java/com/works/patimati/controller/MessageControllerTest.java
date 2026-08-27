@@ -59,7 +59,8 @@ class MessageControllerTest {
                 null,
                 "Merhaba test mesajı",
                 Instant.now(),
-                false
+                false,
+                null
         );
 
         when(messageService.sendMessage(eq(senderEmail), any(MessageSendRequest.class)))
@@ -86,7 +87,7 @@ class MessageControllerTest {
 
         MessageResponse mockMessage = new MessageResponse(
                 1L, 1L, "User One", 2L, "User Two", 2L, "User Two",
-                null, "Selam", Instant.now(), true
+                null, "Selam", Instant.now(), true, null
         );
         Page<MessageResponse> mockPage = new PageImpl<>(List.of(mockMessage), PageRequest.of(0, 20), 1);
 

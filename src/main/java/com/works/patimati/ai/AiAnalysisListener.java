@@ -116,7 +116,9 @@ public class AiAnalysisListener {
         // Eşik AI'nın cevabından geçiyor: kaydın "o an eşik neydi" sorusuna
         // doğru cevap verebilmesi için değerin KAYNAĞINDAN gelmesi gerekiyor.
         // Backend yapılandırmasından okunsaydı iki kaynak sessizce kayardı.
-        boolean isMatchRequired = !Boolean.FALSE.equals(ad.getIsMatchRequired()) && ad.getAdType() != Ad.AdType.ADOPTION;
+        boolean isMatchRequired = !Boolean.FALSE.equals(ad.getIsMatchRequired())
+                && ad.getAdType() != Ad.AdType.ADOPTION
+                && ad.getAdType() != Ad.AdType.HELP;
         List<AiAnalysisResult.Match> matches = (isMatchRequired && result.matches() != null)
                 ? result.matches() : List.of();
         if (isMatchRequired) {
@@ -269,7 +271,9 @@ public class AiAnalysisListener {
             return;
         }
 
-        if (Boolean.FALSE.equals(ad.getIsMatchRequired()) || ad.getAdType() == Ad.AdType.ADOPTION) {
+        if (Boolean.FALSE.equals(ad.getIsMatchRequired())
+                || ad.getAdType() == Ad.AdType.ADOPTION
+                || ad.getAdType() == Ad.AdType.HELP) {
             ad.setAiEmbeddings(null);
             log.info("adId={}: isMatchRequired=false, vektör (embedding) kaydı veritabanına yazılmadı", ad.getId());
         } else {

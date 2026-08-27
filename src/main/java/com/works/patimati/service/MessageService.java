@@ -127,7 +127,8 @@ public class MessageService {
                     null,
                     message.getContent(),
                     message.getTimestamp(),
-                    unreadCount
+                    unreadCount,
+                    partner.getRole()
             );
         }).toList();
     }
@@ -206,7 +207,8 @@ public class MessageService {
                     null,
                     lastMessage.getContent(),
                     lastMessage.getTimestamp(),
-                    unreadCount
+                    unreadCount,
+                    partner.getRole()
             );
         }
 
@@ -217,7 +219,8 @@ public class MessageService {
                 null,
                 null,
                 null,
-                0
+                0,
+                partner.getRole()
         );
     }
 
@@ -366,6 +369,7 @@ public class MessageService {
                 message.getContent(),
                 message.getTimestamp(),
                 message.isRead(),
+                partner.getRole(),
                 message.getType() != null ? message.getType() : MessageType.TEXT,
                 sharedAdDTO
         );

@@ -305,6 +305,6 @@ public class Ad {
     }
 
     public enum AdType {
-        LOST, FOUND, ADOPTION
+        LOST, FOUND, ADOPTION, HELP
     }
 }

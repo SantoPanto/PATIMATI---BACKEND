@@ -112,6 +112,18 @@ class InstagramPublishServiceImplTest {
     }
 
     @Test
+    void yardimIlaniSablonCaptionIleKuyruklanir() {
+        when(instagramCaptionAiClient.generateCaption(any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(null);
+
+        service.queueForReview(ilan(true, Ad.AdType.HELP));
+
+        ArgumentCaptor<AdInstagramPublication> captor = ArgumentCaptor.forClass(AdInstagramPublication.class);
+        verify(publicationRepository).save(captor.capture());
+        assertThat(captor.getValue().getSuggestedCaption()).contains("Yardım ilanı");
+    }
+
+    @Test
     void aiIstisnaFirlatirsaKuyrugaEklemeYineDeBasarili() {
         when(instagramCaptionAiClient.generateCaption(any(), any(), any(), any(), any(), any(), any()))
                 .thenThrow(new RuntimeException("ai servisi cevap vermedi"));

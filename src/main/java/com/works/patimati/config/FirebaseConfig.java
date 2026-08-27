@@ -3,12 +3,14 @@ package com.works.patimati.config;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
 
 import javax.annotation.PostConstruct;
 import java.io.InputStream;
 
+@Slf4j
 @Configuration
 public class FirebaseConfig {
 
@@ -25,11 +27,10 @@ public class FirebaseConfig {
             // Eğer Firebase daha önce başlatılmamışsa başlat
             if (FirebaseApp.getApps().isEmpty()) {
                 FirebaseApp.initializeApp(options);
-                System.out.println("Firebase Admin SDK başarıyla başlatıldı!");
+                log.info("Firebase Admin SDK başarıyla başlatıldı!");
             }
         } catch (Exception e) {
-            e.printStackTrace();
-            System.err.println("Firebase başlatılırken bir hata oluştu: " + e.getMessage());
+            log.warn("Firebase başlatılırken bir hata oluştu, push bildirimleri devre dışı kalacak: {}", e.getMessage(), e);
         }
     }
 }

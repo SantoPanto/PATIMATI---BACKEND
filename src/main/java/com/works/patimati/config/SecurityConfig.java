@@ -6,6 +6,7 @@ import com.works.patimati.security.OAuth2AuthenticationSuccessHandler;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -86,7 +87,26 @@ public class SecurityConfig {
                                 "/ws-connect", // Doğrudan WebSocket bağlantısını kapsar.
                                 "/ws-connect/**" // SockJS’in kullandığı alt adresleri kapsar.
                         ).permitAll() // Kayıt, giriş, OAuth2 ve açık uçlara HERKES erişebilsin
+                        // Yalnızca GET permitAll -- POST/PUT/DELETE (ör. yorum yazma
+                        // uçları /api/vet-clinics/{id}/reviews/**) anyRequest().authenticated()
+                        // kuralına düşer. Eskiden metot ayrımı yapılmayan genel permitAll
+                        // vardı; bu, yorum-yazma uçları eklendiğinde herkesin kimliksiz
+                        // yorum/puan atabilmesi anlamına gelirdi (bkz. VetClinicReviewGuvenlikRegresyonTest).
+                        .requestMatchers(HttpMethod.GET, "/api/vet-clinics", "/api/vet-clinics/**").permitAll()
+                        // GET-only herkese açık dizin/ürün/yorum-okuma -- V34'te /api/vet-clinics
+                        // için düzeltilen AYNI hata sınıfı (metot ayrımsız bare permitAll, yazma
+                        // uçlarını kimliksiz açardı) burada baştan doğru yapılıyor.
+                        .requestMatchers(HttpMethod.GET, "/api/petshops", "/api/petshops/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/petshop-products", "/api/petshop-products/**").permitAll()
+                        // GET-only herkese açık barınak dizini/yorum-okuma/ilan listesi --
+                        // "shelters" (dizin, çoğul) "shelter" (sahibin kendi kart yönetimi,
+                        // tekil) ile FARKLI literal segment, çakışmaz (bkz.
+                        // ShelterReviewGuvenlikRegresyonTest).
+                        .requestMatchers(HttpMethod.GET, "/api/shelters", "/api/shelters/**").permitAll()
                         .requestMatchers("/api/auth/userlist", "/api/admin/**").hasRole("ADMIN") // Yöneticilere özel uç noktalar
+                        .requestMatchers("/api/vet/**").hasRole("VET") // Veteriner kendi klinik kartı uçları
+                        .requestMatchers("/api/petshop/**").hasRole("PETSHOP") // Petshop sahibinin kendi kart+ürün yönetim uçları
+                        .requestMatchers("/api/shelter/**").hasRole("BARINAK") // Barınak sahibinin kendi kart yönetim uçları
                         /*
                          * Belediye modülü (B parçası).
                          *

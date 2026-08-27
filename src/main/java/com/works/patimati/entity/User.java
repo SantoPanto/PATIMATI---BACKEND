@@ -83,7 +83,7 @@ public class User {
 
     // Rol yönetimi için Enum tanımı
     public enum Role {
-        GUEST, USER, ADMIN,
+        GUEST, USER, ADMIN, VET, PETSHOP, BARINAK,
         /**
          * Belediye/kurum hesabı (V34). Ayrı bir tablo değil, bu satırın
          * kendisi: rol INSTITUTION olduğunda aşağıdaki institution* alanları

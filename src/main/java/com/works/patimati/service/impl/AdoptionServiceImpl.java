@@ -244,6 +244,17 @@ public class AdoptionServiceImpl implements AdoptionService {
         return ads.map(adService::toResponseWithTemporaryPhotoUrls);
     }
 
+    @Transactional(readOnly = true)
+    @Override
+    public Page<AdResponse> getPublicAdoptionAdsByOwner(Long ownerUid, Pageable pageable) {
+        Page<Ad> ads = adRepository.findAllByAdTypeAndActiveTrueAndSuspendedFalseAndUser_Uid(
+                Ad.AdType.ADOPTION,
+                ownerUid,
+                pageable
+        );
+        return ads.map(adService::toResponseWithTemporaryPhotoUrls);
+    }
+
     @Transactional
     @Override
     public ComplaintResponse createAdoptionComplaint(

@@ -150,6 +150,7 @@ public class AdMapper {
                 ad.getDistrict(),
                 owner == null ? null : owner.getUid(),
                 ownerDisplayName(owner),
+                owner == null ? null : owner.getRole(),
                 ad.isActive(),
                 ad.isSuspended(),
                 ad.getCreatedAt(),
