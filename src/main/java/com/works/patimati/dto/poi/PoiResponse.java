@@ -19,6 +19,12 @@ public record PoiResponse(
          * (`/hizmetler/veteriner/{refId}` vb.) bununla kurar. OSM/MANUAL
          * noktalarda gerçek bir hesap/detay sayfası olmadığı için null.
          */
-        Long refId
+        Long refId,
+        /**
+         * {@code source=PLATFORM} olduğunda ilgili VetClinic/PetShop/Shelter
+         * kartının kendi fotoğrafı (geçici okuma linki). OSM/MANUAL
+         * noktalarda fotoğraf verisi hiç olmadığı için null.
+         */
+        String photoUrl
 ) {
 }
