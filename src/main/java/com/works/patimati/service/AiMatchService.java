@@ -136,11 +136,14 @@ public class AiMatchService {
     }
 
     /**
-     * Tek bir görseli AI'nın analiz ucuna gönderir, cevabı <b>olduğu gibi</b> döner
-     * -- {@link #analyzeImage} ile AYNI ilke (bkz. oradaki javadoc): AI'nın
-     * {@code /analyze} cevabı zaten dışarıya gösterilmek üzere tanımlanmış bir sözleşme.
+     * Tek bir görseli AI'nın LLM tabanlı pet-raporu ucuna ({@code /analyze_pet},
+     * AI #33) gönderir, cevabı <b>olduğu gibi</b> döner -- {@link #analyzeImage}
+     * ile AYNI ilke (bkz. oradaki javadoc): AI'nın {@code PetReportResult}
+     * cevabı zaten dışarıya gösterilmek üzere tanımlanmış bir sözleşme
+     * (karakter profili, bakım ipuçları, tur/irk/desen kimlik alanları...).
      *
-     * @param kullaniciNotu opsiyonel, boşsa AI'ya hiç gönderilmez
+     * @param kullaniciNotu opsiyonel, boşsa AI'ya hiç gönderilmez; AI bunu
+     *                      LLM prompt'una bağlam olarak ekler
      * @return AI'nın cevabı; AI 2xx dışında bir şey döndürürse {@code null}
      */
     public Map<String, Object> analyzePet(MultipartFile file, String kullaniciNotu) throws IOException {
@@ -161,7 +164,7 @@ public class AiMatchService {
 
         @SuppressWarnings("unchecked")
         ResponseEntity<Map<String, Object>> response = petRaporuRestTemplate.postForEntity(
-                aiServiceUrl + "/analyze",
+                aiServiceUrl + "/analyze_pet",
                 requestEntity,
                 (Class<Map<String, Object>>) (Class<?>) Map.class
         );
