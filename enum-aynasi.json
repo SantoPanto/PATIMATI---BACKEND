@@ -52,6 +52,22 @@
         "OTHER"
       ]
     },
+    "BusinessApplicationStatus": {
+      "kaynak": "src/main/java/com/works/patimati/entity/enums/BusinessApplicationStatus.java",
+      "degerler": [
+        "BEKLEMEDE",
+        "ONAYLANDI",
+        "REDDEDILDI"
+      ]
+    },
+    "BusinessType": {
+      "kaynak": "src/main/java/com/works/patimati/entity/enums/BusinessType.java",
+      "degerler": [
+        "VET",
+        "PETSHOP",
+        "BARINAK"
+      ]
+    },
     "CandidateKind": {
       "kaynak": "src/main/java/com/works/patimati/entity/PotentialMatch.java",
       "degerler": [
