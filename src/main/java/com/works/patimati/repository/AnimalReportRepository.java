@@ -19,4 +19,7 @@ public interface AnimalReportRepository extends JpaRepository<AnimalReport, Long
     Page<AnimalReport> findAllByDistrictIgnoreCaseAndStatus(@Param("ilce") String ilce,
                                                             @Param("status") ReportStatus status,
                                                             Pageable pageable);
+
+    /** İlçesiz yönetici görünümü — süzgeçsiz; kurum hesabı bu yola girmez. */
+    Page<AnimalReport> findAllByStatus(ReportStatus status, Pageable pageable);
 }

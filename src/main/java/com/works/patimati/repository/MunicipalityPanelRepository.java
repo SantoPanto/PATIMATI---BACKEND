@@ -13,19 +13,21 @@ import java.util.Collection;
 @Repository
 public interface MunicipalityPanelRepository extends JpaRepository<Ad, Long> {
 
-    @Query("SELECT COUNT(a) FROM Ad a WHERE LOWER(a.district) = LOWER(:district) AND a.adType = :adType AND a.createdAt BETWEEN :startDate AND :endDate")
+    // :district NULL ise süzgeç yok — yalnız İLÇESİZ YÖNETİCİ bu yoldan gelir
+    // (MunicipalityScopeService.tumIlceler); kurum hesabında ilçe hep dolu.
+    @Query("SELECT COUNT(a) FROM Ad a WHERE (:district IS NULL OR LOWER(a.district) = LOWER(CAST(:district AS String))) AND a.adType = :adType AND a.createdAt BETWEEN :startDate AND :endDate")
     long countAdsByDistrictAndType(
-        @Param("district") String district, 
-        @Param("adType") Ad.AdType adType, 
-        @Param("startDate") Instant startDate, 
+        @Param("district") String district,
+        @Param("adType") Ad.AdType adType,
+        @Param("startDate") Instant startDate,
         @Param("endDate") Instant endDate
     );
 
-    @Query("SELECT COUNT(a) FROM Ad a WHERE LOWER(a.district) = LOWER(:district) AND a.resolutionStatus IN :statuses AND a.resolvedByAdId IS NOT NULL AND a.createdAt BETWEEN :startDate AND :endDate")
+    @Query("SELECT COUNT(a) FROM Ad a WHERE (:district IS NULL OR LOWER(a.district) = LOWER(CAST(:district AS String))) AND a.resolutionStatus IN :statuses AND a.resolvedByAdId IS NOT NULL AND a.createdAt BETWEEN :startDate AND :endDate")
     long countReunionsByDistrict(
-        @Param("district") String district, 
+        @Param("district") String district,
         @Param("statuses") Collection<AdResolutionStatus> statuses,
-        @Param("startDate") Instant startDate, 
+        @Param("startDate") Instant startDate,
         @Param("endDate") Instant endDate
     );
 
@@ -57,19 +59,19 @@ public interface MunicipalityPanelRepository extends JpaRepository<Ad, Long> {
                             THEN 'REUNION' ELSE a.ad_type END AS kategori,
                        a.created_at AS created_at
                 FROM ads a
-                WHERE LOWER(a.district) = LOWER(:district)
+                WHERE (CAST(:district AS text) IS NULL OR LOWER(a.district) = LOWER(CAST(:district AS text)))
                   AND a.location IS NOT NULL
                   AND a.created_at BETWEEN :startDate AND :endDate
                 UNION ALL
                 SELECT ST_Y(r.location), ST_X(r.location), r.type, r.created_at
                 FROM animal_reports r
-                WHERE LOWER(r.district) = LOWER(:district)
+                WHERE (CAST(:district AS text) IS NULL OR LOWER(r.district) = LOWER(CAST(:district AS text)))
                   AND r.created_at BETWEEN :startDate AND :endDate
                 UNION ALL
                 SELECT ST_Y(s.location), ST_X(s.location), 'SIGHTING', s.created_at
                 FROM ad_sightings s
                 JOIN ads bagli ON bagli.id = s.ad_id
-                WHERE LOWER(bagli.district) = LOWER(:district)
+                WHERE (CAST(:district AS text) IS NULL OR LOWER(bagli.district) = LOWER(CAST(:district AS text)))
                   AND s.created_at BETWEEN :startDate AND :endDate
             ) t
             ORDER BY t.created_at DESC

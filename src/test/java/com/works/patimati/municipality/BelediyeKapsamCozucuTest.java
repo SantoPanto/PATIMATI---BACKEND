@@ -168,17 +168,21 @@ class BelediyeKapsamCozucuTest {
     }
 
     @Test
-    @DisplayName("İlçesi olmayan ADMIN de reddedilir — muafiyet yok")
-    void ilcesiz_yonetici_reddedilir() {
+    @DisplayName("İlçesiz ADMIN tüm ilçeleri görür (27.08 ürün kararı) — kurum İSE asla")
+    void ilcesiz_yonetici_tum_ilceleri_gorur() {
+        // Eski kural "ilçesiz kapsam hiç kimsede oluşmaz"dı; 27.08'de Fatih'in
+        // "adminlerimiz de paneli görebilmeli" isteğiyle YÖNETİCİYE denetleyici
+        // görünüm açıldı. Tehlike sınırı değişmedi: ilçesiz KURUM hâlâ ret
+        // (ilcesiz_kurum_reddedilir) — süzgeçsiz sorguya yalnız ADMIN düşer.
         kullanici(User.Role.ADMIN, null);
         oturumAc("ADMIN");
 
-        assertThatThrownBy(() -> kapsamCozucu.mevcutKapsam())
-                .withFailMessage("""
-                        Yönetici ilçesiz kapsam alabildi. ADMIN kapıdan geçebiliyor
-                        ama "ilçesiz kapsam" hiç kimsede oluşmamalı; aksi hâlde
-                        panel sorgusu filtresiz koşar.""")
-                .isInstanceOf(AccessDeniedException.class);
+        var kapsam = kapsamCozucu.mevcutKapsam();
+
+        assertThat(kapsam.tumIlceler())
+                .withFailMessage("İlçesiz yönetici denetleyici (tüm ilçeler) kapsamı almalıydı.")
+                .isTrue();
+        assertThat(kapsam.ilce()).isNull();
     }
 
     @Test

@@ -25,7 +25,11 @@ public class MunicipalityPanelService {
     private final MunicipalityPanelRepository repository;
     private final MunicipalityScopeService municipalityScopeService;
 
+    /** İlçesiz yöneticinin panel başlığı — FE district'i olduğu gibi basıyor. */
+    static final String TUM_ILCELER_ETIKETI = "Tüm ilçeler";
+
     public MunicipalityStatsDto getStats(LocalDateTime startDate, LocalDateTime endDate) {
+        // İlçesiz yöneticide null: sorgular süzgeci atlar (repository'e bak).
         String district = municipalityScopeService.mevcutKapsam().ilce();
         Instant start = startDate.atZone(ZoneId.systemDefault()).toInstant();
         Instant end = endDate.atZone(ZoneId.systemDefault()).toInstant();
@@ -38,7 +42,7 @@ public class MunicipalityPanelService {
         long reunion = repository.countReunionsByDistrict(district, happyStatuses, start, end);
 
         MunicipalityStatsDto stats = new MunicipalityStatsDto();
-        stats.setDistrict(district);
+        stats.setDistrict(district != null ? district : TUM_ILCELER_ETIKETI);
         stats.setLostCount(lost);
         stats.setFoundCount(found);
         stats.setAdoptionCount(adoption);
