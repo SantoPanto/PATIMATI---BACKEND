@@ -21,6 +21,8 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Map;
+
 /**
  * İşletme sahibi olma başvuruları -- kullanıcı tarafı ({@code /api/business-applications})
  * herhangi bir giriş yapmış kullanıcıya açık (bkz. SecurityConfig
@@ -80,5 +82,13 @@ public class BusinessApplicationController {
             Authentication authentication
     ) {
         return ResponseEntity.ok(businessApplicationService.reject(id, authentication.getName(), body.reason()));
+    }
+
+    /** Yalnızca onaylanmış (ONAYLANDI) başvurular silinebilir -- bkz. {@link BusinessApplicationService#delete}. */
+    @DeleteMapping("/api/admin/business-applications/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, String>> delete(@PathVariable @Min(1) Long id) {
+        businessApplicationService.delete(id);
+        return ResponseEntity.ok(Map.of("message", "Başvuru silindi."));
     }
 }

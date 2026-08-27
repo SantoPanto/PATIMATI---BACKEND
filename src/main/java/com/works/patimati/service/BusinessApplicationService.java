@@ -198,6 +198,21 @@ public class BusinessApplicationService {
         return toResponse(saved);
     }
 
+    /**
+     * Onaylanmış bir başvuru kaydını arşivden temizler -- kullanıcının rolünü
+     * veya {@link #createBusinessCard} ile oluşturulan iş kartını ETKİLEMEZ,
+     * yalnızca bu başvuru satırını siler.
+     */
+    @Transactional
+    public void delete(Long id) {
+        BusinessApplication application = businessApplicationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Başvuru bulunamadı: " + id));
+        if (application.getStatus() != BusinessApplicationStatus.ONAYLANDI) {
+            throw new BusinessException("Yalnızca onaylanmış başvurular silinebilir.");
+        }
+        businessApplicationRepository.delete(application);
+    }
+
     private void createBusinessCard(BusinessApplication application) {
         User owner = application.getApplicant();
         switch (application.getBusinessType()) {
